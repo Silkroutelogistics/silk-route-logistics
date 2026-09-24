@@ -47,9 +47,26 @@ function formatDate(d: Date | null | undefined): string {
   return new Date(d).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
+/**
+ * The token, or null if it is absent OR revoked.
+ *
+ * The cancel used to NULL Load.trackingToken, so testing `load.trackingToken`
+ * alone was complete. It now revokes instead -- the uuid stays so the cancel can
+ * be reversed -- and a reader still testing only for presence would put a live
+ * Track Shipment button in a shipper inbox for a cancelled load.
+ *
+ * ONE definition, because both readers in this file have to agree: this button
+ * and the fan-out below. Two hand-written copies of a predicate is how one of
+ * them comes to disagree with the other.
+ */
+function activeTrackingToken(load: any): string | null {
+  return load.trackingToken && !load.trackingTokenRevokedAt ? load.trackingToken : null;
+}
+
 function trackingLink(load: any): string {
-  if (load.trackingToken) {
-    return `<p style="text-align:center;margin:20px 0"><a href="${PORTAL_BASE}/track/${load.trackingToken}" style="display:inline-block;padding:12px 28px;background:#d4a574;color:#0f172a;text-decoration:none;border-radius:6px;font-weight:600">Track Shipment</a></p>`;
+  const token = activeTrackingToken(load);
+  if (token) {
+    return `<p style="text-align:center;margin:20px 0"><a href="${PORTAL_BASE}/track/${token}" style="display:inline-block;padding:12px 28px;background:#d4a574;color:#0f172a;text-decoration:none;border-radius:6px;font-weight:600">Track Shipment</a></p>`;
   }
   return "";
 }
@@ -193,6 +210,7 @@ export async function sendTrackingLinkToCrmContacts(loadId: string) {
       referenceNumber: true,
       bolNumber: true,
       trackingToken: true,
+      trackingTokenRevokedAt: true,
       shipperCode: true,
       originCity: true,
       originState: true,
@@ -232,7 +250,7 @@ export async function sendTrackingLinkToCrmContacts(loadId: string) {
 
   // Use the existing trackingToken (shipper token seeded at load create)
   // or fall back to the short shipperCode (added in Track & Trace module).
-  const token = load.trackingToken ?? load.shipperCode ?? null;
+  const token = activeTrackingToken(load) ?? load.shipperCode ?? null;
   if (!token) return { sent: 0, skipped: "no_token" };
 
   const trackingUrl = `${PORTAL_BASE}/track/${token}`;

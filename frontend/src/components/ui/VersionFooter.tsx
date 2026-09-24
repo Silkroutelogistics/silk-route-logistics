@@ -18900,7 +18900,20 @@
 // Both nullable, no backfill: the loads already cancelled hold a destroyed token
 // and no snapshot, and inventing either is a guess written onto the row a dispute
 // reads. The un-cancel refuses them by name instead.
-export const SRL_VERSION = "3.8.bir";
+// v3.8.bis - the shipper email path honours a revoked tracking token.
+// Second of the un-cancel arc, and the other reader. The cancel used to NULL
+// Load.trackingToken, so testing the field for presence was a complete test. Once
+// the cancel revokes instead - leaving the uuid in place so the cancel can be
+// reversed - a reader that still tests only for presence puts a live Track
+// Shipment button in a shipper inbox for a load that was cancelled.
+// Both readers in the file now go through ONE predicate rather than two
+// hand-written copies, and the explicit select fetches the column that predicate
+// tests. That pairing is the whole risk: a select that omits it makes the read
+// undefined, which is falsy, so a revoked token would read ACTIVE and the button
+// would ship. Sub-pattern 5, both ends, and the test asserts both.
+// Still no behaviour change - the column is null on every row until the cascade
+// starts stamping it, which is the next commit.
+export const SRL_VERSION = "3.8.bis";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
