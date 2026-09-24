@@ -297,6 +297,20 @@ vi.mock("../src/config/database", () => ({
       create: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn(),
+      // The un-cancel TONU guard counts rather than fetches. Mirror the client:
+      // a missing method fails as "not a function" inside the subject, which
+      // reads like service logic rather than a fixture gap (v3.8.alh).
+      count: vi.fn().mockResolvedValue(0),
+    },
+    // ShipperCredit was absent entirely, so anything touching the shipper-credit
+    // reversal or its restore died before reaching an assertion.
+    shipperCredit: {
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
     },
     approvalQueue: {
       create: vi.fn(),
