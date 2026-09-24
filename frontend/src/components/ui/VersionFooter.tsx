@@ -18966,7 +18966,14 @@
 // to. The cascade cannot read it for itself -- the status path writes CANCELLED
 // and then cascades -- so priorStatus and softDeleted are REQUIRED options,
 // passed by the caller who has them, and tsc refuses a call site that forgets.
-export const SRL_VERSION = "3.8.bix";
+// v3.8.biy — C3b/C4: the un-cancel. Guards are pure (lib/uncancelPolicy) so
+// all six refusals are cheap to test; the restore replays the before-image and
+// fires nothing forward. The tracking link handed back is the SAME one the
+// shipper already has. Rate confirmations are reported, never un-voided: the
+// void nulls signTokenHash and a hash cannot be recovered, so an un-void would
+// produce a document that says SENT and no carrier can sign. Tenders move
+// through tenderTransitionService, the only writer of LoadTender.status.
+export const SRL_VERSION = "3.8.biy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

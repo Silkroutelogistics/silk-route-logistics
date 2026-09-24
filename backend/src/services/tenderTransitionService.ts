@@ -412,3 +412,77 @@ export async function withdrawLiveTenders(
     { exceptTenderId: exceptTenderId ?? null, softDeleted: !!softDelete },
   );
 }
+
+/**
+ * Put tenders back to what a cancellation before-image says they were.
+ *
+ * THIS IS A REVERSAL, NOT A SETTLE, which is why it does not go through
+ * applySettle: a settle moves a SET to ONE state, and a restore moves each
+ * tender to its OWN recorded state. What it shares is the thing that matters --
+ * it writes a transition row per tender, so a carrier's tender history shows
+ * the reinstatement rather than a status that silently changed back.
+ *
+ * IT LIVES HERE BECAUSE OF THE INVARIANT, not for convenience. The tender arc
+ * cut LoadTender.status writers from eleven files to three, and the guard
+ * freezes that count. An un-cancel writing the column itself would make four,
+ * and the reason there are three is that a state move without a history row is
+ * how a tender's timeline comes to disagree with the tender.
+ *
+ * IT SENDS NOTHING. Restoring an offer is not re-offering it: the carrier is
+ * told once, by the reinstatement notice, rather than receiving a second copy
+ * of an offer they already have.
+ */
+export async function restoreTenders(
+  input: {
+    loadId: string;
+    /** From the before-image: id, the state it held, and whether it was hidden. */
+    rows: Array<{ id: string; status: string; deletedAt: string | null }>;
+    reason: string;
+    actor?: Actor;
+  },
+  db: TenderDb = prisma,
+): Promise<{ count: number; tenderIds: string[] }> {
+  if (input.rows.length === 0) return { count: 0, tenderIds: [] };
+
+  const ids = input.rows.map((r) => r.id);
+  // Scoped to this load: a before-image naming a tender that belongs elsewhere
+  // moves nothing rather than reaching across loads.
+  const current = await db.loadTender.findMany({
+    where: { id: { in: ids }, loadId: input.loadId },
+    select: { id: true, loadId: true, status: true },
+  });
+  const now = new Date();
+  const restored: string[] = [];
+
+  for (const row of input.rows) {
+    const live = current.find((c) => c.id === row.id);
+    if (!live) continue;
+    if (String(live.status) === row.status) continue; // already where it belongs
+
+    await db.loadTender.updateMany({
+      where: { id: row.id, loadId: input.loadId },
+      data: {
+        status: row.status as never,
+        deletedAt: row.deletedAt ? new Date(row.deletedAt) : null,
+        statusChangedAt: now,
+      },
+    });
+    await logTenderTransition(
+      {
+        tenderId: row.id,
+        loadId: input.loadId,
+        from: live.status as TenderState,
+        to: row.status as TenderState,
+        reason: input.reason,
+        actorType: input.actor?.type ?? (input.actor?.id ? "USER" : "SYSTEM"),
+        actorId: input.actor?.id ?? null,
+        actorName: input.actor?.name ?? null,
+        metadata: { restoredFromCancellationSnapshot: true },
+      },
+      db,
+    );
+    restored.push(row.id);
+  }
+
+  return { count: restored.length, tenderIds: restored };
+}
