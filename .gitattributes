@@ -1,0 +1,21 @@
+# Scoped deliberately to ONE file. This is not a repo-wide EOL normalization —
+# that is `housekeeping/eol-normalize`'s arc, and doing it here would rewrite the
+# working copy of every file in every concurrent worktree on this machine.
+#
+# WHY THIS ONE FILE. `probe-public-surfaces.mjs` is imported by
+# `__tests__/unit/routes/marcoPoloProbe.test.ts`. Git stores it with LF, as git
+# stores everything; `core.autocrlf=true` on Windows checks it out with CRLF;
+# and vitest's ESM loader rejects a CRLF `.mjs` with `SyntaxError: Invalid or
+# unexpected token` at the import line. The test then fails with ONE failed FILE
+# and ZERO failed tests — a load error, not an assertion — which reads like a
+# code defect and is not one. §13.3 Item 268.
+#
+# It fires on every fresh clone, every new worktree, and every checkout that
+# restores the file, so it has cost several sessions a diagnosis each. CI never
+# sees it: Linux has no autocrlf, so the file is LF there and the suite is green
+# on a tree that is red locally.
+#
+# `text eol=lf` makes git check this file out with LF whatever autocrlf says,
+# which removes the trap rather than asking each session to remember the manual
+# `cp` that works around it.
+backend/scripts/probe-public-surfaces.mjs text eol=lf
