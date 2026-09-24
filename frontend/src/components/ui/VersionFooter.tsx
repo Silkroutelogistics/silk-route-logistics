@@ -19012,6 +19012,19 @@
 // happen before it offers the action, lists what will be restored, and names
 // the one thing that will not -- voided rate confirmations, whose signing
 // links cannot come back.
+// v3.8.bjc — C1: pre-tracing stops chasing a carrier who is already at the
+// dock. runPreTracing asks "are you on schedule for pickup?" and selected on
+// SHIPMENT status, which carries no AT_PICKUP at all -- so a carrier standing
+// on the dock still read BOOKED or DISPATCHED and got the email. The filter now
+// keys on Load.status, and the set of statuses that have reached the dock is
+// DERIVED from the transition maps (AT_PICKUP_OR_LATER) rather than listed by
+// hand: the member a hand list would miss is PICKED_UP, and a load sitting on
+// that one is exactly what must not be chased. TONU comes along with the
+// derivation and was never filtered before, so a truck-ordered-not-used load
+// inside the window could be asked about freight nobody is moving. CANCELLED
+// stays pinned by name inside the skip set so the Item 8.4 cascade backstop
+// does not depend on the derivation. runLateDetection is untouched -- its load
+// filter is byte-identical, which is why the edit was bounded to one function.
 export const SRL_VERSION = "3.8.bje";
 
 export function VersionFooter({ className }: { className?: string }) {

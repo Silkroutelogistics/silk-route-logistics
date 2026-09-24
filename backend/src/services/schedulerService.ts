@@ -1,6 +1,8 @@
 import crypto from "crypto";
 import cron from "node-cron";
 import { prisma } from "../config/database";
+import type { LoadStatus } from "@prisma/client";
+import { AT_PICKUP_OR_LATER } from "../lib/loadStateMachine";
 import { sendPreTracingEmail, sendNoTrackingDataEmail, sendPasswordExpiryReminder, settingsPathForRole } from "./emailService";
 import { processDueCheckCalls } from "./checkCallAutomation";
 import { runRiskFlagging } from "./riskEngine";
@@ -66,6 +68,14 @@ async function releaseLock(jobName: string) {
  * Sends emails to carriers at 48h and 24h before pickup.
  * Dedup via Notification table (type "PRE_TRACING").
  */
+/**
+ * Loads this job must never chase: everything at the dock or past it, plus
+ * CANCELLED pinned by name so the backstop does not depend on the derivation.
+ */
+const PRE_TRACING_SKIP_STATUSES: LoadStatus[] = [
+  ...new Set<LoadStatus>(["CANCELLED", ...AT_PICKUP_OR_LATER]),
+];
+
 export async function runPreTracing() {
   const now = new Date();
   const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
@@ -88,7 +98,19 @@ export async function runPreTracing() {
       //
       // v3.8.ayv cascades the shipment to CANCELLED at the source; this is the
       // backstop for rows created before that cascade existed.
-      load: { is: { deletedAt: null, status: { not: "CANCELLED" } } },
+      //
+      // AND THE LOAD IS ALSO THE AUTHORITY ON WHETHER THE TRUCK HAS ARRIVED.
+      // This job asks a carrier "are you on schedule for pickup?". Selecting
+      // on SHIPMENT status cannot answer that -- Shipment has no AT_PICKUP, so
+      // a carrier standing on the dock still reads BOOKED or DISPATCHED here
+      // and was emailed to ask whether they would make it. The LOAD knows.
+      //
+      // Keyed on Load.status deliberately, and derived from the state machine
+      // rather than listed by hand -- see AT_PICKUP_OR_LATER. CANCELLED stays
+      // named explicitly in PRE_TRACING_SKIP_STATUSES even though the derived
+      // set contains it today, so the cancelled-load backstop above survives a
+      // future change to the machine that drops it out.
+      load: { is: { deletedAt: null, status: { notIn: PRE_TRACING_SKIP_STATUSES } } },
     },
     include: {
       load: {

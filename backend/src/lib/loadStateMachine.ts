@@ -204,3 +204,63 @@ export function getAllowedNextStatuses(from: LoadStatus, actor: ActorRole): Load
   const map = actor === "AE" ? AE_ALLOWED_TRANSITIONS : CARRIER_ALLOWED_TRANSITIONS;
   return map[from] ?? [];
 }
+
+/**
+ * Every status at AT_PICKUP or beyond — the load has reached the dock.
+ *
+ * WHAT IT IS FOR. A job that chases a carrier toward a pickup must stop the
+ * moment the carrier is standing at it. `runPreTracing` asks "are you on
+ * schedule?" and selected on SHIPMENT status, which does not carry that fact;
+ * it is the LOAD that knows whether the truck has arrived.
+ *
+ * DERIVED FROM THE MACHINE, NOT HARDCODED, for the same reason
+ * PRE_POD_STATUSES is: a hand-written list drifts from the enum in silence.
+ * The member most likely to be forgotten by hand is `PICKED_UP`, the legacy
+ * alias, which lands in this set only because the AE map lists it under
+ * AT_PICKUP — and a load at PICKED_UP is exactly one that must not be chased.
+ *
+ * FORWARD REACHABILITY IS SOUND HERE FOR A SPECIFIC REASON, and it is not a
+ * general property: AT_PICKUP carries no BACKWARD edge in either map. If one
+ * is ever added — AT_PICKUP -> POSTED, say — this set silently swallows the
+ * whole pipeline and every pre-tracing email stops. The guard asserts the
+ * absence of that edge rather than trusting it to stay absent.
+ *
+ * AE + CARRIER ONLY, DELIBERATELY. Passing "AUTO" here would be wrong today:
+ * `getAllowedNextStatuses` has no AUTO branch and falls through to the CARRIER
+ * map, so an AUTO walk would silently re-walk CARRIER (§13.3 Item 276
+ * finding 27, latent because nothing passes AUTO). It costs nothing here —
+ * AUTO_ALLOWED_TRANSITIONS has no AT_PICKUP key, so it contributes no edge
+ * from this starting point either way — but the omission is a choice, not an
+ * oversight, and it must stay one until that branch exists.
+ *
+ * CANCELLED and TONU come along, and both are correct to exclude from a
+ * pickup chase: neither is awaiting a truck. CANCELLED was already filtered
+ * separately; TONU was NOT, so a truck-ordered-not-used load with a future
+ * pickup date inside the window could be emailed "are you on schedule?"
+ * about freight nobody is moving.
+ */
+export const AT_PICKUP_OR_LATER: LoadStatus[] = deriveAtPickupOrLater();
+
+function deriveAtPickupOrLater(): LoadStatus[] {
+  const next = (s: LoadStatus): LoadStatus[] => [
+    ...getAllowedNextStatuses(s, "AE"),
+    ...getAllowedNextStatuses(s, "CARRIER"),
+  ];
+  const seen = new Set<LoadStatus>(["AT_PICKUP"]);
+  const queue: LoadStatus[] = ["AT_PICKUP"];
+  while (queue.length) {
+    const s = queue.shift() as LoadStatus;
+    for (const n of next(s)) {
+      if (!seen.has(n)) {
+        seen.add(n);
+        queue.push(n);
+      }
+    }
+  }
+  return [...seen];
+}
+
+/** True once the load has reached the dock or moved past it. */
+export function hasReachedPickup(status: LoadStatus | string): boolean {
+  return (AT_PICKUP_OR_LATER as string[]).includes(status);
+}

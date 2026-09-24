@@ -41,6 +41,60 @@ function shipmentSelections(): string[] {
 
 const LOAD_GUARD = 'load: { is: { deletedAt: null, status: { not: "CANCELLED" } } }';
 
+/**
+ * Does this load filter exclude cancelled loads?
+ *
+ * TWO FORMS ARE CORRECT, AND THE PROPERTY IS THE SUBJECT RATHER THAN THE
+ * SPELLING. The direct form is `status: { not: "CANCELLED" }`. runPreTracing
+ * now uses a derived set instead -- `status: { notIn: PRE_TRACING_SKIP_STATUSES }`
+ * -- because that job must ALSO skip loads that have reached the dock, and
+ * CANCELLED is pinned by name inside that constant precisely so this backstop
+ * survives the derivation. Asserting the literal would have meant weakening a
+ * live filter to keep a test green, which is the wrong way round.
+ *
+ * IT RESOLVES THE IDENTIFIER RATHER THAN TRUSTING IT. A `notIn:` naming a set
+ * that does not pin CANCELLED is REFUSED, so this cannot be satisfied by
+ * pointing at any set at all -- which is how a widened guard usually goes blind.
+ */
+function excludesCancelled(flatWhere: string, source: string = code): boolean {
+  if (flatWhere.includes('status: { not: "CANCELLED" }')) return true;
+
+  // DELIBERATELY REGEX-FREE. This file is edited by patch scripts, and a
+  // backslash eaten on the way in yields a matcher that still compiles and
+  // matches nothing — which would report every job guarded, forever, and that
+  // failure looks exactly like success. It happened three times while this
+  // helper was being written (§19 Sub-pattern 22). indexOf cannot be
+  // mis-escaped.
+  const MARKER = "status: { notIn: ";
+  const at = flatWhere.indexOf(MARKER);
+  if (at === -1) return false;
+  const rest = flatWhere.slice(at + MARKER.length);
+  const cut = rest.indexOf(" ");
+  const ident = (cut === -1 ? rest : rest.slice(0, cut)).trim();
+  if (!ident) return false;
+
+  // Resolve the identifier in the source rather than trusting its name.
+  for (const kw of ["const ", "let ", "var "]) {
+    let from = 0;
+    for (;;) {
+      const d = source.indexOf(kw + ident, from);
+      if (d === -1) break;
+      from = d + 1;
+      // Reject a prefix hit: a lookup for FOO must not be answered by FOOBAR.
+      const after = source[d + kw.length + ident.length];
+      if (after !== undefined && (after === "_" || after === "$" || /[a-zA-Z0-9]/.test(after))) {
+        continue;
+      }
+      const eq = source.indexOf("=", d);
+      if (eq === -1) continue;
+      const semi = source.indexOf(";", eq);
+      if (semi === -1) continue;
+      return source.slice(eq, semi).includes('"CANCELLED"');
+    }
+  }
+  return false;
+}
+
 describe("shipment-selecting jobs guard on the load", () => {
   const selections = shipmentSelections();
 
@@ -71,7 +125,11 @@ describe("shipment-selecting jobs guard on the load", () => {
     for (const w of selections) {
       const flat = w.replace(/\s+/g, " ");
       expect(flat, "missing deletedAt in the load filter").toContain("deletedAt: null");
-      expect(flat, "missing CANCELLED exclusion in the load filter").toContain('status: { not: "CANCELLED" }');
+      expect(
+        excludesCancelled(flat),
+        "the load filter no longer excludes cancelled loads -- neither directly nor via a " +
+          "notIn set that pins CANCELLED. A shipment under a cancelled load starts firing again.",
+      ).toBe(true);
     }
   });
 
@@ -80,7 +138,13 @@ describe("shipment-selecting jobs guard on the load", () => {
       const i = code.indexOf(`function ${fn}`);
       expect(i, `${fn} not found — renamed?`).toBeGreaterThan(-1);
       const body = code.slice(i, i + 2000).replace(/\s+/g, " ");
-      expect(body.includes(LOAD_GUARD.replace(/\s+/g, " ")), `${fn} does not guard on the load`).toBe(true);
+      expect(body, `${fn} dropped the soft-delete half of the load filter`).toContain(
+        "deletedAt: null",
+      );
+      expect(
+        excludesCancelled(body),
+        `${fn} dropped the cancelled-load half of the load filter`,
+      ).toBe(true);
     }
   });
 
@@ -98,5 +162,38 @@ describe("shipment-selecting jobs guard on the load", () => {
     const body = code.slice(i, i + 2000);
     expect(body).toContain('"BOOKED", "DISPATCHED"');
     expect(body).toContain("pickupDate");
+  });
+
+  it("the cancelled-exclusion check accepts both forms and refuses a set that omits CANCELLED", () => {
+    // The widening is the risky part of this guard, so it is fixtured in BOTH
+    // directions. Without the negative cases, a check that had quietly started
+    // returning true for everything would report every job guarded, forever --
+    // and that failure looks exactly like success.
+    expect(
+      excludesCancelled('load: { is: { deletedAt: null, status: { not: "CANCELLED" } } }'),
+      "the direct form must still be accepted",
+    ).toBe(true);
+    expect(
+      excludesCancelled(
+        "status: { notIn: SOME_SET }",
+        'const SOME_SET: LoadStatus[] = ["CANCELLED", "TONU"];',
+      ),
+      "a notIn set that pins CANCELLED must be accepted",
+    ).toBe(true);
+    expect(
+      excludesCancelled(
+        "status: { notIn: SOME_SET }",
+        'const SOME_SET: LoadStatus[] = ["TONU", "DELIVERED"];',
+      ),
+      "a notIn set that does NOT pin CANCELLED must be refused -- otherwise any set satisfies it",
+    ).toBe(false);
+    expect(
+      excludesCancelled("status: { notIn: NO_SUCH_CONSTANT }"),
+      "an unresolvable identifier must be refused, not assumed safe",
+    ).toBe(false);
+    expect(
+      excludesCancelled("load: { is: { deletedAt: null } }"),
+      "a filter with no status clause at all must be refused",
+    ).toBe(false);
   });
 });
