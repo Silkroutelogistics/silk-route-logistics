@@ -25,6 +25,14 @@
  * (~~...~~) is how this repo records what a section used to say, so the check
  * targets LIVE claims only — a claim inside strikethrough is history and must
  * keep working.
+ * §21.2 IS GUARDED THE SAME WAY, and it needs it more. On 2026-09-23 §21.2 was
+ * amended from the suffix-on-a-shared-stem scheme to one bare number per load,
+ * ahead of the code that implements it. A ratified-but-unbuilt section is the
+ * exact shape this file exists for, so the check below holds the section's own
+ * "NOT YET BUILT" status line against what documentNumber.ts actually emits —
+ * in BOTH directions. Building the code and forgetting the doc fails; flipping
+ * the doc ahead of the code fails too.
+ *
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, existsSync, readdirSync, statSync } from "fs";
@@ -120,5 +128,52 @@ describe("§21.1 pilot claims match the code", () => {
     expect(approveBody, "approve now writes quickPayEnabled — §21.1 needs updating").not.toContain(
       "quickPayEnabled: true",
     );
+  });
+});
+
+/** §21.2 to end of file. It is the last section, so it has no end delimiter. */
+const section212 = (() => {
+  const start = claudeMd.indexOf("### §21.2");
+  return start >= 0 ? claudeMd.slice(start) : "";
+})();
+const live212 = section212.replace(/~~[sS]*?~~/g, "");
+const documentNumber = read("backend/src/lib/documentNumber.ts");
+
+/** Does generateLoadNumber still stamp the retired `SRL-` prefix? Sliced to the
+ *  function rather than grepped file-wide: the retired scheme is described at
+ *  length in this module's own docblock, and matching that prose would make the
+ *  answer permanently "yes". */
+const generatorEmitsLegacyPrefix = (() => {
+  const i = documentNumber.indexOf("export async function generateLoadNumber");
+  if (i < 0) throw new Error("generateLoadNumber not found in documentNumber.ts");
+  return documentNumber.slice(i, i + 900).includes("`SRL-");
+})();
+
+describe("§21.2 numbering claims match the code", () => {
+  it("the section was located and parsed (tripwire)", () => {
+    expect(section212.length, `§21.2 not found in ${SECTION_FILE}`).toBeGreaterThan(1000);
+    expect(live212.length, "live-claim text parsed empty").toBeGreaterThan(500);
+  });
+
+  it("the status line and documentNumber.ts agree on whether the bare scheme is live", () => {
+    const docSaysNotBuilt = /RATIFIED, NOT YET BUILT/i.test(live212);
+    expect(
+      generatorEmitsLegacyPrefix,
+      docSaysNotBuilt
+        ? "§21.2 says NOT YET BUILT but generateLoadNumber no longer emits SRL- — flip the status line"
+        : "§21.2 no longer says NOT YET BUILT but generateLoadNumber still emits SRL- — the doc is ahead of the code",
+    ).toBe(docSaysNotBuilt);
+  });
+
+  it("the accessorial letter table is internally consistent", () => {
+    // A typo'd table is a doc that assigns two types the same letter, which is
+    // the one thing the single-constant rule exists to prevent.
+    const rows = [...live212.matchAll(/`([A-Z_]+)` [|] ([A-Z]) [|]/g)].map((m) => [m[1], m[2]]);
+    const types = rows.map((r) => r[0]);
+    const letters = rows.map((r) => r[1]);
+    expect(types.length, "expected 12 accessorial types in the §21.2 table").toBe(12);
+    expect(new Set(types).size, "a type appears twice in the table").toBe(12);
+    expect(new Set(letters).size, "two types share a letter").toBe(12);
+    expect(letters, "I is skipped: it reads as a 1 on a faxed reference").not.toContain("I");
   });
 });
