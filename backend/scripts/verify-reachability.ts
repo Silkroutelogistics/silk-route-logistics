@@ -215,7 +215,17 @@ for (const { text } of addedLines("backend/src")) {
 
 for (const name of [...exports_].sort()) {
   const definition = new RegExp(`export\\s+(?:async\\s+)?(?:function|const)\\s+${name}\\b`);
-  const word = new RegExp(`\\b${name}\\b`, "g");
+  // STATELESS for .test, GLOBAL for .match, and the split is load-bearing.
+  // RegExp.prototype.test on a /g regex advances lastIndex and carries it into
+  // the NEXT call, so reusing one global regex across a .filter() over the
+  // corpus skips any file whose match sits before the offset the previous file
+  // left behind. Measured on this repo: the consumer scan for one export found
+  // its test file and missed backend/src/lib/documentSearch.ts, which imports
+  // and calls it — so a live export was reported as consumed only by tests.
+  // That is this gate failing in the direction its own header warns about
+  // twice: toward DEAD, which sends somebody to delete working code.
+  const word = new RegExp(`\\b${name}\\b`);
+  const wordAll = new RegExp(`\\b${name}\\b`, "g");
 
   // Consumers in OTHER files.
   const consumers = corpus.filter((c) => word.test(c.body) && !definition.test(c.body));
@@ -226,7 +236,7 @@ for (const name of [...exports_].sort()) {
   // helpers as dead, which would have sent someone deleting working code.
   // Count occurrences beyond the single definition.
   const home = corpus.find((c) => definition.test(c.body));
-  const homeUses = home ? (home.body.match(word) || []).length - 1 : 0;
+  const homeUses = home ? (home.body.match(wordAll) || []).length - 1 : 0;
 
   const testOnly =
     consumers.length > 0 &&
