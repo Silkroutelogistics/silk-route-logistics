@@ -184,6 +184,15 @@ export const updateLoadStatusSchema = z.object({
 export const loadQuerySchema = z.object({
   status: z.string().optional(),
   activeOnly: z.coerce.boolean().optional(),
+  /**
+   * The reversal queue: loads cancelled inside the un-cancel window.
+   *
+   * A SEPARATE PARAMETER RATHER THAN A CHANGE TO activeOnly (ruling 3). The
+   * board's active partition is what every other surface reads, and widening
+   * it to admit cancelled loads would put them in front of every AE rather
+   * than in one tab behind a role gate.
+   */
+  reversible: z.enum(["true"]).optional(),
   // v3.8.axo — the Load Board / Track & Trace partition, asked as a question
   // about the TENDERS rather than a list of load statuses each surface keeps
   // its own copy of. "false" is the board, "true" is Track & Trace, absent is

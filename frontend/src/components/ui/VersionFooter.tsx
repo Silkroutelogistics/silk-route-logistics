@@ -18980,7 +18980,14 @@
 // IN-APP ONLY, once, deduped on the action link -- and that notice fires from
 // the controller rather than the service, because the service is guarded
 // against importing any sender at all.
-export const SRL_VERSION = "3.8.biz";
+// v3.8.bja — C6a/C6b: the AE surface. A "Cancelled (72h)" tab behind its own
+// server-side query (activeOnly is untouched, per ruling 3) and refused for
+// any role but ADMIN/CEO rather than merely hidden; a Reverse cancellation
+// button on the row; and a confirm dialog that asks the server what would
+// happen before it offers the action, lists what will be restored, and names
+// the one thing that will not -- voided rate confirmations, whose signing
+// links cannot come back.
+export const SRL_VERSION = "3.8.bja";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

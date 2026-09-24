@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import { createLoad, getLoads, getLoadById, updateLoad, updateLoadStatus, deleteLoad, restoreLoad, getDistance, getLoadAudit, uncancelLoadHandler } from "../controllers/loadController";
+import { createLoad, getLoads, getLoadById, updateLoad, updateLoadStatus, deleteLoad, restoreLoad, getDistance, getLoadAudit, uncancelLoadHandler, uncancelPreviewHandler } from "../controllers/loadController";
 import { createLoadWithTender } from "../controllers/withTenderController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
@@ -107,6 +107,10 @@ router.put("/:id/restore", authorize("ADMIN", "BROKER", "DISPATCH", "OPERATIONS"
 // refuses LOAD_NOT_CANCELLED rather than reversing twice. ADMIN and CEO only,
 // matching the ratified policy; the service checks the role again, because a
 // route gate protects the route and the rule belongs to the act.
+// GET is the preview the confirm dialog reads; PUT performs it. Same path,
+// same role gate, same policy -- so the dialog cannot promise something the
+// reversal would refuse.
+router.get("/:id/uncancel", authorize("ADMIN", "CEO"), uncancelPreviewHandler);
 router.put(
   "/:id/uncancel",
   authorize("ADMIN", "CEO"),

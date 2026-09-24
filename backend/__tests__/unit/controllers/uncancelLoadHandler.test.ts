@@ -184,20 +184,51 @@ describe("the carrier notice — in-app only", () => {
 
 describe("the route, read from source", () => {
   const route = fs.readFileSync(path.resolve(__dirname, "../../../src/routes/loads.ts"), "utf8");
-  const decl = route.slice(route.indexOf('"/:id/uncancel"'));
-  const block = decl.slice(0, decl.indexOf(");") + 2);
 
-  it("finds the route at all (vacuity tripwire)", () => {
+  /**
+   * Addressed BY VERB, not by "the first occurrence of the path".
+   *
+   * C6b added `router.get("/:id/uncancel", ...)` as the confirm dialog's
+   * preview, and this block used to slice from the first match — so it started
+   * reading the GET and reported the PUT as missing its validator and its audit
+   * row. The test was correct for the day it was written and wrong the moment a
+   * second verb shared the path. A path is not a route.
+   */
+  function blockFor(verb: "get" | "put"): string {
+    const start = route.indexOf(`router.${verb}(`, 0) === -1 ? -1 : (() => {
+      let i = 0;
+      for (;;) {
+        const at = route.indexOf(`router.${verb}(`, i);
+        if (at === -1) return -1;
+        const tail = route.slice(at, at + 400);
+        if (tail.includes('"/:id/uncancel"')) return at;
+        i = at + 1;
+      }
+    })();
+    expect(start, `no router.${verb} for /:id/uncancel`).toBeGreaterThan(-1);
+    const tail = route.slice(start);
+    return tail.slice(0, tail.indexOf(");") + 2);
+  }
+
+  it("finds both routes (vacuity tripwire)", () => {
     expect(route).toContain('"/:id/uncancel"');
-    expect(block.length, "the slice found nothing — the scanner is broken, not the route").toBeGreaterThan(40);
+    expect(blockFor("put").length, "the slice found nothing — the scanner is broken, not the route").toBeGreaterThan(40);
+    expect(blockFor("get").length).toBeGreaterThan(20);
   });
 
-  it("is PUT, not POST — a second call refuses rather than reversing twice", () => {
-    const before = route.slice(0, route.indexOf('"/:id/uncancel"'));
-    expect(before.trimEnd().endsWith("router.put(")).toBe(true);
+  it("the action is PUT, not POST — a second call refuses rather than reversing twice", () => {
+    expect(blockFor("put")).toContain('"/:id/uncancel"');
+    expect(route).not.toContain('router.post("/:id/uncancel"');
+  });
+
+  it("the preview is GET and carries the same role gate", () => {
+    // The dialog must not be able to promise something the action would refuse,
+    // and it must not be readable by somebody who could not act on it.
+    expect(blockFor("get")).toContain('authorize("ADMIN", "CEO")');
   });
 
   it("is ADMIN and CEO only", () => {
+    const block = blockFor("put");
     expect(block).toContain('authorize("ADMIN", "CEO")');
     for (const role of ["BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING", "CARRIER", "SHIPPER"]) {
       expect(block, "the uncancel route admits " + role).not.toContain('"' + role + '"');
@@ -205,6 +236,7 @@ describe("the route, read from source", () => {
   });
 
   it("validates the body and writes an audit row", () => {
+    const block = blockFor("put");
     expect(block).toContain("validateBody(uncancelLoadSchema)");
     expect(block).toContain('auditLog("UPDATE", "Load")');
   });

@@ -13,12 +13,13 @@ import {
   Search, MapPin, Truck, Calendar, DollarSign, Download, Package,
   Thermometer, Shield, Phone, FileText, X, Users, Send, ChevronRight,
   ClipboardCheck, Globe, Info, Clock, AlertTriangle, Trash2,
-  Tag as TagIcon, Pencil,
+  Tag as TagIcon, Pencil, Undo2,
 } from "lucide-react";
 
 import { RateConfirmationModal } from "@/components/loads/RateConfirmationModal";
 import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
 import { EditLoadModal } from "@/components/loads/EditLoadModal";
+import ReverseCancellationModal from "@/components/loads/ReverseCancellationModal";
 import ExecutionEvidencePanel from "@/components/loads/ExecutionEvidencePanel";
 import { AcceptOnBehalfModal } from "@/components/loads/AcceptOnBehalfModal";
 import { OverrideComplianceModal, type BlockedCode } from "@/components/loads/OverrideComplianceModal";
@@ -80,7 +81,7 @@ const TENDER_COLORS: Record<string, string> = {
 // v3.8.aue — ACCOUNT_EXECUTIVE granted margin/P&L READ (money movement stays denied).
 const MARGIN_ROLES = ["ADMIN", "CEO", "BROKER", "ACCOUNTING", "ACCOUNT_EXECUTIVE"];
 
-type StatusTab = "attention" | "DRAFT" | "POSTED" | "TENDERED" | "BOOKED" | "all";
+type StatusTab = "attention" | "DRAFT" | "POSTED" | "TENDERED" | "BOOKED" | "all" | "reversible";
 type PanelTab = "details" | "tracking" | "invoice" | "documents" | "history" | "carrier" | "exceptions" | "tags";
 
 const PANEL_TABS: { key: PanelTab; icon: typeof Info; label: string }[] = [
@@ -138,6 +139,10 @@ function needsAttention(l: Load, attentionIds: Set<string>): boolean {
  */
 function matchesTab(l: Load, tab: StatusTab, attentionIds: Set<string>): boolean {
   if (tab === "all") return true;
+  // The reversal queue is filtered SERVER-side -- cancelled loads are not in
+  // the board's fetched set at all, so there is nothing here to narrow. Every
+  // other tab is a client-side view over one query; this one is its own query.
+  if (tab === "reversible") return true;
   if (tab === "attention") return needsAttention(l, attentionIds);
   const d = deriveLoadStatus(l);
   if (tab === "TENDERED") return ["OFFERED", "COUNTERED"].includes(d.key);
@@ -154,6 +159,10 @@ export default function LoadsPage() {
   const { user } = useAuthStore();
   const canCreate = !isCarrier(user?.role);
   const canSeeMargin = MARGIN_ROLES.includes(user?.role || "");
+  // Ratified: reversing a cancellation is ADMIN/CEO. The tab and the button
+  // both gate on this, and the server refuses independently -- hiding a
+  // control is a courtesy, not a permission.
+  const canReverse = ["ADMIN", "CEO"].includes(user?.role || "");
   const queryClient = useQueryClient();
 
   /* ---- UI state ---- */
@@ -167,6 +176,7 @@ export default function LoadsPage() {
   /* ---- Clone / Create state ---- */
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false); // v3.8.alu §13.3 Item 3 — EditLoadModal
+  const [showReverse, setShowReverse] = useState(false); // C6b — reverse a cancellation
   // B7a (v3.8.bdd) — CancelLoadModal target. "archive" is the Archive button on
   // a live (DRAFT) load: the server treats that as a cancellation and demands
   // the same reason code, so the same modal collects it.
@@ -252,7 +262,10 @@ export default function LoadsPage() {
 
   /* ---- Queries ---- */
   const query = new URLSearchParams();
-  if (filters.status) query.set("status", filters.status);
+  // Ruling 3: a separate parameter, never a change to activeOnly. The active
+  // partition is what every other surface reads.
+  if (activeTab === "reversible") query.set("reversible", "true");
+  else if (filters.status) query.set("status", filters.status);
   else query.set("activeOnly", "true");
   if (filters.originState) query.set("originState", filters.originState);
   if (filters.destState) query.set("destState", filters.destState);
@@ -261,7 +274,10 @@ export default function LoadsPage() {
   query.set("page", String(page));
 
   const { data } = useQuery({
-    queryKey: ["loads", filters, page],
+    // activeTab is in the key because the reversal queue is a DIFFERENT query,
+    // not a filter over this one -- without it, switching tabs would show the
+    // previous tab's rows from cache.
+    queryKey: ["loads", filters, page, activeTab],
     queryFn: () =>
       api.get<{ loads: Load[]; total: number; totalPages: number }>(`/loads?${query.toString()}`).then((r) => r.data),
     // v3.8.aao — Sprint 36 Item 50 (A0.3-G1). Auto-refresh on 30s
@@ -585,7 +601,7 @@ export default function LoadsPage() {
   const load = loadDetail;
 
   /* ---- Tab button helper ---- */
-  const tabBtn = (key: StatusTab, label: string, count: number) => (
+  const tabBtn = (key: StatusTab, label: string, count: number | null) => (
     <button
       key={key}
       onClick={() => { setActiveTab(key); setPage(1); }}
@@ -596,11 +612,13 @@ export default function LoadsPage() {
       }`}
     >
       {label}
-      <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
-        activeTab === key ? "bg-[#C5A572]/20 text-[#C5A572]" : "bg-gray-100 text-slate-500"
-      }`}>
-        {count}
-      </span>
+      {count !== null && (
+        <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
+          activeTab === key ? "bg-[#C5A572]/20 text-[#C5A572]" : "bg-gray-100 text-slate-500"
+        }`}>
+          {count}
+        </span>
+      )}
       {activeTab === key && (
         <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C5A572] rounded-full" />
       )}
@@ -724,6 +742,14 @@ export default function LoadsPage() {
         {tabBtn("TENDERED", "Tendered", tabCounts.TENDERED)}
         {tabBtn("BOOKED", "Booked", tabCounts.BOOKED)}
         {tabBtn("all", "All", tabCounts.all)}
+        {/*
+          ADMIN/CEO only, and the server refuses it for anyone else rather than
+          relying on this being hidden. The count is null while the tab is
+          inactive: it is a separate query, and firing it on every board load to
+          fill in a badge would be a request per page-view for a number nobody
+          is looking at yet.
+        */}
+        {canReverse && tabBtn("reversible", "Cancelled (72h)", activeTab === "reversible" ? (data?.total ?? 0) : null)}
       </div>
 
       {/* ---- UPGRADE 2: Lane Cards ---- */}
@@ -1121,6 +1147,23 @@ export default function LoadsPage() {
                         <Pencil className="w-3 h-3" /> Edit
                       </button>
                     )}
+                    {/*
+                      Reverse cancellation — ADMIN/CEO, on a cancelled load
+                      whose before-image still exists. `reversible` comes from
+                      the server; offering the button on a load with no snapshot
+                      would be offering an action that refuses, which teaches an
+                      AE to distrust the row. The 72-hour window is NOT checked
+                      here: the modal's preview asks the server, and duplicating
+                      the rule in the client is how the two come to disagree.
+                    */}
+                    {canReverse && load.status === "CANCELLED" && (load as any).reversible !== false && (
+                      <button
+                        onClick={() => setShowReverse(true)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-[#FAEEDA] text-[#0A2540] border border-[#BA7517]/30 rounded text-xs hover:bg-[#f5e3c6]"
+                      >
+                        <Undo2 className="w-3 h-3" /> Reverse cancellation
+                      </button>
+                    )}
                     {/* Close */}
                     <button
                       onClick={() => setSelectedLoadId(null)}
@@ -1232,6 +1275,13 @@ export default function LoadsPage() {
           open for "new load" flows when no load is selected. Modal handles
           its own open/closed state via props. */}
       <CreateLoadModal open={showCreate} onClose={() => { setShowCreate(false); setCloneData(null); }} cloneFrom={cloneData} />
+      {canReverse && showReverse && loadDetail && (
+        <ReverseCancellationModal
+          loadId={loadDetail.id}
+          reference={(loadDetail as any).referenceNumber ?? null}
+          onClose={() => setShowReverse(false)}
+        />
+      )}
       {/* v3.8.alu §13.3 Item 3 — EditLoadModal. Mounts only when a load is selected. */}
       {loadDetail && (
         <EditLoadModal open={showEdit} onClose={() => setShowEdit(false)} load={loadDetail as any} canSeeMargin={canSeeMargin} />

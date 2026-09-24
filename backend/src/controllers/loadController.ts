@@ -36,6 +36,7 @@ import { invoicedTotalsForLoads } from "../lib/invoiceTotals";
 import { heldByCarrier, notHeldByCarrier } from "../lib/tenderLifecycle";
 import { shipmentSyncFor } from "../lib/shipmentStatusFor";
 import { uncancelLoad } from "../services/uncancelLoad";
+import { UNCANCEL_WINDOW_HOURS, assessUncancel } from "../lib/uncancelPolicy";
 import { createNotification } from "../services/notificationService";
 
 const RELEASED_VALUE_BASIS_VALUES = ["PER_POUND", "PER_PIECE", "TOTAL", "NVD"] as const;
@@ -443,7 +444,20 @@ export async function getLoads(req: AuthRequest, res: Response) {
     where.posterId = req.user!.id;
   }
 
-  if (query.status) {
+  // The reversal queue. Overrides the status and soft-delete filters above
+  // because it asks a different question: not "what is live" but "what can
+  // still be brought back". The archive path cancels AND hides, so a listing
+  // that kept deletedAt: null would miss exactly the loads most likely to need
+  // reversing.
+  if (query.reversible === "true") {
+    if (!["ADMIN", "CEO"].includes(req.user!.role)) {
+      res.status(403).json({ error: "Reversing a cancellation is restricted to ADMIN and CEO.", code: "UNCANCEL_ROLE_FORBIDDEN" });
+      return;
+    }
+    where.status = "CANCELLED";
+    where.cancelledAt = { gte: new Date(Date.now() - UNCANCEL_WINDOW_HOURS * 3_600_000) };
+    delete where.deletedAt;
+  } else if (query.status) {
     where.status = query.status;
   } else if (query.activeOnly) {
     where.status = { notIn: ["DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED", "TONU", "CANCELLED"] };
@@ -511,7 +525,17 @@ export async function getLoads(req: AuthRequest, res: Response) {
   // invoice yet, which is most of the board. The Map omits those loads and the
   // attach below leaves the field null.
   const billed = await invoicedTotalsForLoads(loads.map((l) => l.id));
-  const withTotals = loads.map((l) => ({ ...l, invoicedTotal: billed.get(l.id) ?? null }));
+  // cancellationSnapshot is STRIPPED and replaced by a boolean. It is an
+  // internal before-image, sometimes several kilobytes, and no list view has
+  // any use for its contents -- only for whether one exists, which is what
+  // decides if the reverse action can be offered at all. Sending the blob to
+  // every row of the reversal queue would be payload for nothing and would put
+  // the shape of SRC internals in front of a browser.
+  const withTotals = loads.map(({ cancellationSnapshot, ...l }) => ({
+    ...l,
+    invoicedTotal: billed.get(l.id) ?? null,
+    reversible: cancellationSnapshot !== null && cancellationSnapshot !== undefined,
+  }));
 
   res.json({ loads: withTotals, total, page: query.page, totalPages: Math.ceil(total / query.limit) });
 }
@@ -1412,6 +1436,65 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
  * and is now told it is back needs it in the place they act on loads, not a
  * second inbox item; and an email cannot be un-sent if the AE reverses again.
  */
+/**
+ * GET /loads/:id/uncancel — what reversing this would do, and whether it can.
+ *
+ * The confirm dialog has to tell an AE what they are about to restore, and the
+ * only record of that is the before-image. It is summarised here rather than
+ * shipped: the snapshot is an internal structure, sometimes kilobytes, and a
+ * dialog needs counts and the one list that needs human action, not the blob.
+ *
+ * It runs the SAME assessUncancel the PUT does, so a load the reversal will
+ * refuse says so before the AE types a reason rather than after.
+ */
+export async function uncancelPreviewHandler(req: AuthRequest, res: Response) {
+  const load = await prisma.load.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, status: true, cancelledAt: true, cancellationSnapshot: true, referenceNumber: true },
+  });
+  if (!load) {
+    res.status(404).json({ error: "Load not found" });
+    return;
+  }
+
+  const [tonuAccessorialCount, tenders] = await Promise.all([
+    prisma.loadAccessorial.count({ where: { loadId: load.id, type: "TONU", status: { not: "REJECTED" } } }),
+    prisma.loadTender.findMany({ where: { loadId: load.id }, select: { id: true, status: true } }),
+  ]);
+
+  const verdict = assessUncancel({
+    load: { status: load.status, cancelledAt: load.cancelledAt, cancellationSnapshot: load.cancellationSnapshot },
+    actorRole: req.user!.role,
+    now: new Date(),
+    tonuAccessorialCount,
+    tenders: tenders.map((t) => ({ id: t.id, status: String(t.status) })),
+  });
+
+  if (!verdict.ok) {
+    res.json({ canReverse: false, code: verdict.code, message: verdict.message });
+    return;
+  }
+
+  const s = verdict.snapshot;
+  res.json({
+    canReverse: true,
+    restoreTo: verdict.restoreTo,
+    unhide: verdict.unhide,
+    cancelledAt: load.cancelledAt,
+    willRestore: {
+      shipments: s.shipments.length,
+      trackingLink: s.trackingTokenRevoked === true,
+      shipperTrackingLinks: s.shipperTrackingTokens.length,
+      tenders: (s.tenders ?? []).length,
+      carrierPays: (s.carrierPays ?? []).length,
+      shipperCredit: s.shipperCredit !== null && s.shipperCredit !== undefined,
+    },
+    // The one thing the reversal will NOT put back, listed by name so the
+    // dialog can say so rather than leaving an AE to discover it afterwards.
+    rateConfirmationsToReissue: s.rateConfirmations ?? [],
+  });
+}
+
 export async function uncancelLoadHandler(req: AuthRequest, res: Response) {
   const { reason } = uncancelLoadSchema.parse(req.body);
 
