@@ -31,7 +31,19 @@ import { defineConfig } from "@playwright/test";
 // survivable. The runner's port-ownership check is unchanged: it still refuses
 // a port it does not own and names the pid, because the point was never the
 // specific number, it was not stopping somebody else's process.
-const BACKEND_PORT = 3110;
+// OVERRIDABLE, because the number is shared state on one machine.
+//
+// Both ports were hard constants, and `reuseExistingServer` is on outside CI,
+// so two worktrees running E2E at once bound the same pair: one run adopted the
+// other's backend, both suites raced one database, and one run's cleanup
+// stopped the other's server (§13.3 Item 291.13). The ports are the shared
+// state; making them per-run is what stops the collision.
+//
+// Defaults unchanged, so CI and every existing invocation behave exactly as
+// before. e2e/run-local.mjs reads the same two variables and derives the baked
+// API URL from the backend port, so a override cannot leave the frontend
+// calling the wrong origin.
+const BACKEND_PORT = Number(process.env.E2E_BACKEND_PORT || 3110);
 // FRONTEND PORT AND CORS ARE ONE DECISION, NOT TWO.
 //
 // server.ts allows :3000, :5173 and :4000 in non-production and nothing else,
@@ -44,7 +56,7 @@ const BACKEND_PORT = 3110;
 // CORS_ORIGIN, which server.ts merges into allowedOrigins — the mechanism that
 // already exists for staging and preview origins. No production source changes:
 // the hardcoded list is untouched and still governs everything else.
-const FRONTEND_PORT = 4100;
+const FRONTEND_PORT = Number(process.env.E2E_FRONTEND_PORT || 4100);
 
 export default defineConfig({
   testDir: "./e2e",

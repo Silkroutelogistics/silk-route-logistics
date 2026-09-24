@@ -31,7 +31,7 @@
  * each left a live backend on 3010, and the next run tripped over it.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -39,8 +39,11 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CONTAINER = process.env.E2E_LOCAL_CONTAINER || "srl-e2e-local";
 const PG_PORT = process.env.E2E_LOCAL_PG_PORT || "55440";
-const BACKEND_PORT = 3110; // playwright.config.ts — dedicated, off the dev-server range
-const FRONTEND_PORT = 4100; // playwright.config.ts
+// Same two variables playwright.config.ts reads, same defaults. Set them to
+// run a second worktree's E2E concurrently without the two colliding on one
+// port pair (§13.3 Item 291.13).
+const BACKEND_PORT = Number(process.env.E2E_BACKEND_PORT || 3110);
+const FRONTEND_PORT = Number(process.env.E2E_FRONTEND_PORT || 4100);
 
 /** Keys this script relies on. Absent from ci.yml => fail, never guess. */
 const REQUIRED_KEYS = [
@@ -250,6 +253,37 @@ if (missing.length) {
   die("ci.yml e2e env is missing: " + missing.join(", ") + " — update e2e/run-local.mjs");
 }
 
+/**
+ * The baked API URL and the backend port are ONE decision, not two.
+ *
+ * NEXT_PUBLIC_* is inlined at build time, so a frontend built against one port
+ * and served against another leaves the browser calling an origin nobody is
+ * listening on — and the test then dies at B5 with "element(s) not found",
+ * which reads exactly like a product regression. That is the failure the
+ * `baked` check below exists to prevent, and it can only prevent it if the URL
+ * it checks for is the URL this run will actually serve.
+ *
+ * At default ports the value is asserted against ci.yml rather than replaced,
+ * so the CI-parity guarantee this script is built on still holds and a drift
+ * between ci.yml and playwright.config.ts fails loudly here instead of
+ * surfacing as a local PASS over a CI FAILURE. Only an explicit port override
+ * is allowed to diverge, and it says so.
+ */
+const derivedApiUrl = "http://localhost:" + BACKEND_PORT + "/api";
+if (BACKEND_PORT === 3110) {
+  if (env.NEXT_PUBLIC_API_URL !== derivedApiUrl) {
+    die(
+      "ci.yml sets NEXT_PUBLIC_API_URL=" + env.NEXT_PUBLIC_API_URL + "\n" +
+        "     but the e2e backend port is " + BACKEND_PORT + ", i.e. " + derivedApiUrl + ".\n" +
+        "     These must agree, or the browser calls an origin nobody serves.\n" +
+        "     Fix ci.yml or playwright.config.ts — do not paper over it here."
+    );
+  }
+} else {
+  say("       ports overridden — API URL " + derivedApiUrl + " (ci.yml says " + env.NEXT_PUBLIC_API_URL + ")");
+  env.NEXT_PUBLIC_API_URL = derivedApiUrl;
+}
+
 // The local Postgres replaces CI's service container; everything else is CI's.
 const DB = "postgresql://ci:ci@localhost:" + PG_PORT + "/ci";
 const E = {
@@ -260,6 +294,21 @@ const E = {
   // §19 Sub-pattern 20 — absence is not neutralization. Explicitly empty, so a
   // path that would send is inert rather than picking a real key out of
   // backend/.env via dotenv.
+  // The spec reads its OWN two variables, and they are not the webServer
+  // ports. Overriding the ports without these leaves Playwright serving one
+  // pair while the suite drives the other — and the default it would drive is
+  // :3110, which on a developer machine may be somebody else's server. An
+  // override that silently points the suite at a port this run does not own is
+  // worse than no override at all, so they are derived here rather than left to
+  // be remembered.
+  E2E_BACKEND_API: "http://localhost:" + BACKEND_PORT + "/api",
+  E2E_FRONTEND_BASE: "http://localhost:" + FRONTEND_PORT,
+  // bol-access-gate.spec.ts reads a THIRD name. Nothing set it, so its
+  // default -- :3110 -- was not a fallback, it was the value: with the ports
+  // overridden the spec drove :3110 while Playwright served :3120, i.e. a
+  // server this run did not start and does not own. e2ePortParity now derives
+  // this list from the specs rather than trusting anyone to remember it.
+  E2E_API_URL: "http://localhost:" + BACKEND_PORT + "/api",
   RESEND_API_KEY: "",
   QUO_API_KEY: "",
   OPENPHONE_API_KEY: "",
@@ -341,6 +390,26 @@ if (baked) {
 }
 
 // ── 5. test ─────────────────────────────────────────────────────────────────
+//
+// EXIT 0 MEANS "PLAYWRIGHT RAN AND PASSED", NEVER "PLAYWRIGHT EXITED 0".
+//
+// A run once printed the header below and nothing else -- no "Running N
+// tests", no result line -- and this script exited 0 over it (§13.3 Item
+// 269(b)). A pre-push gate that reports success without evidence is worse than
+// no gate, because it is believed. It is the same failure the seed step above
+// already guards against: "The seed command has been executed" prints whether
+// or not the seed ran, so the fixture COUNT is what is checked.
+//
+// The evidence here is Playwright's own result artifact. It is deleted first,
+// so a stale file from an earlier run cannot be mistaken for this one's.
+const lastRun = path.join(ROOT, "test-results/.last-run.json");
+try {
+  if (existsSync(lastRun)) rmSync(lastRun);
+} catch {
+  // Not fatal: if it cannot be removed, the freshness check below still has to
+  // find a parseable PASSED result written by this run.
+}
+
 say("[5/5] Playwright\n");
 const t = spawnSync("npx", ["playwright", "test", "--reporter=list", ...process.argv.slice(2)], {
   cwd: ROOT,
@@ -348,6 +417,40 @@ const t = spawnSync("npx", ["playwright", "test", "--reporter=list", ...process.
   shell: needsShell("npx"),
   env: { ...E, CI: "true" }, // retries + no server reuse, exactly as CI runs it
 });
+
 say("\nDatabase left running for inspection:  docker exec -it " + CONTAINER + " psql -U ci -d ci");
 say("Remove it with:                        docker rm -f " + CONTAINER + "\n");
-process.exit(t.status ?? 1);
+
+// The launcher itself failed -- binary missing, shell refused, spawn error.
+// spawnSync reports this as status null with .error set, and `?? 1` alone
+// would have caught the exit code but said nothing about why.
+if (t.error) {
+  die("Playwright could not be launched: " + t.error.message);
+}
+if (t.status !== 0) {
+  process.exit(t.status ?? 1);
+}
+
+// Status 0 is necessary and not sufficient: prove a run actually happened.
+if (!existsSync(lastRun)) {
+  die(
+    "Playwright exited 0 but wrote no result artifact (" + lastRun + ").\n" +
+      "     That means it did not run a test session -- a launch failure, a config\n" +
+      "     error, or a filter that matched nothing. Treating this as a pass is how\n" +
+      "     a green with no evidence reaches a push (§13.3 Item 269(b))."
+  );
+}
+let verdict;
+try {
+  verdict = JSON.parse(readFileSync(lastRun, "utf8"));
+} catch (e) {
+  die("Playwright's result artifact is unreadable: " + e.message);
+}
+if (verdict.status !== "passed") {
+  die(
+    "Playwright exited 0 but its result artifact says '" + verdict.status + "'.\n" +
+      "     Failed tests: " + JSON.stringify(verdict.failedTests ?? [])
+  );
+}
+
+process.exit(0);

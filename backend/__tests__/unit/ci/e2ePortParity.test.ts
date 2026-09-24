@@ -35,10 +35,28 @@ const code = (src: string) =>
 
 const PW = code(read("playwright.config.ts"));
 
+/**
+ * The DEFAULT port, from either form the declaration may take.
+ *
+ * Both ports became overridable (`Number(process.env.E2E_BACKEND_PORT || 3110)`)
+ * so two worktrees can run E2E at once without binding the same pair — §13.3
+ * Item 291.13, where one run adopted another's backend and a third run's
+ * cleanup stopped somebody else's server. The literal in that expression is
+ * still the single source every other file is checked against; what changed is
+ * that a run may opt out of it, together, in one place.
+ */
 function pwPort(name: string): number {
-  const m = PW.match(new RegExp("const " + name + "\\s*=\\s*(\\d+)"));
+  const m = PW.match(
+    new RegExp("const " + name + "\\s*=\\s*(?:Number\\(\\s*process\\.env\\.\\w+\\s*\\|\\|\\s*)?(\\d+)"),
+  );
   expect(m, "playwright.config.ts no longer declares " + name).not.toBeNull();
   return Number(m![1]);
+}
+
+/** The env var each port may be overridden by, from playwright.config.ts. */
+function pwOverrideVar(name: string): string | null {
+  const m = PW.match(new RegExp("const " + name + "\\s*=\\s*Number\\(\\s*process\\.env\\.(\\w+)"));
+  return m ? m[1] : null;
 }
 
 const BACKEND = pwPort("BACKEND_PORT");
@@ -62,10 +80,69 @@ describe("E2E port parity", () => {
     expect(FRONTEND, "the frontend port is back on the old shared port").not.toBe(4000);
   });
 
-  it("the local runner uses the same ports", () => {
+  it("the local runner uses the same ports and the same override variables", () => {
     const runner = code(read("e2e/run-local.mjs"));
-    expect(runner).toContain("const BACKEND_PORT = " + BACKEND + ";");
-    expect(runner).toContain("const FRONTEND_PORT = " + FRONTEND + ";");
+    for (const [name, def] of [["BACKEND_PORT", BACKEND], ["FRONTEND_PORT", FRONTEND]] as const) {
+      const v = pwOverrideVar(name);
+      expect(v, name + " is no longer overridable in playwright.config.ts").not.toBeNull();
+      // Same variable AND same default. A runner reading a different variable
+      // name would leave one of the two honouring an override and the other
+      // not, which is the split this guard exists to prevent.
+      expect(
+        runner,
+        "e2e/run-local.mjs does not read " + v + " with default " + def,
+      ).toContain("process.env." + v + " || " + def);
+    }
+  });
+
+  it("an override points the SPEC at the ports it serves, not at :3110", () => {
+    // The spec's base URLs are their own two variables. Overriding the
+    // webServer ports without these leaves the suite driving the default
+    // :3110 — which on a developer machine may be a server this run does not
+    // own, so the suite would mutate somebody else's database and report a
+    // pass. The runner therefore derives both from the ports it is serving.
+    const runner = code(read("e2e/run-local.mjs"));
+    expect(runner, "run-local does not pin the spec's backend base URL").toContain(
+      'E2E_BACKEND_API: "http://localhost:" + BACKEND_PORT + "/api"',
+    );
+    expect(runner, "run-local does not pin the spec's frontend base URL").toContain(
+      'E2E_FRONTEND_BASE: "http://localhost:" + FRONTEND_PORT',
+    );
+  });
+
+  it("EVERY spec's base-URL default uses the served ports, and the runner sets it", () => {
+    // Generalised after bol-access-gate.spec.ts was found reading a third
+    // variable name (E2E_API_URL) that nothing set. Its default was :3110 --
+    // not a fallback but the value -- so with the ports overridden it drove a
+    // server the run did not own, and the failure read as a product 500.
+    //
+    // Derived from the specs so a fourth name cannot be added silently.
+    const specDir = path.join(ROOT, "e2e");
+    const specs = fs.readdirSync(specDir).filter((f) => f.endsWith(".spec.ts"));
+    expect(specs.length, "no e2e specs found - this guard is scanning nothing").toBeGreaterThan(0);
+
+    const runner = read("e2e/run-local.mjs");
+    for (const f of specs) {
+      const src = code(read("e2e/" + f));
+      const re = /process\.env\.(E2E_[A-Z0-9_]+)\s*\|\|\s*["'`]http:\/\/localhost:(\d+)([^"'`]*)["'`]/g;
+      let m: RegExpExecArray | null;
+      let seen = 0;
+      while ((m = re.exec(src))) {
+        seen++;
+        const [, varName, port] = m;
+        const expected = varName.includes("FRONTEND") ? FRONTEND : BACKEND;
+        expect(
+          Number(port),
+          f + " defaults " + varName + " to :" + port + ", but Playwright serves :" + expected,
+        ).toBe(expected);
+        expect(
+          runner,
+          f + " reads " + varName + ", which e2e/run-local.mjs never sets - an " +
+            "override would leave this spec driving :" + port + ", a server the run does not own",
+        ).toContain(varName + ":");
+      }
+      expect(seen, f + " declares no base URL - the scanner may have stopped matching").toBeGreaterThan(0);
+    }
   });
 
   it("the spec's operative defaults use the same ports", () => {

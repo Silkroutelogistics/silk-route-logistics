@@ -58,17 +58,20 @@ test.describe("Full Load Lifecycle E2E", () => {
     // ─────────────────────────────────────────────────────────────────
     // B1 — Login as admin via E2E bypass
     // ─────────────────────────────────────────────────────────────────
-    await loginAsAdmin(page, FRONTEND_BASE, BACKEND_API);
-
-    // Pull token for subsequent direct-API calls (used for fixture
-    // creation that's not exposed via UI yet, e.g., creating a load
-    // programmatically when Order Builder + Convert path is too long
-    // for a smoke walk).
-    const tokenResponse = await request.post(`${BACKEND_API}/auth/e2e-token`, {
-      data: { email: "whaider@silkroutelogistics.ai" },
-    });
-    expect(tokenResponse.ok(), "E2E token mint must succeed").toBeTruthy();
-    const { token } = await tokenResponse.json();
+    // ONE admin session for the whole walk — the browser's cookie and the
+    // Authorization header carry the SAME token.
+    //
+    // This used to mint a second admin token here for the direct-API calls.
+    // ADMIN is capped at one concurrent session and registerSession evicts
+    // FIFO, so that second mint evicted the browser's session and every page
+    // request came back 401 SESSION_REPLACED — the board bounced to login and
+    // B4 reported "element(s) not found" on the load reference. It only
+    // misfired sometimes because two mints inside one clock second produce a
+    // byte-identical token (jwt.sign is deterministic, `iat` is whole-second),
+    // so the suite was depending on two HTTP calls not straddling a boundary.
+    // §13.3 Item 301.
+    const token = await loginAsAdmin(page, FRONTEND_BASE, BACKEND_API);
+    expect(token, "E2E token mint must succeed").toBeTruthy();
     const authHeaders = { Authorization: `Bearer ${token}` };
 
     // ─────────────────────────────────────────────────────────────────
