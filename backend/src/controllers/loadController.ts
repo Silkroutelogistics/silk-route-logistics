@@ -203,27 +203,47 @@ export async function createLoad(req: AuthRequest, res: Response) {
     originCity: raw.originCity,
     originState: raw.originState,
     originZip: raw.originZip,
-    originContactName: pickupContact.name || raw.contactName || undefined,
-    originContactPhone: pickupContact.phone || raw.contactPhone || undefined,
+    // WHO IS AT THE DOCK. The Order Builder sends these FLAT
+    // (`originContactName`), and this read only ever looked at a NESTED
+    // `raw.pickupContact` that no shipped form produces. `createLoadSchema` is
+    // `.passthrough()`, so the flat keys arrived on req.body intact and were
+    // then simply never read — the loss is here, not in the validator.
+    // Production 2026-09-23: all four loadboard-created loads carry NULL dock
+    // contacts while the three drawer-created ones carry them, a 100% split by
+    // creation path. The nested shape stays accepted so the drawer keeps working.
+    originContactName: pickupContact.name || raw.originContactName || raw.contactName || undefined,
+    originContactPhone: pickupContact.phone || raw.originContactPhone || raw.contactPhone || undefined,
     destCompany: raw.destinationName || raw.destCompany || undefined,
     destAddress: raw.destAddress || raw.destinationAddress || undefined,
     destCity: raw.destinationCity || raw.destCity,
     destState: raw.destinationState || raw.destState,
     destZip: raw.destinationZip || raw.destZip,
-    destContactName: deliveryContact.name || undefined,
-    destContactPhone: deliveryContact.phone || undefined,
+    destContactName: deliveryContact.name || raw.destContactName || undefined,
+    destContactPhone: deliveryContact.phone || raw.destContactPhone || undefined,
     shipperFacility: raw.shipperName || raw.shipperFacility || undefined,
     consigneeFacility: raw.consigneeName || raw.consigneeFacility || undefined,
 
     // Schedule
+    // A TIME THAT WAS SENT IS A TIME THAT GETS WRITTEN. These four reads used
+    // to be gated on a `pickupTimeType` / `deliveryTimeType` discriminator that
+    // the Order Builder has never sent — grep it in
+    // frontend/src/app/dashboard/orders/page.tsx and you get nothing. With the
+    // discriminator undefined every ternary fell to `undefined` and the sweep
+    // below deleted the key, so every loadboard load was created with NULL
+    // windows while the AE watched themselves type them in.
+    //
+    // The gate is removed rather than repaired. It had exactly one producer and
+    // no reader outside these six lines, so asking callers to send a
+    // discriminator would be asking them to keep a secret handshake alive for
+    // its own sake. Both spellings are accepted: `pickupWindowOpen/Close` from
+    // the Order Builder, `pickupTimeStart/End` from the drawer, and a bare
+    // `pickupTime` for the appointment shape that used to need the flag.
     pickupDate: raw.pickupDate,
-    pickupTimeStart: raw.pickupTimeType === "APPOINTMENT" ? raw.pickupTime :
-                     raw.pickupTimeType === "WINDOW" ? raw.pickupWindowOpen : undefined,
-    pickupTimeEnd: raw.pickupTimeType === "WINDOW" ? raw.pickupWindowClose : undefined,
+    pickupTimeStart: raw.pickupTimeStart || raw.pickupWindowOpen || raw.pickupTime || undefined,
+    pickupTimeEnd: raw.pickupTimeEnd || raw.pickupWindowClose || undefined,
     deliveryDate: raw.deliveryDate,
-    deliveryTimeStart: raw.deliveryTimeType === "APPOINTMENT" ? raw.deliveryTime :
-                       raw.deliveryTimeType === "WINDOW" ? raw.deliveryWindowOpen : undefined,
-    deliveryTimeEnd: raw.deliveryTimeType === "WINDOW" ? raw.deliveryWindowClose : undefined,
+    deliveryTimeStart: raw.deliveryTimeStart || raw.deliveryWindowOpen || raw.deliveryTime || undefined,
+    deliveryTimeEnd: raw.deliveryTimeEnd || raw.deliveryWindowClose || undefined,
 
     // Freight
     weight: raw.weight || undefined,
@@ -304,7 +324,15 @@ export async function createLoad(req: AuthRequest, res: Response) {
     proNumber: raw.proNumber || undefined,
     bolNumber: raw.bolNumber || undefined,
     sealNumber: raw.sealNumber || undefined,
+    // Per-side appointments (v3.8.bhy). `appointmentNumber` is still accepted:
+    // it is the legacy single box, and a client that has not been updated must
+    // keep working rather than silently lose the one number it can send.
     appointmentNumber: raw.appointmentNumber || undefined,
+    pickupAppointment: raw.pickupAppointment || undefined,
+    deliveryAppointment: raw.deliveryAppointment || undefined,
+    // `pallets` was declared on the model and written by nothing on any create
+    // path, so the column was permanently NULL on every load ever made.
+    pallets: raw.pallets || undefined,
     additionalRefs: raw.additionalRefs || undefined,
 
     // Freight classification (TMW)
@@ -943,9 +971,19 @@ export async function updateLoad(req: AuthRequest, res: Response) {
     hazmat, hazmatClass, hazmatUnNumber,
     temperatureControlled, tempMin, tempMax, tempSetpoint, preCoolTo, reeferContinuous,
     specialInstructions, notes, contactName, contactPhone,
+    // The dock contacts. They were absent from this destructure entirely, so a
+    // PATCH could never repair what the create path had dropped — the AE could
+    // see the fields were empty and had no way to fill them. `contactName` and
+    // `contactPhone` below are a DIFFERENT column pair that create writes into
+    // originContactName/Phone and edit wrote into contactName/Phone, so the two
+    // halves of the lifecycle disagreed about where "the contact" lives.
+    originContactName, originContactPhone, destContactName, destContactPhone,
     customerId,
     // TMW-level fields
     poNumbers, bolNumber, sealNumber, appointmentNumber, additionalRefs,
+    // Per-side appointments (v3.8.bhy). `appointmentNumber` stays accepted so a
+    // client that has not been updated keeps working; it is the legacy single box.
+    pickupAppointment, deliveryAppointment,
     nmfcCode, declaredValue, loadingType, turnable,
     driverName, driverPhone, truckNumber, trailerNumber,
     dockAssignment, driverInstructions,
@@ -1029,6 +1067,10 @@ export async function updateLoad(req: AuthRequest, res: Response) {
   if (notes !== undefined) data.notes = notes;
   if (contactName !== undefined) data.contactName = contactName;
   if (contactPhone !== undefined) data.contactPhone = contactPhone;
+  if (originContactName !== undefined) data.originContactName = originContactName;
+  if (originContactPhone !== undefined) data.originContactPhone = originContactPhone;
+  if (destContactName !== undefined) data.destContactName = destContactName;
+  if (destContactPhone !== undefined) data.destContactPhone = destContactPhone;
 
   // TMW-level fields
   if (poNumbers !== undefined) data.poNumbers = poNumbers;
@@ -1036,6 +1078,8 @@ export async function updateLoad(req: AuthRequest, res: Response) {
   if (bolNumber !== undefined) data.bolNumber = bolNumber;
   if (sealNumber !== undefined) data.sealNumber = sealNumber;
   if (appointmentNumber !== undefined) data.appointmentNumber = appointmentNumber;
+  if (pickupAppointment !== undefined) data.pickupAppointment = pickupAppointment;
+  if (deliveryAppointment !== undefined) data.deliveryAppointment = deliveryAppointment;
   if (additionalRefs !== undefined) data.additionalRefs = additionalRefs;
   if (nmfcCode !== undefined) data.nmfcCode = nmfcCode;
   if (declaredValue !== undefined) data.declaredValue = declaredValue;

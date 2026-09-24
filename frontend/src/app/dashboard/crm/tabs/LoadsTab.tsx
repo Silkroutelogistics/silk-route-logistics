@@ -1,4 +1,5 @@
 "use client";
+import { formatStopDate } from "@/lib/stopDate";
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -69,7 +70,7 @@ export function LoadsTab({ customerId }: { customerId: string }) {
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[11px] text-gray-500">{new Date(l.pickupDate).toLocaleDateString()}</span>
+                <span className="text-[11px] text-gray-500">{formatStopDate(l.pickupDate)}</span>
                 <span className={`px-1.5 py-0.5 text-[10px] rounded ${
                   l.status === "DELIVERED" ? "bg-green-100 text-green-700"
                   : l.status === "IN_TRANSIT" ? "bg-cyan-100 text-cyan-700"

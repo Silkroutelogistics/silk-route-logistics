@@ -198,18 +198,13 @@ export default function OrderBuilderPage() {
     // are stable for the lifetime of the page.
   }, []);
 
-  // ─── BOL preview on mount (v3.5.b) ────────────────────────
-  useQuery<{ bolNumber: string }>({
-    queryKey: ["ob-next-bol"],
-    queryFn: async () => {
-      const { data } = await api.get("/loads/next-bol");
-      if (data?.bolNumber && !form.bolNumber) {
-        setForm((f) => ({ ...f, bolNumber: data.bolNumber }));
-      }
-      return data;
-    },
-    staleTime: Infinity,
-  });
+  // The BOL-number preview that lived here fetched /loads/next-bol purely to
+  // fill the readOnly box removed above. That box promised an auto-population
+  // into the shipper-reference column that no create path performs, so the
+  // preview was populating a field that was shown and never saved. SRL's BOL
+  // number is allocated server-side at creation into `srlBolNumber`.
+  // NOTE: /loads/next-bol now has no caller. Retiring the endpoint — and its
+  // separate BOL-{n} numbering scheme — belongs to the numbering arc, not here.
 
   // ─── Customer search + selection ───────────────────────────
   // v3.8.rr — context=crm restricts the search to onboardingStatus=APPROVED
@@ -496,7 +491,7 @@ export default function OrderBuilderPage() {
         deliveryTimeEnd: "",
         customerRate: "",
         targetCost: "",
-        bolNumber: f.bolNumber, // keep the previewed-next-BOL number; template doesn't carry one
+        bolNumber: f.bolNumber, // shipper's own reference, if one was ever set; a template does not carry one
       };
       // Customer linkage was set when AE picked the customer; template
       // doesn't change it. lineItems comes from formData if present.
@@ -584,6 +579,14 @@ export default function OrderBuilderPage() {
       commodity: form.lineItems[0]?.description || null,
       weight: form.lineItems[0]?.weight ? parseFloat(form.lineItems[0].weight) : null,
       pieces: form.lineItems[0]?.pieces ? parseInt(form.lineItems[0].pieces, 10) : null,
+      // Pallets are DERIVED from the line items rather than collected again.
+      // The AE already states package type per line, and `Load.pallets` had no
+      // writer on any create path — so the column was permanently NULL. Summing
+      // the PLT lines uses what the AE actually entered instead of adding a
+      // second box that could disagree with it.
+      pallets: form.lineItems
+        .filter((l) => l.packageType === "PLT")
+        .reduce((n, l) => n + (parseInt(l.pieces, 10) || 0), 0) || null,
       hazmat: form.lineItems.some((l) => l.hazmat),
       temperatureControlled: form.temperatureControlled,
       tempMin: form.tempMin ? parseFloat(form.tempMin) : undefined,
@@ -600,7 +603,8 @@ export default function OrderBuilderPage() {
       deliveryWindowClose: form.deliveryTimeEnd || null,
       // Refs
       poNumbers: form.poNumbers,
-      appointmentNumber: form.appointmentNumber || null,
+      pickupAppointment: form.pickupAppointment || null,
+      deliveryAppointment: form.deliveryAppointment || null,
       // Pricing
       customerRate: form.customerRate ? parseFloat(form.customerRate) : null,
       carrierRate: form.targetCost ? parseFloat(form.targetCost) : null,
@@ -1226,7 +1230,14 @@ export default function OrderBuilderPage() {
             </div>
 
             {/* Auto / ref fields */}
-            <div className="grid grid-cols-4 gap-2 mt-3">
+            {/* The "BOL #" box that sat here was readOnly, promised "Auto on
+                save", and was bound to `bolNumber` — the SHIPPER's reference
+                column, which nothing on the create path ever writes. It
+                therefore promised an auto-population that could not happen, on
+                every load ever created. SRL's own BOL number is allocated
+                server-side into `srlBolNumber` and is shown on the load panel
+                and the printed BOL; there is nothing for the AE to fill in here. */}
+            <div className="grid grid-cols-3 gap-2 mt-3">
               <Field label="Distance (mi)" tag="Auto">
                 <input
                   value={form.distance}
@@ -1235,17 +1246,16 @@ export default function OrderBuilderPage() {
                   placeholder="Auto"
                 />
               </Field>
-              <Field label="BOL #" tag="Auto">
-                <input
-                  value={form.bolNumber}
-                  onChange={(e) => setForm((f) => ({ ...f, bolNumber: e.target.value }))}
-                  className={inpAuto}
-                  placeholder="Auto on save"
-                  readOnly
-                />
+              {/* Two boxes, each naming its side. There was one unqualified
+                  "Appt #", so an AE holding a pickup appointment AND a delivery
+                  appointment could record one of them and nothing anywhere said
+                  which one it was. SRL-121497 carries 15160360 with no way to
+                  tell. */}
+              <Field label="Pickup Appt #">
+                <input value={form.pickupAppointment} onChange={(e) => setForm((f) => ({ ...f, pickupAppointment: e.target.value }))} className={inp} />
               </Field>
-              <Field label="Appt #">
-                <input value={form.appointmentNumber} onChange={(e) => setForm((f) => ({ ...f, appointmentNumber: e.target.value }))} className={inp} />
+              <Field label="Delivery Appt #">
+                <input value={form.deliveryAppointment} onChange={(e) => setForm((f) => ({ ...f, deliveryAppointment: e.target.value }))} className={inp} />
               </Field>
               <Field label="PO #">
                 <PoInput pos={form.poNumbers} onChange={(list) => setForm((f) => ({ ...f, poNumbers: list }))} />
@@ -1796,7 +1806,9 @@ export default function OrderBuilderPage() {
           reeferContinuous: form.reeferContinuous,
           // Refs (Sprint 59.b — PO + appointment)
           poNumbersText: (form.poNumbers ?? []).join(", "),
-          appointmentNumber: form.appointmentNumber ?? "",
+          // The drawer still carries one appointment box. The delivery side is
+          // what maps to it, matching where existing values were migrated.
+          appointmentNumber: form.deliveryAppointment ?? "",
           // Financials
           customerRate: form.customerRate,
           offeredRate: form.targetCost,

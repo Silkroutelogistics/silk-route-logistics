@@ -1,4 +1,5 @@
 "use client";
+import { formatStopDate } from "@/lib/stopDate";
 
 import { useState } from "react";
 import { MapPin, Calendar, Weight, Ruler, DollarSign, ChevronRight, Truck, Send, CheckCircle } from "lucide-react";
@@ -130,7 +131,7 @@ export default function AvailableLoadsPage() {
                       <span>{load.destCity}, {load.destState}</span>
                     </div>
                     <div className="flex gap-4 mt-2 text-[11px] text-gray-700">
-                      <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(load.pickupDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                      <span className="flex items-center gap-1"><Calendar size={12} /> {formatStopDate(load.pickupDate)}</span>
                       {load.weight && <span className="flex items-center gap-1"><Weight size={12} /> {Number(load.weight).toLocaleString()} lbs</span>}
                       {load.distance && <span className="flex items-center gap-1"><Ruler size={12} /> {load.distance} mi</span>}
                     </div>
@@ -180,12 +181,12 @@ export default function AvailableLoadsPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Pickup</span>
-                  <span>{new Date(detail.pickupDate).toLocaleDateString()}</span>
+                  <span>{formatStopDate(detail.pickupDate)}</span>
                 </div>
                 {detail.deliveryDate && (
                   <div className="flex justify-between">
                     <span className="text-gray-700">Delivery</span>
-                    <span>{new Date(detail.deliveryDate).toLocaleDateString()}</span>
+                    <span>{formatStopDate(detail.deliveryDate)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">

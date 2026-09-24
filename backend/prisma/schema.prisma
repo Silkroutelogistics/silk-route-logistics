@@ -1529,6 +1529,15 @@ model Load {
   shipperReference     String?
   shipperPoNumber      String?
   pickupNumber         String?
+  // The appointment the SHIPPER gave for the pickup. There was no such column:
+  // the pickup block had a release number and the delivery block had an
+  // appointment, so an AE with two appointment numbers had one box to put them
+  // in and the second was simply lost. `deliveryAppointment` already existed
+  // here and was written by nothing — the single generic `appointmentNumber`
+  // further down carried whatever was typed, and the Track & Trace panel
+  // labelled it as the DELIVERY appointment, which is why existing values
+  // migrate to that side.
+  pickupAppointment    String?
   pickupInstructions   String?
   pickupHours          String?
   loadingType          String?

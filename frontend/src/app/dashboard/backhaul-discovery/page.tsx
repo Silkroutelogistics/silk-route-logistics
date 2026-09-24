@@ -1,4 +1,5 @@
 "use client";
+import { formatStopDate } from "@/lib/stopDate";
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -156,7 +157,7 @@ export default function BackhaulDiscoveryPage() {
 
                 {/* Dates */}
                 <div className="text-right text-xs text-gray-500">
-                  <div className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(load.pickupDate).toLocaleDateString()}</div>
+                  <div className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {formatStopDate(load.pickupDate)}</div>
                 </div>
               </div>
             ))}

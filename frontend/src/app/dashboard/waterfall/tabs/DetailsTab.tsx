@@ -1,6 +1,7 @@
 "use client";
 
 import { money, pct, perMile, customerBilled, carrierPay, margin, marginPct } from "@/lib/rateDisplay";
+import { formatStopDate, formatStopWindow } from "@/lib/stopDate";
 
 export function DetailsTab({ load }: { load: any }) {
   // 6.5 — all three may be unknown, and that is not the same as zero.
@@ -16,29 +17,42 @@ export function DetailsTab({ load }: { load: any }) {
     <div className="space-y-6 text-sm">
       <Section title="Shipment">
         <Field label="Load #"     value={load.loadNumber ?? load.referenceNumber} />
-        <Field label="BOL #"      value={load.bolNumber} />
+        {/* SRL's document number, not the shipper's reference — see the note in
+            track-trace/tabs/DetailsTab.tsx. Same defect, same two columns. */}
+        <Field label="BOL #"      value={load.srlBolNumber} />
+        <Field label="Shipper BOL ref" value={load.bolNumber} />
         <Field label="Mode"       value={(load.equipmentType || "").toUpperCase() === "LTL" ? "LTL" : "FTL"} />
         <Field label="Equipment"  value={load.equipmentType} />
         <Field label="Commodity"  value={load.commodity} />
         <Field label="Weight"     value={load.weight ? `${load.weight} lbs` : "—"} />
         <Field label="Pieces"     value={load.pieces} />
+        <Field label="Pallets"    value={load.pallets} />
         <Field label="Hazmat"     value={load.hazmat ? "Yes" : "No"} />
       </Section>
 
+      {/* Parity with track-trace/tabs/DetailsTab.tsx. This panel showed the
+          dock contact's NAME and not their phone, and neither appointment —
+          the same rows an AE reads on the other panel for the same load. */}
       <Section title="Origin">
         <Field label="Facility" value={load.shipperFacility ?? load.originCompany} />
         <Field label="Address"  value={`${load.originAddress ?? ""}, ${load.originCity}, ${load.originState} ${load.originZip ?? ""}`} />
         <Field label="Contact"  value={load.originContactName} />
-        <Field label="Pickup"   value={fmtDate(load.pickupDate)} />
-        <Field label="Window"   value={`${load.pickupTimeStart ?? "—"} – ${load.pickupTimeEnd ?? "—"}`} />
+        <Field label="Phone"    value={load.originContactPhone} />
+        <Field label="Pickup"   value={formatStopDate(load.pickupDate)} />
+        <Field label="Window"   value={formatStopWindow(load.pickupTimeStart, load.pickupTimeEnd)} />
+        <Field label="Pickup Appt #" value={load.pickupAppointment} />
       </Section>
 
       <Section title="Destination">
         <Field label="Facility" value={load.consigneeFacility ?? load.destCompany} />
         <Field label="Address"  value={`${load.destAddress ?? ""}, ${load.destCity}, ${load.destState} ${load.destZip ?? ""}`} />
         <Field label="Contact"  value={load.destContactName} />
-        <Field label="Delivery" value={fmtDate(load.deliveryDate)} />
-        <Field label="Window"   value={`${load.deliveryTimeStart ?? "—"} – ${load.deliveryTimeEnd ?? "—"}`} />
+        <Field label="Phone"    value={load.destContactPhone} />
+        <Field label="Delivery" value={formatStopDate(load.deliveryDate)} />
+        <Field label="Window"   value={formatStopWindow(load.deliveryTimeStart, load.deliveryTimeEnd)} />
+        {/* Legacy fallback, as on the T&T panel — that is where the value of a
+            load created before the split was migrated to. */}
+        <Field label="Delivery Appt #" value={load.deliveryAppointment ?? load.appointmentNumber} />
       </Section>
 
       <Section title="Pricing">
@@ -84,9 +98,3 @@ function Field({ label, value, tone }: { label: string; value: any; tone?: "gree
   );
 }
 
-function fmtDate(d: any) {
-  if (!d) return "—";
-  const date = new Date(d);
-  if (isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-}

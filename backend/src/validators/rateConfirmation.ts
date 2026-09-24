@@ -54,6 +54,16 @@ export const createRateConfirmationSchema = z.object({
     consigneeRefNumber: z.string().optional(),
     deliveryRef: z.string().optional(),
     appointmentNumber: z.string().optional(),
+    // v3.8.bih — the per-side appointments, declared for the same load-bearing
+    // reason as the reefer and Quick Pay fields below: this is a plain
+    // z.object(), which STRIPS undeclared keys. v3.8.big taught the renderer to
+    // read `fd.pickupAppointment` and `fd.deliveryAppointment` and neither was
+    // declared here, so the read could never be satisfied from an AE edit and
+    // the document fell through to the Load columns every time. The modal's
+    // appointment box has therefore never survived a save. Both ends of the
+    // flow have to agree on the key names (§13.3 Item 116).
+    pickupAppointment: z.string().optional(),
+    deliveryAppointment: z.string().optional(),
     deliveryHours: z.string().optional(),
     unloadingType: z.string().optional(),
     estUnloadingTime: z.string().optional(),

@@ -1,5 +1,7 @@
 "use client";
 
+import { formatStopDate, formatStopWindow, formatActualDatetime } from "@/lib/stopDate";
+
 export function DetailsTab({ load }: { load: any }) {
   const pickup = load.loadStops?.find((s: any) => s.stopType === "PICKUP") ?? {};
   const delivery = [...(load.loadStops ?? [])].reverse().find((s: any) => s.stopType === "DELIVERY") ?? {};
@@ -9,12 +11,20 @@ export function DetailsTab({ load }: { load: any }) {
       <Section title="Shipment info">
         <Field label="Load #"       value={load.loadNumber ?? load.referenceNumber} />
         <Field label="PO #"         value={(load.poNumbers || []).join(", ") || "—"} />
-        <Field label="BOL #"        value={load.bolNumber} />
+        {/* SRL's own BOL document number — the one the printed BOL carries.
+            This row used to read `load.bolNumber`, the SHIPPER-supplied
+            reference, which is NULL on every live load because no customer has
+            ever supplied one. So the panel said "—" while the PDF in the
+            driver's hand said SRL-121497B. Two columns, deliberately distinct
+            (§21.2); the panel was simply reading the empty one. */}
+        <Field label="BOL #"        value={load.srlBolNumber} />
+        <Field label="Shipper BOL ref" value={load.bolNumber} />
         <Field label="Mode"         value={(load.equipmentType || "").toUpperCase() === "LTL" ? "LTL" : "FTL"} />
         <Field label="Equipment"    value={load.equipmentType} />
         <Field label="Commodity"    value={load.commodity} />
         <Field label="Weight"       value={load.weight ? `${load.weight} lbs` : "—"} />
         <Field label="Pieces"       value={load.pieces} />
+        <Field label="Pallets"      value={load.pallets} />
         <Field label="Hazmat"       value={load.hazmat ? "Yes" : "No"} />
         {load.temperatureControlled && (
           <Field label="Temp"       value={`${load.tempMin ?? "—"}°F – ${load.tempMax ?? "—"}°F`} />
@@ -26,11 +36,14 @@ export function DetailsTab({ load }: { load: any }) {
         <Field label="Address"      value={`${pickup.address ?? load.originAddress ?? ""}, ${pickup.city ?? load.originCity}, ${pickup.state ?? load.originState} ${pickup.zip ?? load.originZip ?? ""}`} />
         <Field label="Contact"      value={pickup.contactName ?? load.originContactName} />
         <Field label="Phone"        value={pickup.contactPhone ?? load.originContactPhone} />
-        <Field label="Pickup date"  value={fmtDate(load.pickupDate)} />
-        <Field label="Window"       value={`${load.pickupTimeStart ?? "—"} – ${load.pickupTimeEnd ?? "—"}`} />
+        <Field label="Pickup date"  value={formatStopDate(load.pickupDate)} />
+        <Field label="Window"       value={formatStopWindow(load.pickupTimeStart, load.pickupTimeEnd)} />
+        {/* There was no pickup-appointment row anywhere. The single "Appt #"
+            sat under Destination, so a pickup appointment had nowhere to show. */}
+        <Field label="Pickup Appt #" value={load.pickupAppointment} />
         <Field
           label="Actual pickup"
-          value={fmtDate(load.actualPickupDatetime)}
+          value={formatActualDatetime(load.actualPickupDatetime)}
           tone={pickup.onTime === false ? "red" : pickup.onTime ? "green" : "neutral"}
         />
         <Field label="Dock/Bay"     value={load.dockAssignment} />
@@ -42,10 +55,12 @@ export function DetailsTab({ load }: { load: any }) {
         <Field label="Address"      value={`${delivery.address ?? load.destAddress ?? ""}, ${delivery.city ?? load.destCity}, ${delivery.state ?? load.destState} ${delivery.zip ?? load.destZip ?? ""}`} />
         <Field label="Contact"      value={delivery.contactName ?? load.destContactName} />
         <Field label="Phone"        value={delivery.contactPhone ?? load.destContactPhone} />
-        <Field label="Delivery date" value={fmtDate(load.deliveryDate)} />
-        <Field label="Window"       value={`${load.deliveryTimeStart ?? "—"} – ${load.deliveryTimeEnd ?? "—"}`} />
-        <Field label="Appt #"       value={load.appointmentNumber} />
-        <Field label="Actual delivery" value={fmtDate(load.actualDeliveryDatetime)} />
+        <Field label="Delivery date" value={formatStopDate(load.deliveryDate)} />
+        <Field label="Window"       value={formatStopWindow(load.deliveryTimeStart, load.deliveryTimeEnd)} />
+        {/* Named, and falling back to the legacy single column for loads created
+            before the split — that is where their value was migrated to. */}
+        <Field label="Delivery Appt #" value={load.deliveryAppointment ?? load.appointmentNumber} />
+        <Field label="Actual delivery" value={formatActualDatetime(load.actualDeliveryDatetime)} />
       </Section>
 
       <Section title="Carrier & driver">
@@ -80,9 +95,3 @@ function Field({ label, value, tone }: { label: string; value: any; tone?: "gree
   );
 }
 
-function fmtDate(d: string | Date | null | undefined) {
-  if (!d) return null;
-  const date = new Date(d);
-  if (isNaN(date.getTime())) return null;
-  return date.toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
-}
