@@ -78,3 +78,12 @@ e2e/render-proof-out/
 # rule above: a NEW variant is ignored rather than exposed.
 backend/scripts/_*-undo.json
 backend/scripts/_*-before.json
+
+# `verify-bol-onepage.ts:18` writes this with a RELATIVE path, so `npm run
+# verify:bol` — a gate on every commit touching the BOL — drops it in whatever
+# directory it was run from, which is `backend/`. It is a rendered artifact, not
+# a source file, and it regenerates on the next gate run. `out/` above already
+# covers artifacts written where they belong; this one is written where it does
+# not. Ignored rather than relocated because moving it means touching a gate
+# script, and a gate is the wrong thing to change in passing.
+backend/bol-out.pdf
