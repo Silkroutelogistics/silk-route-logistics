@@ -3,7 +3,9 @@
 `CLAUDE.md` is injected into every session AND into every subagent's system prompt.
 At ~405,000 tokens it exceeded the entire context window of any 200k model, so a
 haiku subagent could not be spawned in this repository at all, and a sonnet one
-cost ~646,000 tokens before it did any work (§2.6 rule c, suspended).
+cost ~646,000 tokens before it did any work — which is what suspended §2.6 rule c.
+The core is now ~32,261 tokens, haiku starts (59,195 tokens for a trivial task), and
+rule c is live again.
 
 This directory holds what was moved out. Three rules govern it.
 
