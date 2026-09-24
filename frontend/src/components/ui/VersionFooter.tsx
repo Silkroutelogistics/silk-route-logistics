@@ -18724,7 +18724,26 @@
 // banked: the BOL has no archive record at all (generated on demand, streamed,
 // no Document row, no stored URL), and giving the RC a template-version column
 // is a schema change this arc should not carry into a rebase and a push.
-export const SRL_VERSION = "3.8.bih";
+// v3.8.bii - numbering C1: one bare number per load reaches lib/documentNumber.ts.
+// generateLoadNumber returns 5001 rather than SRL-5001, and its sequence is
+// declared START WITH 5001 - the clause only bites where the sequence does not
+// yet exist, which is a fresh CI database or a new container, and is exactly
+// the case that was still starting at 121472. Production moved by ALTER on
+// 2026-09-23 and is untouched by the line.
+// THE DISCRIMINATOR IS "IS THE STEM ALL DIGITS", NOT "DOES IT START WITH SRL-".
+// There are four stem shapes in the data: the SRL-1214xx series, a 25-char cuid
+// absorbed by email-to-load, an RFQ-<base36> stamp absorbed by the shipper
+// portal, and the new bare number. Only the last belongs to the amended scheme.
+// Testing the prefix classed the cuid and RFQ- stems as NEW and stopped parsing
+// the suffixes their documents were issued with - caught by an existing test,
+// which is why the retired scheme's 36 assertions still pass unchanged.
+// A CORE RE-ISSUE TAKES A HYPHEN: 5001, 5001-2, 5001-3. A bare digit would make
+// revision 2 of load 5001 read as load 50012, and the same ambiguity would let
+// the allocator scan sweep in another load's row. The scan therefore matches the
+// exact number OR the hyphen form, never startsWith(stem). The rulings do not
+// reach this case - it only arises once core documents lose their suffix - so
+// the separator is flagged as an open decision rather than taken quietly.
+export const SRL_VERSION = "3.8.bii";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
