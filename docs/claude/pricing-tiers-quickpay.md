@@ -322,11 +322,18 @@ assigned anywhere else.
 `SHP-YYYY-NNN` being confined to internal surfaces. Each is a change to a surface
 outside the numbering module.
 
-**One open question the rulings did not reach.** A core re-issue is a new row for
-the same load against a `@unique` column, and a bare number has no suffix letter to
-hang a revision on. `5001-2` is what `documentNumber.ts` issues, because appending
-a bare digit would make revision 2 of load 5001 read as load 50012. The separator
-is one constant if a different character is wanted.
+**A core re-issue takes a hyphen: `5001`, then `5001-2`, then `5001-3`. Ratified
+2026-09-24.** A re-issue is a new row for the same load against a `@unique` column,
+and a bare number has no suffix letter to hang a revision on the way `SRL-121485R2`
+did.
+
+**A bare digit was not available, and that is the reason rather than a preference.**
+`5001` followed by `2` is `50012` — which is load 50012's own number. The document
+would read as another load's, and the allocator would inherit the same ambiguity:
+its scan for the next free revision would sweep in that load's row and skip a
+number because of freight nobody was looking at. The hyphen cannot occur in a bare
+load number, so it delimits in both directions — when a person reads a number and
+when the allocator scans for one. `CORE_REVISION_SEPARATOR` holds it.
 
 `quickPayPilotDocClaims.test.ts` holds the first paragraph against what
 `documentNumber.ts` actually emits, in both directions, so this line cannot go
