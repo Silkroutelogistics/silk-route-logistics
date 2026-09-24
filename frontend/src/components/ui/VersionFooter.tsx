@@ -18873,7 +18873,20 @@
 // "not counted", which is the distinction the nullable return exists to keep.
 // Nothing narrowed. The substring pass IS the old flat OR, so every term that
 // matched before still matches; what changed is only which row comes first.
-export const SRL_VERSION = "3.8.bip";
+// v3.8.biq - health reports which range load_number_seq is issuing from.
+// CREATE SEQUENCE IF NOT EXISTS ... START WITH 5001 is inert where the
+// sequence already exists, so the code and the database can disagree about the
+// load number series with nothing reporting it. On 2026-09-24 that gap produced
+// a wrong published claim: pg_sequences.start_value was read as evidence of the
+// next number, and start_value is the CREATE-time value, unchanged by ALTER
+// SEQUENCE ... RESTART. It cannot tell never-restarted from restarted-to-5001.
+// Only last_value + is_called can, and srl_readonly could not read them at all
+// (Item 303.2), so settling it took the owner credential and a hand-run script.
+// A failed read reports nulls, never bare - no evidence is not the safe answer.
+// The migration is GRANT-only and guarded on the role AND the sequence existing,
+// because CI builds its database with db push and a from-empty migrate deploy
+// has neither; a bare GRANT would error there and block every later migration.
+export const SRL_VERSION = "3.8.biq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

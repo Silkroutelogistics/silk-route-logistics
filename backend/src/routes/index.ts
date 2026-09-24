@@ -1,5 +1,6 @@
 import { buildInfo } from "../lib/buildInfo";
 import { schemaInfo } from "../lib/schemaInfo";
+import { loadNumberSeqInfo } from "../lib/loadNumberSeqInfo";
 import { statusMachineCounters } from "../lib/loadTransitionObserver";
 import { cumulativeStatusMachineCounters } from "../lib/statusMachineCounters";
 import { storageStatus } from "../services/storageService";
@@ -155,6 +156,12 @@ router.get("/health", async (_req, res) => {
       ...statusMachineCounters(),
       ...(await cumulativeStatusMachineCounters(prisma as any)),
     },
+    // Which range is the load number series issuing from? `CREATE SEQUENCE IF
+    // NOT EXISTS ... START WITH 5001` is inert where the sequence already
+    // exists, so the code and the database can disagree about this silently --
+    // and on 2026-09-24 they were read as agreeing from start_value, which
+    // RESTART does not change. See lib/loadNumberSeqInfo.
+    load_number_seq: await loadNumberSeqInfo(prisma as any),
   });
 });
 
