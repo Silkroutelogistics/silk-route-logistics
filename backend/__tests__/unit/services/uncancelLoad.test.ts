@@ -20,6 +20,9 @@ import path from "path";
 import { uncancelLoad, UNCANCEL_EVENT_TYPE } from "../../../src/services/uncancelLoad";
 import { prisma } from "../../../src/config/database";
 
+/** Long before any cancel in these fixtures: production always selects createdAt. */
+const TENDER_CREATED = new Date("2020-01-01T00:00:00.000Z");
+
 const mockPrisma = prisma as any;
 const CANCELLED_AT = new Date("2026-09-20T09:00:00.000Z");
 const NOW = new Date("2026-09-21T09:00:00.000Z");
@@ -50,7 +53,7 @@ function txClient() {
     // findMany too: restoreTenders reads each tender's CURRENT state so the
     // transition row can name what it moved FROM, and a fake missing it throws
     // in a way that reads like service logic.
-    loadTender: { updateMany: m(), create: vi.fn(), findMany: vi.fn().mockResolvedValue([{ id: "tn1", loadId: "load-1", status: "WITHDRAWN" }]) },
+    loadTender: { updateMany: m(), create: vi.fn(), findMany: vi.fn().mockResolvedValue([{ id: "tn1", loadId: "load-1", status: "WITHDRAWN", createdAt: TENDER_CREATED, statusChangedAt: null }]) },
     shipperCredit: { updateMany: m() },
     carrierPay: { updateMany: m(), create: vi.fn() },
     loadActivity: { create: vi.fn().mockResolvedValue({}) },
@@ -70,7 +73,7 @@ function seed(over: Record<string, unknown> = {}) {
     ...over,
   });
   mockPrisma.loadAccessorial.count.mockResolvedValue(0);
-  mockPrisma.loadTender.findMany.mockResolvedValue([{ id: "tn1", status: "WITHDRAWN" }]);
+  mockPrisma.loadTender.findMany.mockResolvedValue([{ id: "tn1", status: "WITHDRAWN", createdAt: TENDER_CREATED, statusChangedAt: null }]);
 }
 
 beforeEach(() => {
@@ -183,7 +186,7 @@ describe("the restore — v3.8.biy", () => {
       cancellationSnapshot: snapshot({ load: { status: "BOOKED", softDeleted: true } }),
     });
     mockPrisma.loadAccessorial.count.mockResolvedValue(0);
-    mockPrisma.loadTender.findMany.mockResolvedValue([{ id: "tn1", status: "WITHDRAWN" }]);
+    mockPrisma.loadTender.findMany.mockResolvedValue([{ id: "tn1", status: "WITHDRAWN", createdAt: TENDER_CREATED, statusChangedAt: null }]);
     const tx2 = txClient();
     await uncancelLoad({ loadId: "load-1", actorId: "u1", actorRole: "ADMIN", reason: "r", now: NOW });
     expect(tx2.load.update.mock.calls[0][0].data.deletedAt).toBeNull();

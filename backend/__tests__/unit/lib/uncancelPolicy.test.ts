@@ -20,6 +20,8 @@ import {
 
 const CANCELLED_AT = new Date("2026-09-20T09:00:00.000Z");
 const WITHIN = new Date("2026-09-22T08:00:00.000Z"); // 71h later
+const BEFORE_CANCEL = new Date("2026-09-18T09:00:00.000Z"); // 2 days before the cancel
+const AFTER_CANCEL = new Date("2026-09-20T10:00:00.000Z"); // 1h after the cancel
 
 /** Every required key, spelled out. */
 function snapshot(over: Record<string, unknown> = {}) {
@@ -44,7 +46,7 @@ function facts(over: Partial<UncancelFacts> = {}): UncancelFacts {
     actorRole: "ADMIN",
     now: WITHIN,
     tonuAccessorialCount: 0,
-    tenders: [{ id: "tn1", status: "WITHDRAWN" }],
+    tenders: [{ id: "tn1", status: "WITHDRAWN", createdAt: BEFORE_CANCEL, statusChangedAt: null }],
     ...over,
   };
 }
@@ -210,7 +212,9 @@ describe("adversarial case 7 — a cancel that predates the snapshot", () => {
 
 describe("carrier released, and re-tendered", () => {
   it("refuses when a carrier was released AFTER the cancel", () => {
-    const v = assessUncancel(facts({ tenders: [{ id: "tn1", status: "RELEASED" }] }));
+    const v = assessUncancel(
+      facts({ tenders: [{ id: "tn1", status: "RELEASED", createdAt: BEFORE_CANCEL, statusChangedAt: AFTER_CANCEL }] }),
+    );
     expect(v.ok).toBe(false);
     if (v.ok) return;
     expect(v.code).toBe("CARRIER_RELEASED");
@@ -227,7 +231,7 @@ describe("carrier released, and re-tendered", () => {
           cancelledAt: CANCELLED_AT,
           cancellationSnapshot: snapshot({ tenders: [{ id: "tn1", status: "RELEASED", deletedAt: null }] }),
         },
-        tenders: [{ id: "tn1", status: "RELEASED" }],
+        tenders: [{ id: "tn1", status: "RELEASED", createdAt: BEFORE_CANCEL, statusChangedAt: BEFORE_CANCEL }],
       }),
     );
     expect(v.ok).toBe(true);
@@ -235,7 +239,12 @@ describe("carrier released, and re-tendered", () => {
 
   it("refuses when a tender exists that the before-image never saw", () => {
     const v = assessUncancel(
-      facts({ tenders: [{ id: "tn1", status: "WITHDRAWN" }, { id: "tn2", status: "OFFERED" }] }),
+      facts({
+        tenders: [
+          { id: "tn1", status: "WITHDRAWN", createdAt: BEFORE_CANCEL, statusChangedAt: null },
+          { id: "tn2", status: "OFFERED", createdAt: AFTER_CANCEL, statusChangedAt: null },
+        ],
+      }),
     );
     expect(v.ok).toBe(false);
     if (v.ok) return;
@@ -252,5 +261,86 @@ describe("a load that is not cancelled", () => {
     if (v.ok) return;
     expect(v.code).toBe("LOAD_NOT_CANCELLED");
     expect(v.message).toContain(status);
+  });
+});
+
+
+/**
+ * Finding B. A tender absent from the before-image was read as new. It is only
+ * new if its OWN clock says so: createdAt after the snapshot takenAt.
+ *
+ * The snapshot only ever recorded the tenders the cancel WITHDREW, so a
+ * CONFIRMED tender -- one the cancel correctly never touched -- was missing
+ * from it, and its absence read as a retender. That refused the reversal on
+ * exactly the loads most likely to need one: the ones with a committed carrier.
+ */
+describe("Finding B -- a tender is new only if it was created after the cancel", () => {
+  it("(a) a committed-carrier load reverses", () => {
+    const v = assessUncancel(
+      facts({
+        load: {
+          status: "CANCELLED",
+          cancelledAt: CANCELLED_AT,
+          cancellationSnapshot: snapshot({ tenders: [{ id: "tn1", status: "CONFIRMED", deletedAt: null }] }),
+        },
+        tenders: [{ id: "tn1", status: "CONFIRMED", createdAt: BEFORE_CANCEL, statusChangedAt: null }],
+      }),
+    );
+    expect(v.ok, v.ok ? "" : "refused with " + v.code).toBe(true);
+  });
+
+  it("(b) a tender created AFTER the cancel still refuses", () => {
+    const v = assessUncancel(
+      facts({ tenders: [{ id: "tn9", status: "OFFERED", createdAt: AFTER_CANCEL, statusChangedAt: null }] }),
+    );
+    expect(v.ok).toBe(false);
+    if (v.ok) return;
+    expect(v.code).toBe("LOAD_RETENDERED");
+  });
+
+  it("(c) the SRL-121496 shape: a v1 snapshot with tenders:[] and a tender predating takenAt", () => {
+    const v = assessUncancel(
+      facts({
+        load: {
+          status: "CANCELLED",
+          cancelledAt: CANCELLED_AT,
+          cancellationSnapshot: snapshot({ version: 1, tenders: [] }),
+        },
+        tenders: [{ id: "tn1", status: "CONFIRMED", createdAt: BEFORE_CANCEL, statusChangedAt: null }],
+      }),
+    );
+    expect(v.ok, v.ok ? "" : "the frozen v1 row still refuses: " + v.code).toBe(true);
+    if (!v.ok) return;
+    expect(v.restoreTo).toBe("DISPATCHED");
+  });
+
+  it("(d) a genuine release since the cancel still refuses", () => {
+    const v = assessUncancel(
+      facts({
+        load: {
+          status: "CANCELLED",
+          cancelledAt: CANCELLED_AT,
+          cancellationSnapshot: snapshot({ tenders: [{ id: "tn1", status: "CONFIRMED", deletedAt: null }] }),
+        },
+        tenders: [{ id: "tn1", status: "RELEASED", createdAt: BEFORE_CANCEL, statusChangedAt: AFTER_CANCEL }],
+      }),
+    );
+    expect(v.ok).toBe(false);
+    if (v.ok) return;
+    expect(v.code).toBe("CARRIER_RELEASED");
+  });
+
+  it("(d2) a release BEFORE the cancel, absent from a v1 row, does not refuse", () => {
+    const v = assessUncancel(
+      facts({
+        load: {
+          status: "CANCELLED",
+          cancelledAt: CANCELLED_AT,
+          cancellationSnapshot: snapshot({ version: 1, tenders: [] }),
+        },
+        tenders: [{ id: "tn1", status: "RELEASED", createdAt: BEFORE_CANCEL, statusChangedAt: BEFORE_CANCEL }],
+      }),
+    );
+    expect(v.ok, v.ok ? "" : "a pre-cancel release read as released-since: " + v.code).toBe(true);
   });
 });

@@ -86,7 +86,7 @@ export async function uncancelLoad(input: UncancelInput): Promise<UncancelResult
   // cancel hid look like one that never existed.
   const tenders = await prisma.loadTender.findMany({
     where: { loadId: input.loadId },
-    select: { id: true, status: true },
+    select: { id: true, status: true, createdAt: true, statusChangedAt: true },
   });
 
   const verdict = assessUncancel({
@@ -98,7 +98,7 @@ export async function uncancelLoad(input: UncancelInput): Promise<UncancelResult
     actorRole: input.actorRole,
     now,
     tonuAccessorialCount,
-    tenders: tenders.map((t) => ({ id: t.id, status: String(t.status) })),
+    tenders: tenders.map((t) => ({ id: t.id, status: String(t.status), createdAt: t.createdAt, statusChangedAt: t.statusChangedAt })),
   });
 
   if (!verdict.ok) return verdict;

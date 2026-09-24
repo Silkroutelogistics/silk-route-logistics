@@ -51,7 +51,14 @@ export interface UncancelFacts {
   /** LoadAccessorial rows of type TONU that are not REJECTED. */
   tonuAccessorialCount: number;
   /** Every tender on the load AS IT STANDS NOW. */
-  tenders: Array<{ id: string; status: string }>;
+  /**
+   * Every tender on the load AS IT STANDS NOW, each with its own clock.
+   *
+   * createdAt is what decides whether a tender is NEW. Absence from the
+   * before-image cannot: a v1 snapshot recorded only the tenders the cancel
+   * WITHDREW, so a CONFIRMED tender was never in it (Finding B).
+   */
+  tenders: Array<{ id: string; status: string; createdAt: Date; statusChangedAt: Date | null }>;
 }
 
 export type UncancelVerdict =
@@ -179,12 +186,18 @@ export function assessUncancel(facts: UncancelFacts): UncancelVerdict {
 
   const snapshotTenders = Array.isArray(snapshot.tenders) ? snapshot.tenders : [];
   const knownAtCancel = new Map(snapshotTenders.map((t) => [t.id, t.status]));
+  const takenAtMs = Date.parse(snapshot.takenAt);
 
-  // RELEASED now and not RELEASED at cancel time. The cancel itself only ever
-  // WITHDRAWS (withdrawLiveTenders), so a release is somebody else's act.
-  const releasedSince = facts.tenders.filter(
-    (t) => t.status === "RELEASED" && knownAtCancel.get(t.id) !== "RELEASED",
-  );
+  // The tender's own clock, because absence from the before-image proves
+  // nothing: a release lands the tender in SETTLED_STATES, which the capture
+  // never recorded even at v2.
+  const releasedSince = facts.tenders.filter((t) => {
+    if (t.status !== "RELEASED") return false;
+    const atCancel = knownAtCancel.get(t.id);
+    if (atCancel !== undefined) return atCancel !== "RELEASED";
+    if (!Number.isFinite(takenAtMs)) return true;
+    return t.statusChangedAt instanceof Date && t.statusChangedAt.getTime() > takenAtMs;
+  });
   if (releasedSince.length > 0) {
     return {
       ok: false,
@@ -196,8 +209,19 @@ export function assessUncancel(facts: UncancelFacts): UncancelVerdict {
     };
   }
 
-  // Present now, absent from the before-image: created since the cancel.
-  const newSince = facts.tenders.filter((t) => !knownAtCancel.has(t.id));
+  // Created since the cancel, by the tender's OWN createdAt rather than by
+  // absence from the recorded set. A tender that predates takenAt existed
+  // before the cancel however the snapshot was written, which is what lets a
+  // v1 row (SRL-121496: tenders:[]) be read correctly without a migration.
+  // An unreadable takenAt falls back to the absence test rather than letting
+  // a genuine retender through.
+  const newSince = facts.tenders.filter((t) => {
+    const created = t.createdAt instanceof Date ? t.createdAt.getTime() : NaN;
+    // No usable clock on either side: fall back to the absence test rather
+    // than crashing or letting a genuine retender through.
+    if (!Number.isFinite(takenAtMs) || !Number.isFinite(created)) return !knownAtCancel.has(t.id);
+    return created > takenAtMs;
+  });
   if (newSince.length > 0) {
     return {
       ok: false,

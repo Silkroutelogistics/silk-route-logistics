@@ -1459,7 +1459,7 @@ export async function uncancelPreviewHandler(req: AuthRequest, res: Response) {
 
   const [tonuAccessorialCount, tenders] = await Promise.all([
     prisma.loadAccessorial.count({ where: { loadId: load.id, type: "TONU", status: { not: "REJECTED" } } }),
-    prisma.loadTender.findMany({ where: { loadId: load.id }, select: { id: true, status: true } }),
+    prisma.loadTender.findMany({ where: { loadId: load.id }, select: { id: true, status: true, createdAt: true, statusChangedAt: true } }),
   ]);
 
   const verdict = assessUncancel({
@@ -1467,7 +1467,7 @@ export async function uncancelPreviewHandler(req: AuthRequest, res: Response) {
     actorRole: req.user!.role,
     now: new Date(),
     tonuAccessorialCount,
-    tenders: tenders.map((t) => ({ id: t.id, status: String(t.status) })),
+    tenders: tenders.map((t) => ({ id: t.id, status: String(t.status), createdAt: t.createdAt, statusChangedAt: t.statusChangedAt })),
   });
 
   if (!verdict.ok) {
