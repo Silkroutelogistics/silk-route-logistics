@@ -18961,7 +18961,12 @@
 // shipment -- threw. Proven against a real database, not reasoned about.
 // carrierLoads' existing answers are preserved exactly, so no shipper-visible
 // status moves; only the AE path changes, from "throws" to "maps".
-export const SRL_VERSION = "3.8.biw";
+// v3.8.bix — C2c: the load's own before-image. Nothing recorded what status
+// the load held before the cancel, so the un-cancel had nothing to restore it
+// to. The cascade cannot read it for itself -- the status path writes CANCELLED
+// and then cascades -- so priorStatus and softDeleted are REQUIRED options,
+// passed by the caller who has them, and tsc refuses a call site that forgets.
+export const SRL_VERSION = "3.8.bix";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

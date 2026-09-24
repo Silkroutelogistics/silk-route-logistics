@@ -62,6 +62,19 @@ export interface CascadeResult {
 export interface CancellationSnapshot {
   version: number;
   takenAt: string;
+  /**
+   * The load's OWN before-image, and the one key the un-cancel cannot work
+   * without: nothing else records what status the load held before the cancel.
+   * It is not readable from the row by the time this runs -- the status path
+   * writes CANCELLED first and then cascades -- so it is passed in by the
+   * caller, who has it, and the option is REQUIRED so tsc refuses a call site
+   * that forgets.
+   */
+  load: {
+    status: string;
+    /** This cancel also hid the load. A status-only cancel leaves it visible. */
+    softDeleted: boolean;
+  };
   /** Spec row 4. Recoverable from NOWHERE else: the sync overwrites in place. */
   shipments: Array<{ id: string; status: string }>;
   /** Spec row 5. The uuid survives; this says whether THIS cancel revoked it. */
@@ -96,7 +109,15 @@ export const CASCADE_EVENT_TYPE = "cancel_cascade";
 export async function cascadeLoadCancellation(
   loadId: string,
   db: Db,
-  opts: { reason?: string | null; actorId?: string | null; actorName?: string | null } = {},
+  opts: {
+    /** The status the load held BEFORE this cancel. Required: see the interface. */
+    priorStatus: string;
+    /** Whether this cancel also set deletedAt. */
+    softDeleted: boolean;
+    reason?: string | null;
+    actorId?: string | null;
+    actorName?: string | null;
+  },
 ): Promise<CascadeResult> {
   const now = new Date();
 
@@ -167,6 +188,7 @@ export async function cascadeLoadCancellation(
   const snapshot: CancellationSnapshot = {
     version: CANCELLATION_SNAPSHOT_VERSION,
     takenAt: now.toISOString(),
+    load: { status: opts.priorStatus, softDeleted: opts.softDeleted },
     shipments: priorShipments.map((s) => ({ id: s.id, status: String(s.status) })),
     trackingTokenRevoked: result.trackingTokenRevoked,
     shipperTrackingTokens: priorShipperTokens.map((t) => ({ id: t.id, expiresAt: t.expiresAt.toISOString() })),

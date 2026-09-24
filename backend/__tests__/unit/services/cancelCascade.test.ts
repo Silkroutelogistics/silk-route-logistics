@@ -34,6 +34,14 @@ vi.mock("../../../src/validators/load", () => ({
   loadQuerySchema: { parse: (v: any) => v },
 }));
 import { cascadeLoadCancellation, CASCADE_EVENT_TYPE } from "../../../src/services/cancelCascade";
+
+/**
+ * The two before-image fields the cascade cannot read for itself: the status
+ * path writes CANCELLED and then cascades, so by the time it runs the row no
+ * longer says what it was. Required on the real signature, so every call here
+ * carries them.
+ */
+const OPTS = { priorStatus: "DISPATCHED", softDeleted: false };
 import { VOIDABLE_EXCLUSIONS } from "../../../src/services/rateConfirmationVoidService";
 import { deleteLoad, updateLoadStatus } from "../../../src/controllers/loadController";
 import { prisma } from "../../../src/config/database";
@@ -69,7 +77,7 @@ describe("what the cascade stops", () => {
     // The status path already synced ONE shipment via findFirst. updateMany is
     // the difference: a load with two shipments left the second one running.
     mockPrisma.shipment.updateMany.mockResolvedValue({ count: 2 });
-    const r = await cascadeLoadCancellation("load-1", mockPrisma);
+    const r = await cascadeLoadCancellation("load-1", mockPrisma, OPTS);
     expect(r.shipmentsCancelled).toBe(2);
     const [arg] = mockPrisma.shipment.updateMany.mock.calls[0];
     expect(arg.where).toMatchObject({ loadId: "load-1", status: { not: "CANCELLED" } });
@@ -83,7 +91,7 @@ describe("what the cascade stops", () => {
     // survives so an un-cancel can hand back the SAME link the shipper was
     // sent, rather than minting a second one.
     mockPrisma.load.updateMany.mockResolvedValue({ count: 1 });
-    const r = await cascadeLoadCancellation("load-1", mockPrisma);
+    const r = await cascadeLoadCancellation("load-1", mockPrisma, OPTS);
     expect(r.trackingTokenRevoked).toBe(true);
     const [arg] = mockPrisma.load.updateMany.mock.calls[0];
     expect(arg.where).toMatchObject({ id: "load-1", trackingToken: { not: null }, trackingTokenRevokedAt: null });
@@ -95,7 +103,7 @@ describe("what the cascade stops", () => {
   it("EXPIRES shipper tracking rows rather than deleting them", async () => {
     // The record of what was issued, and to whom, outlives the link it granted.
     mockPrisma.shipperTrackingToken.updateMany.mockResolvedValue({ count: 3 });
-    const r = await cascadeLoadCancellation("load-1", mockPrisma);
+    const r = await cascadeLoadCancellation("load-1", mockPrisma, OPTS);
     expect(r.shipperTokensExpired).toBe(3);
     const [arg] = mockPrisma.shipperTrackingToken.updateMany.mock.calls[0];
     expect(arg.data.expiresAt).toBeInstanceOf(Date);
@@ -103,7 +111,7 @@ describe("what the cascade stops", () => {
   });
 
   it("writes exactly one LoadActivity row tagged cancel_cascade", async () => {
-    await cascadeLoadCancellation("load-1", mockPrisma, { reason: "test load" });
+    await cascadeLoadCancellation("load-1", mockPrisma, { ...OPTS, reason: "test load" });
     expect(mockPrisma.loadActivity.create).toHaveBeenCalledTimes(1);
     const [arg] = mockPrisma.loadActivity.create.mock.calls[0];
     expect(arg.data.eventType).toBe(CASCADE_EVENT_TYPE);
@@ -118,7 +126,7 @@ describe("what the cascade must NOT do", () => {
     // carrierReleaseService, which settles the tender, voids live paper and
     // records a fall-off. Clearing it here would do a tenth of that silently and
     // mark a carrier as having fallen off a load SRL cancelled.
-    await cascadeLoadCancellation("load-1", mockPrisma);
+    await cascadeLoadCancellation("load-1", mockPrisma, OPTS);
     for (const [arg] of mockPrisma.load.updateMany.mock.calls) {
       expect(JSON.stringify(arg.data)).not.toContain("carrierId");
     }
@@ -139,15 +147,15 @@ describe("idempotence", () => {
     mockPrisma.load.updateMany.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 });
     mockPrisma.shipperTrackingToken.updateMany.mockResolvedValueOnce({ count: 2 }).mockResolvedValueOnce({ count: 0 });
 
-    const first = await cascadeLoadCancellation("load-1", mockPrisma);
-    const second = await cascadeLoadCancellation("load-1", mockPrisma);
+    const first = await cascadeLoadCancellation("load-1", mockPrisma, OPTS);
+    const second = await cascadeLoadCancellation("load-1", mockPrisma, OPTS);
 
     expect(first).toEqual({ shipmentsCancelled: 1, trackingTokenRevoked: true, shipperTokensExpired: 2, rateConfirmationsVoided: 0 });
     expect(second).toEqual({ shipmentsCancelled: 0, trackingTokenRevoked: false, shipperTokensExpired: 0, rateConfirmationsVoided: 0 });
   });
 
   it("the scoping that makes it idempotent is in the where clauses, not in a caller guard", async () => {
-    await cascadeLoadCancellation("load-1", mockPrisma);
+    await cascadeLoadCancellation("load-1", mockPrisma, OPTS);
     expect(mockPrisma.shipment.updateMany.mock.calls[0][0].where.status).toEqual({ not: "CANCELLED" });
     expect(mockPrisma.load.updateMany.mock.calls[0][0].where.trackingToken).toEqual({ not: null });
     expect(mockPrisma.load.updateMany.mock.calls[0][0].where.trackingTokenRevokedAt).toBeNull();
@@ -159,7 +167,7 @@ describe("idempotence", () => {
 describe("the rate confirmation on cancel", () => {
   it("voids the live rate confirmations and nulls their signing tokens", async () => {
     mockPrisma.rateConfirmation.updateMany.mockResolvedValue({ count: 1 });
-    const r = await cascadeLoadCancellation("load-1", mockPrisma);
+    const r = await cascadeLoadCancellation("load-1", mockPrisma, OPTS);
     expect(r.rateConfirmationsVoided).toBe(1);
     const call = mockPrisma.rateConfirmation.updateMany.mock.calls[0][0];
     expect(call.where.loadId).toBe("load-1");
@@ -167,7 +175,7 @@ describe("the rate confirmation on cancel", () => {
   });
 
   it("never touches SIGNED or FINALIZED — an executed document is evidence, not a draft", async () => {
-    await cascadeLoadCancellation("load-1", mockPrisma);
+    await cascadeLoadCancellation("load-1", mockPrisma, OPTS);
     const notIn: string[] = mockPrisma.rateConfirmation.updateMany.mock.calls[0][0].where.status.notIn;
     expect(notIn).toEqual(expect.arrayContaining(["SIGNED", "FINALIZED", "VOID"]));
     expect([...VOIDABLE_EXCLUSIONS]).toEqual(expect.arrayContaining(["SIGNED", "FINALIZED"]));
@@ -180,7 +188,7 @@ describe("the rate confirmation on cancel", () => {
       ...mockPrisma,
       rateConfirmation: { updateMany: vi.fn().mockResolvedValue({ count: 2 }), findMany: vi.fn().mockResolvedValue([]) },
     };
-    const r = await cascadeLoadCancellation("load-1", tx as any);
+    const r = await cascadeLoadCancellation("load-1", tx as any, OPTS);
     expect(r.rateConfirmationsVoided).toBe(2);
     expect(tx.rateConfirmation.updateMany).toHaveBeenCalledTimes(1);
     expect(mockPrisma.rateConfirmation.updateMany).not.toHaveBeenCalled();
@@ -233,6 +241,44 @@ describe("both call paths invoke it, and only for CANCELLED", () => {
     expect(mockPrisma.rateConfirmation.updateMany).not.toHaveBeenCalled();
   });
 
+  it("the status path records the PRE-cancel status, not CANCELLED — v3.8.bix", async () => {
+    // The dangerous mistake here is one identifier: `load.status` is the
+    // UPDATED row and reads CANCELLED, while `existing.status` is what the
+    // load actually held. Recording the former would make the un-cancel
+    // faithfully restore a load to "cancelled", which looks like a no-op and
+    // is really a lost load. So this asserts the value, not merely that a
+    // value was passed.
+    txClient();
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "u1", status: "DISPATCHED", carrierId: null, podUrl: null });
+    mockPrisma.load.update.mockResolvedValue({ id: "load-1", status: "CANCELLED", carrierId: null, referenceNumber: "R" });
+    mockPrisma.shipment.findFirst.mockResolvedValue(null);
+    const { req, res } = mockReqRes({ status: "CANCELLED", cancellationReasonCode: "SHIPPER_FREIGHT_NOT_READY" }, { id: "u1", role: "OPERATIONS" }, { id: "load-1" });
+
+    await updateLoadStatus(req, res);
+
+    const call = mockPrisma.load.updateMany.mock.calls.find(([a]: any[]) => a?.data && "cancellationSnapshot" in a.data);
+    expect(call, "no snapshot was persisted on the status path").toBeTruthy();
+    const snap = (call as any)[0].data.cancellationSnapshot;
+    expect(snap.load.status).toBe("DISPATCHED");
+    expect(snap.load.status, "recorded the post-cancel status — the un-cancel would restore to CANCELLED").not.toBe("CANCELLED");
+    // A status-only cancel leaves the load visible; only deleteLoad hides it.
+    expect(snap.load.softDeleted).toBe(false);
+  });
+
+  it("deleteLoad records softDeleted so an un-cancel knows whether to unhide — v3.8.bix", async () => {
+    const tx = txClient();
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "u1", status: "BOOKED", podUrl: null, deletedAt: null });
+    const { req, res } = mockReqRes({ cancellationReasonCode: "SHIPPER_CANCELLED" }, { id: "u1", role: "ADMIN", email: "a@x" }, { id: "load-1" });
+
+    await deleteLoad(req, res);
+
+    const call = tx.load.updateMany.mock.calls.find(([a]: any[]) => a?.data && "cancellationSnapshot" in a.data);
+    expect(call, "no snapshot was persisted on the delete path").toBeTruthy();
+    const snap = (call as any)[0].data.cancellationSnapshot;
+    expect(snap.load.status).toBe("BOOKED");
+    expect(snap.load.softDeleted).toBe(true);
+  });
+
   it("the status path runs the cascade on a CANCELLED transition", async () => {
     txClient();
     mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "u1", status: "TENDERED", carrierId: null, podUrl: null });
@@ -277,7 +323,7 @@ describe("the before-image — v3.8.biu", () => {
     mockPrisma.rateConfirmation.findMany.mockResolvedValue([{ id: "rc1", status: "SENT" }]);
     mockPrisma.load.updateMany.mockResolvedValue({ count: 1 });
 
-    await cascadeLoadCancellation("load-1", mockPrisma);
+    await cascadeLoadCancellation("load-1", mockPrisma, OPTS);
     const arg = snapshotCall();
     expect(arg, "no snapshot was persisted").toBeTruthy();
     const snap = arg.data.cancellationSnapshot;
@@ -305,7 +351,7 @@ describe("the before-image — v3.8.biu", () => {
   it("writes EVERY key even when empty, so absent can only mean 'predates the snapshot'", async () => {
     // If an empty class were omitted, the un-cancel could not tell a load it can
     // restore from one it can only guess at — and it refuses the latter by name.
-    await cascadeLoadCancellation("load-1", mockPrisma);
+    await cascadeLoadCancellation("load-1", mockPrisma, OPTS);
     const snap = snapshotCall().data.cancellationSnapshot;
     for (const k of ["shipments", "shipperTrackingTokens", "rateConfirmations", "trackingTokenRevoked", "version", "takenAt"]) {
       expect(Object.keys(snap), `key ${k} missing — absent must mean unrecorded, never empty`).toContain(k);
@@ -316,7 +362,7 @@ describe("the before-image — v3.8.biu", () => {
   it("a SECOND cancel cannot overwrite the first snapshot", async () => {
     // By then the 'before' state is the already-cancelled one. Recording that
     // would replace the truth with a copy of the damage.
-    await cascadeLoadCancellation("load-1", mockPrisma);
+    await cascadeLoadCancellation("load-1", mockPrisma, OPTS);
     const arg = snapshotCall();
     expect(arg.where).toMatchObject({ id: "load-1" });
     expect(arg.where.cancellationSnapshot, "the snapshot write is not scoped to un-snapshotted").toBeTruthy();
@@ -325,7 +371,7 @@ describe("the before-image — v3.8.biu", () => {
   it("SIGNED and FINALIZED rate confirmations never enter the snapshot", async () => {
     // They are excluded from the void, so the cancel never touched them; a
     // snapshot naming them would imply an un-cancel should put them back.
-    await cascadeLoadCancellation("load-1", mockPrisma);
+    await cascadeLoadCancellation("load-1", mockPrisma, OPTS);
     const [rcArg] = mockPrisma.rateConfirmation.findMany.mock.calls[0];
     expect(rcArg.where.status.notIn).toEqual(expect.arrayContaining(["SIGNED", "FINALIZED"]));
   });

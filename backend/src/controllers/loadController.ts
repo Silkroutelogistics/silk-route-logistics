@@ -847,6 +847,9 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
     // reversal below, and before the response.
     if (status === "CANCELLED") {
       await cascadeLoadCancellation(load.id, prisma, {
+        // existing.status is the pre-cancel status; `load` is the updated row.
+        priorStatus: existing.status,
+        softDeleted: false,
         reason,
         actorId: req.user!.id,
         actorName: `${req.user!.firstName ?? ""} ${req.user!.lastName ?? ""}`.trim() || null,
@@ -1341,6 +1344,9 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
     // The other 28 children this soft-delete does NOT reach are banked at
     // §13.3; these three are the ones that keep sending.
     await cascadeLoadCancellation(load.id, tx, {
+      // `load` was read before the transaction, so this is the pre-cancel status.
+      priorStatus: load.status,
+      softDeleted: true,
       reason,
       actorId: req.user!.id,
       actorName: `${req.user!.firstName ?? ""} ${req.user!.lastName ?? ""}`.trim() || null,
