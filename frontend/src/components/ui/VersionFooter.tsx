@@ -18945,7 +18945,16 @@
 // document that says SENT and cannot be signed. They are reported for re-issue.
 // SIGNED and FINALIZED never enter the snapshot at all - the void excludes them,
 // so the cancel never touched them.
-export const SRL_VERSION = "3.8.biu";
+// v3.8.biv — C2b: the deferred half of the cancellation before-image.
+// cancelCascade captures the rows it writes inside the cancel transaction.
+// onLoadCancelledOrTONU runs fire-and-forget AFTERWARDS and writes the money
+// rows -- tenders, shipper credit, carrier pay -- which the transactional half
+// never sees. Those are captured here, before the cleanup touches them.
+// mergeCancellationSnapshot NEVER invents a container: if the transactional
+// half did not run there is no snapshot, and inventing one would produce a
+// record that looks complete and describes half a cancel. The keys stay
+// ABSENT, which is what the un-cancel refuses on.
+export const SRL_VERSION = "3.8.biv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

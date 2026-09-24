@@ -14,6 +14,8 @@ import { log } from "../lib/logger";
 import { resolveTonuBilling } from "../lib/tonuPolicy";
 import { raiseTonuCustomerCharge } from "./invoiceService";
 import { withdrawLiveTenders } from "./tenderTransitionService";
+import { mergeCancellationSnapshot } from "./cancelCascade";
+import { LIVE_STATES } from "../lib/tenderLifecycle";
 import {
   standardNetDays,
   quickPayAutoApprovePerLoad,
@@ -1867,6 +1869,47 @@ export async function onLoadCancelledOrTONU(loadId: string, reason?: string) {
     },
   });
   if (!load) return;
+
+  // THE DEFERRED HALF OF THE BEFORE-IMAGE, read before this function writes
+  // anything. cancelCascade captured the transactional rows; these three are
+  // the money rows it cannot see, and an un-cancel that guessed at them would
+  // either strand a carrier's pay or double-count a shipper's credit.
+  //
+  // Best-effort by construction: this whole function is fire-and-forget, so if
+  // it never runs the keys stay ABSENT and the un-cancel refuses them rather
+  // than defaulting. That is the intended failure, not a gap.
+  try {
+    const [priorTenders, priorCarrierPays] = await Promise.all([
+      prisma.loadTender.findMany({
+        where: { loadId, status: { in: LIVE_STATES } },
+        select: { id: true, status: true, deletedAt: true },
+      }),
+      prisma.carrierPay.findMany({ where: { loadId, status: { notIn: ["PAID", "VOID"] } }, select: { id: true, status: true, notes: true } }),
+    ]);
+    const priorCredit =
+      load.customerId && ["DELIVERED", "POD_RECEIVED", "INVOICED"].includes(load.status)
+        ? await prisma.shipperCredit.findUnique({
+            where: { customerId: load.customerId },
+            select: { id: true, currentUtilized: true, autoBlocked: true, blockedReason: true, blockedAt: true },
+          })
+        : null;
+    await mergeCancellationSnapshot(loadId, {
+      tenders: priorTenders.map((t) => ({ id: t.id, status: String(t.status), deletedAt: t.deletedAt ? t.deletedAt.toISOString() : null })),
+      carrierPays: priorCarrierPays.map((c) => ({ id: c.id, status: String(c.status), notes: c.notes ?? null })),
+      shipperCredit: priorCredit
+        ? {
+            id: priorCredit.id,
+            currentUtilized: priorCredit.currentUtilized,
+            autoBlocked: priorCredit.autoBlocked,
+            blockedReason: priorCredit.blockedReason ?? null,
+            blockedAt: priorCredit.blockedAt ? priorCredit.blockedAt.toISOString() : null,
+          }
+        : null,
+    });
+  } catch (err) {
+    // Never fail the cancellation cleanup for the sake of recording it.
+    log.error({ err, loadId }, "[Integration] cancellation before-image not recorded");
+  }
 
   // 1. Cancel all active tenders for this load
   //

@@ -34,6 +34,7 @@
  */
 import { Prisma } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
+import { prisma as prismaClient } from "../config/database";
 import { voidLiveRateConfirmations, VOIDABLE_EXCLUSIONS } from "./rateConfirmationVoidService";
 
 /** Accepts either the client or a transaction client. */
@@ -69,6 +70,16 @@ export interface CancellationSnapshot {
   shipperTrackingTokens: Array<{ id: string; expiresAt: string }>;
   /** Spec row 7. Recorded for the audit and the confirm dialog -- see above. */
   rateConfirmations: Array<{ id: string; status: string }>;
+
+  // --- the DEFERRED half, written by onLoadCancelledOrTONU after the tx ---
+  // OPTIONAL because that path is fire-and-forget and can fail independently.
+  // Absent means unrecorded, and the un-cancel refuses rather than guessing.
+  /** Spec row 8. Never restored as DECLINED -- these carriers never answered. */
+  tenders?: Array<{ id: string; status: string; deletedAt: string | null }>;
+  /** Spec row 9. Only written when the load had been delivered. */
+  shipperCredit?: { id: string; currentUtilized: number; autoBlocked: boolean; blockedReason: string | null; blockedAt: string | null } | null;
+  /** Spec row 10. PAID rows are excluded by the cancel and never appear. */
+  carrierPays?: Array<{ id: string; status: string; notes: string | null }>;
 }
 
 export const CANCELLATION_SNAPSHOT_VERSION = 1;
@@ -185,4 +196,36 @@ export async function cascadeLoadCancellation(
   });
 
   return result;
+}
+
+
+/**
+ * Merge the DEFERRED half of the before-image.
+ *
+ * onLoadCancelledOrTONU runs fire-and-forget AFTER the cancel transaction, and
+ * writes rows this cascade never sees: tenders, shipper credit, carrier pay.
+ * Those are the money rows, so an un-cancel that guessed at them would either
+ * strand a carrier's pay or double-count a shipper's credit.
+ *
+ * MERGED, NEVER REPLACED, and only onto a snapshot that already exists. If the
+ * transactional half never ran there is nothing to attach to, and inventing a
+ * container here would produce a snapshot that looks complete and describes
+ * half a cancel. The keys stay ABSENT, which is what the un-cancel refuses on.
+ */
+export async function mergeCancellationSnapshot(
+  loadId: string,
+  patch: Partial<CancellationSnapshot>,
+  db: Db = prismaClient,
+): Promise<boolean> {
+  const row = await db.load.findUnique({ where: { id: loadId }, select: { cancellationSnapshot: true } });
+  const existing = row?.cancellationSnapshot as unknown as CancellationSnapshot | null;
+  if (!existing || typeof existing !== "object") return false;
+  // Keys already present win: a re-run must not overwrite the first reading,
+  // which is the only one taken before the writes.
+  const merged = { ...patch, ...existing };
+  await db.load.update({
+    where: { id: loadId },
+    data: { cancellationSnapshot: merged as unknown as Prisma.InputJsonValue },
+  });
+  return true;
 }
