@@ -18755,7 +18755,18 @@
 // carrier over one period, spans many loads, and structurally cannot carry a
 // load number. It is not a load document, so the rule does not reach it - a
 // decision recorded at the call site rather than an oversight.
-export const SRL_VERSION = "3.8.bij";
+// v3.8.bik - numbering C3: three exports added this arc had no consumer and
+// are removed rather than left waiting for one. The reachability gate found
+// them, which is what it is for - DEAD items ship work nobody can reach, and an
+// unreachable allocator is worse than an absent one because the next author
+// assumes it is wired. withSupplementalNumber and ACCESSORIAL_FILENAME_LABEL
+// belong to the supplemental-invoice surface, which is not built; they land
+// with the caller that needs them. LEGACY_PREFIX was superseded by isBareStem
+// during the same arc - the scheme discriminator is "is the stem all digits",
+// so the prefix constant stopped being read the moment that landed.
+// The supplemental RULE stays and is tested: the letter map, the format and the
+// parse. What went is the plumbing with nothing on either end of it.
+export const SRL_VERSION = "3.8.bik";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

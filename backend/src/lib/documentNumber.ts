@@ -108,11 +108,6 @@ export const DOCUMENT_SUFFIX: Record<DocumentKind, string> = {
   SETTLEMENT: "P",
 };
 
-/** The retired series prefix. Retained because search still resolves it and
- *  documents still print it; it is NOT the scheme discriminator — see
- *  isBareStem, which is, and see why the prefix cannot be. */
-export const LEGACY_PREFIX = "SRL-";
-
 /** Separates a core re-issue's revision from the bare number. Cannot occur in a
  *  bare load number, which is what makes 5001-2 unambiguous against load 50012. */
 export const CORE_REVISION_SEPARATOR = "-";
@@ -379,25 +374,6 @@ export const DOCUMENT_FILENAME_LABEL: Record<Exclude<DocumentKind, "SUPPLEMENTAL
   SETTLEMENT: "Settlement",
 };
 
-/** Filename label per accessorial type, for supplementals. Same single-source
- *  argument as ACCESSORIAL_LETTER: the type is legible from the filename. */
-export const ACCESSORIAL_FILENAME_LABEL: Record<AccessorialLetterType, string> = {
-  LUMPER: "Lumper",
-  DETENTION_PU: "Detention_Pickup",
-  DETENTION_DEL: "Detention_Delivery",
-  TONU: "TONU",
-  LAYOVER: "Layover",
-  HAZMAT: "Hazmat",
-  DEADHEAD: "Deadhead",
-  DRIVER_ASSIST: "Driver_Assist",
-  REEFER_FUEL: "Reefer_Fuel",
-  INSIDE_DELIVERY: "Inside_Delivery",
-  LIFTGATE: "Liftgate",
-  PALLET_EXCHANGE: "Pallet_Exchange",
-};
-
-// ─── Load number ────────────────────────────────────────────────────────────
-
 /**
  * Next load number from the Postgres sequence.
  *
@@ -550,26 +526,4 @@ export async function withDocumentNumber<T>(
     }
   }
   throw lastErr ?? new Error(`Failed to allocate a unique ${kind} document number for ${stem}`);
-}
-
-/** withDocumentNumber for a supplemental, which allocates by accessorial type. */
-export async function withSupplementalNumber<T>(
-  stem: string,
-  type: AccessorialLetterType,
-  build: (documentNumber: string) => Promise<T>,
-  attempts = 6,
-  client: any = prisma,
-): Promise<T> {
-  let lastErr: unknown;
-  for (let i = 0; i < attempts; i++) {
-    const documentNumber = await nextSupplementalNumber(stem, type, client);
-    try {
-      return await build(documentNumber);
-    } catch (e: any) {
-      lastErr = e;
-      if (e?.code === "P2002" && i < attempts - 1) continue;
-      throw e;
-    }
-  }
-  throw lastErr ?? new Error(`Failed to allocate a unique supplemental number for ${stem}`);
 }
