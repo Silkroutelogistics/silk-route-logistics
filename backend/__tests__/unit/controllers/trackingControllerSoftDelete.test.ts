@@ -144,3 +144,55 @@ describe("behavioural — a soft-deleted load 404s through every entry point", (
     }
   });
 });
+
+describe("a REVOKED tracking token is absent — v3.8.bir", () => {
+  // The cancel used to close this path by NULLing Load.trackingToken. That was
+  // permanent: @default(uuid()) applies only at INSERT and backend/src holds no
+  // other writer, so the value could never come back and the cancel was
+  // irreversible by construction. The cancel now stamps trackingTokenRevokedAt
+  // and this filter does the closing instead — same behaviour, recoverable.
+
+  const code = codeOnly(src);
+
+  it("the trackingToken lookup filters on trackingTokenRevokedAt", () => {
+    // Regex LITERAL, not new RegExp(string): a previous cut of this test built
+    // the pattern from a string and every backslash was eaten a layer early, so
+    // it matched nothing and reported the lookup missing (§19 Sub-pattern 22).
+    const m = code.match(/prisma\.load\s*\.\s*findFirst\(([\s\S]*?trackingToken:[\s\S]*?)\)\s*;/);
+    expect(m, "the trackingToken lookup was not found — the scanner is broken, not the file").toBeTruthy();
+    expect(
+      /trackingTokenRevokedAt\s*:\s*null/.test(m![1]),
+      "the trackingToken lookup does not exclude revoked tokens: a cancelled load would still be tracked publicly",
+    ).toBe(true);
+  });
+
+  it("the query it ISSUES carries the clause, not merely the source", async () => {
+    await getPublicTracking({ params: { token: "042fd17f-59d0-4739-9d95-22f59650a110" } } as any, mockRes());
+    const tokenCalls = mockPrisma.load.findFirst.mock.calls.filter(
+      ([a]: any[]) => a?.where && "trackingToken" in a.where,
+    );
+    expect(tokenCalls.length, "no trackingToken lookup was issued").toBeGreaterThan(0);
+    for (const [arg] of tokenCalls) {
+      expect(JSON.stringify(arg.where)).toContain('"trackingTokenRevokedAt":null');
+    }
+  });
+
+  it("a revoked token 404s while the same uuid on a live load resolves", async () => {
+    // The filter is what decides: revoked, the scoped query matches nothing.
+    mockPrisma.load.findFirst.mockResolvedValue(null);
+    const revoked = mockRes();
+    await getPublicTracking({ params: { token: "042fd17f-59d0-4739-9d95-22f59650a110" } } as any, revoked);
+    expect(revoked.status).toHaveBeenCalledWith(404);
+
+    // Control: without it this passes on a handler that 404s everything.
+    mockPrisma.load.findFirst.mockResolvedValue({
+      id: "l1", referenceNumber: "SRL-999", loadNumber: "SRL-999", status: "IN_TRANSIT",
+      originCity: "Lebanon", originState: "PA", destCity: "Northlake", destState: "TX",
+      pickupDate: new Date("2026-09-01"), deliveryDate: new Date("2026-09-04"),
+      checkCalls: [], trackingEvents: [], stops: [],
+    });
+    const live = mockRes();
+    await getPublicTracking({ params: { token: "042fd17f-59d0-4739-9d95-22f59650a110" } } as any, live);
+    expect(live.status).not.toHaveBeenCalledWith(404);
+  });
+});

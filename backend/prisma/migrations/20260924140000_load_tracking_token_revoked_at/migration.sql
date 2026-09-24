@@ -1,0 +1,21 @@
+-- v3.8.bir -- the cancel will revoke the tracking token instead of destroying it.
+--
+-- ADDITIVE ONLY. One nullable column, no default, no backfill, nothing dropped
+-- and nothing made non-null.
+--
+-- WHY. cascadeLoadCancellation sets Load.trackingToken to NULL. @default(uuid())
+-- applies ONLY at INSERT, so the ORM can never regenerate it, and a census of
+-- backend/src finds no other writer of that column: the value is gone for good
+-- and the cancel is irreversible by construction. Stamping this column instead
+-- leaves the uuid in place while every reader treats a revoked token as absent.
+--
+-- SHIPS WITH ITS READERS, NOT AHEAD OF THEM. This commit teaches the two readers
+-- to honour the column; the cancel starts writing it in the next one. That order
+-- matters: were the cancel taught first, a cancelled load would keep a LIVE
+-- public tracking link until the readers caught up.
+--
+-- NO BACKFILL, DELIBERATELY. The loads already CANCELLED in production hold a
+-- destroyed token, not a revoked one. Stamping them would assert a uuid that no
+-- longer exists; they stay unrecoverable and the un-cancel refuses them by name.
+
+ALTER TABLE "loads" ADD COLUMN "trackingTokenRevokedAt" TIMESTAMP(3);

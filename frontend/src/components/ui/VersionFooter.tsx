@@ -18886,7 +18886,21 @@
 // The migration is GRANT-only and guarded on the role AND the sequence existing,
 // because CI builds its database with db push and a from-empty migrate deploy
 // has neither; a bare GRANT would error there and block every later migration.
-export const SRL_VERSION = "3.8.biq";
+// v3.8.bir - the two columns the un-cancel needs, ahead of any code reading them.
+// The cancel DESTROYS Load.trackingToken by setting it NULL, and @default(uuid())
+// applies only at INSERT - so the ORM cannot regenerate it, and backend/src holds
+// no other writer of that column. Today's cancel is irreversible by construction.
+// trackingTokenRevokedAt lets the cancel revoke instead, leaving the uuid in place
+// for the readers that will treat a revoked token as absent: behaviour identical
+// to today, and reversible.
+// cancellationSnapshot is the before-image of every cascade write. Shipment.status
+// is recoverable from nowhere today - the sync overwrites it in place and records
+// no prior value - so the inverse would be a reconstruction rather than a replay,
+// and every column added to the cascade later would be silently unrecoverable.
+// Both nullable, no backfill: the loads already cancelled hold a destroyed token
+// and no snapshot, and inventing either is a guess written onto the row a dispute
+// reads. The un-cancel refuses them by name instead.
+export const SRL_VERSION = "3.8.bir";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

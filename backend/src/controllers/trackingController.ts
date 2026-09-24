@@ -143,7 +143,20 @@ export async function getPublicTracking(req: Request, res: Response) {
     load = await prisma.load.findFirst({ where: { id: loadId, deletedAt: null }, select: loadSelect });
   } else {
     // Fallback lookups: trackingToken (legacy uuid) → shipperCode (6-char) → BOL → reference
-    load = await prisma.load.findFirst({ where: { trackingToken: token, deletedAt: null }, select: loadSelect });
+    // A REVOKED token is absent. The cancel used to NULL Load.trackingToken,
+    // which closed this lookup by destroying the value -- and @default(uuid())
+    // applies only at INSERT, so nothing could ever put it back. The cancel now
+    // stamps trackingTokenRevokedAt instead, so this clause is what keeps the
+    // behaviour identical while leaving the uuid recoverable.
+    //
+    // Scoped to THIS lookup on purpose. The shipperCode, BOL and reference
+    // lookups below already resolve a cancelled-but-not-archived load today;
+    // revocation is about the token the cancel used to destroy, and widening it
+    // to the other entry points would be a behaviour change, not a like-for-like.
+    load = await prisma.load.findFirst({
+      where: { trackingToken: token, trackingTokenRevokedAt: null, deletedAt: null },
+      select: loadSelect,
+    });
     if (!load) {
       load = await prisma.load.findFirst({ where: { shipperCode: token, deletedAt: null }, select: loadSelect });
     }
