@@ -18929,7 +18929,23 @@
 // of drift the un-cancel exists to unpick.
 // Scoped to not-yet-revoked, so a re-run moves nothing - the idempotence contract
 // this file states in its own header.
-export const SRL_VERSION = "3.8.bit";
+// v3.8.biu - the cancel records a before-image of what it changed.
+// Most of the cascade is recoverable today only because it HAPPENS to be
+// reconstructible from audit rows, and one row already is not: the shipment sync
+// overwrites Shipment.status in place and records no prior value, so an inverse
+// would have to guess it. The snapshot makes the un-cancel a replay rather than a
+// reconstruction, and means a column added to the cascade later is not silently
+// unrecoverable - which is the failure this arc exists to stop repeating.
+// Taken BEFORE any write, keyed by cascade row, with the variable-length sets
+// stored as lists. Every key is written even when empty, so an ABSENT key can only
+// mean the cancel predates this column - which the un-cancel refuses by name
+// rather than defaulting, because a default here is a guess about what a load was.
+// Rate confirmations are RECORDED but never replayed: the void also nulls
+// signTokenHash, and a hash cannot be recovered, so an un-void would produce a
+// document that says SENT and cannot be signed. They are reported for re-issue.
+// SIGNED and FINALIZED never enter the snapshot at all - the void excludes them,
+// so the cancel never touched them.
+export const SRL_VERSION = "3.8.biu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

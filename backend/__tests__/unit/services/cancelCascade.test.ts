@@ -56,6 +56,12 @@ beforeEach(() => {
   mockPrisma.shipperTrackingToken.updateMany.mockResolvedValue({ count: 0 });
   mockPrisma.rateConfirmation.updateMany.mockResolvedValue({ count: 0 });
   mockPrisma.loadActivity.create.mockResolvedValue(null);
+  // The before-image reads. Prisma always returns an ARRAY from findMany; the
+  // shared mock resolves undefined, so without these the snapshot build throws
+  // on .map -- a fixture gap that reads exactly like a cascade bug.
+  mockPrisma.shipment.findMany.mockResolvedValue([]);
+  mockPrisma.shipperTrackingToken.findMany.mockResolvedValue([]);
+  mockPrisma.rateConfirmation.findMany.mockResolvedValue([]);
 });
 
 describe("what the cascade stops", () => {
@@ -168,7 +174,12 @@ describe("the rate confirmation on cancel", () => {
   });
 
   it("runs on the SAME client the cascade was handed, so it joins the caller's transaction", async () => {
-    const tx = { ...mockPrisma, rateConfirmation: { updateMany: vi.fn().mockResolvedValue({ count: 2 }) } };
+    // The spread replaces rateConfirmation wholesale, so findMany has to come
+    // back with it or the before-image read throws.
+    const tx = {
+      ...mockPrisma,
+      rateConfirmation: { updateMany: vi.fn().mockResolvedValue({ count: 2 }), findMany: vi.fn().mockResolvedValue([]) },
+    };
     const r = await cascadeLoadCancellation("load-1", tx as any);
     expect(r.rateConfirmationsVoided).toBe(2);
     expect(tx.rateConfirmation.updateMany).toHaveBeenCalledTimes(1);
@@ -192,11 +203,16 @@ describe("both call paths invoke it, and only for CANCELLED", () => {
   /** A DISTINCT transaction client, so "inside the transaction" is observable. */
   function txClient() {
     const m = () => vi.fn().mockResolvedValue({ count: 0 });
+    const rows = () => vi.fn().mockResolvedValue([]);
     const tx = {
       load: { update: vi.fn().mockResolvedValue({}), updateMany: m() },
       loadTender: { updateMany: m() }, checkCall: { updateMany: m() }, invoice: { updateMany: m() },
-      shipment: { updateMany: m() }, shipperTrackingToken: { updateMany: m() },
-      rateConfirmation: { updateMany: m() }, loadActivity: { create: vi.fn().mockResolvedValue(null) },
+      // findMany too: the cascade reads a before-image before it writes, and a
+      // fake missing it throws in a way that reads like cascade logic.
+      shipment: { updateMany: m(), findMany: rows() },
+      shipperTrackingToken: { updateMany: m(), findMany: rows() },
+      rateConfirmation: { updateMany: m(), findMany: rows() },
+      loadActivity: { create: vi.fn().mockResolvedValue(null) },
     };
     mockPrisma.$transaction.mockImplementation(async (arg: any) => (Array.isArray(arg) ? Promise.all(arg) : arg(tx)));
     return tx;
@@ -245,5 +261,72 @@ describe("both call paths invoke it, and only for CANCELLED", () => {
     expect(mockPrisma.shipment.updateMany).not.toHaveBeenCalled();
     expect(mockPrisma.rateConfirmation.updateMany).not.toHaveBeenCalled();
     expect(mockPrisma.loadActivity.create).not.toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ eventType: CASCADE_EVENT_TYPE }) }));
+  });
+});
+
+describe("the before-image — v3.8.biu", () => {
+  /** The load.updateMany call that persists the snapshot, not the token one. */
+  function snapshotCall() {
+    const call = mockPrisma.load.updateMany.mock.calls.find(([a]: any[]) => a?.data && "cancellationSnapshot" in a.data);
+    return call ? call[0] : null;
+  }
+
+  it("is taken BEFORE any write, so it records what preceded the cancel", async () => {
+    mockPrisma.shipment.findMany.mockResolvedValue([{ id: "s1", status: "IN_TRANSIT" }, { id: "s2", status: "BOOKED" }]);
+    mockPrisma.shipperTrackingToken.findMany.mockResolvedValue([{ id: "t1", expiresAt: new Date("2026-12-01T00:00:00.000Z") }]);
+    mockPrisma.rateConfirmation.findMany.mockResolvedValue([{ id: "rc1", status: "SENT" }]);
+    mockPrisma.load.updateMany.mockResolvedValue({ count: 1 });
+
+    await cascadeLoadCancellation("load-1", mockPrisma);
+    const arg = snapshotCall();
+    expect(arg, "no snapshot was persisted").toBeTruthy();
+    const snap = arg.data.cancellationSnapshot;
+
+    // The PRIOR statuses, not CANCELLED — this is the whole point of reading first.
+    expect(snap.shipments).toEqual([{ id: "s1", status: "IN_TRANSIT" }, { id: "s2", status: "BOOKED" }]);
+    expect(snap.shipperTrackingTokens).toEqual([{ id: "t1", expiresAt: "2026-12-01T00:00:00.000Z" }]);
+    expect(snap.rateConfirmations).toEqual([{ id: "rc1", status: "SENT" }]);
+    expect(snap.trackingTokenRevoked).toBe(true);
+    expect(snap.version).toBe(1);
+
+    // BEFORE is asserted, not assumed. The mock returns its array whatever the
+    // where clause says, so the content check alone passes even when the read
+    // targets the POST-write set — an injection reading status:"CANCELLED" left
+    // every case green. Two assertions close that: the read is aimed at the set
+    // about to be written, and it is issued before the write (§19 SP16).
+    const [shipRead] = mockPrisma.shipment.findMany.mock.calls[0];
+    expect(shipRead.where.status, "the before-image must read the set about to be cancelled").toEqual({ not: "CANCELLED" });
+    expect(
+      mockPrisma.shipment.findMany.mock.invocationCallOrder[0],
+      "the before-image was read AFTER the write — it records the damage, not what preceded it",
+    ).toBeLessThan(mockPrisma.shipment.updateMany.mock.invocationCallOrder[0]);
+  });
+
+  it("writes EVERY key even when empty, so absent can only mean 'predates the snapshot'", async () => {
+    // If an empty class were omitted, the un-cancel could not tell a load it can
+    // restore from one it can only guess at — and it refuses the latter by name.
+    await cascadeLoadCancellation("load-1", mockPrisma);
+    const snap = snapshotCall().data.cancellationSnapshot;
+    for (const k of ["shipments", "shipperTrackingTokens", "rateConfirmations", "trackingTokenRevoked", "version", "takenAt"]) {
+      expect(Object.keys(snap), `key ${k} missing — absent must mean unrecorded, never empty`).toContain(k);
+    }
+    expect(snap.shipments).toEqual([]);
+  });
+
+  it("a SECOND cancel cannot overwrite the first snapshot", async () => {
+    // By then the 'before' state is the already-cancelled one. Recording that
+    // would replace the truth with a copy of the damage.
+    await cascadeLoadCancellation("load-1", mockPrisma);
+    const arg = snapshotCall();
+    expect(arg.where).toMatchObject({ id: "load-1" });
+    expect(arg.where.cancellationSnapshot, "the snapshot write is not scoped to un-snapshotted").toBeTruthy();
+  });
+
+  it("SIGNED and FINALIZED rate confirmations never enter the snapshot", async () => {
+    // They are excluded from the void, so the cancel never touched them; a
+    // snapshot naming them would imply an un-cancel should put them back.
+    await cascadeLoadCancellation("load-1", mockPrisma);
+    const [rcArg] = mockPrisma.rateConfirmation.findMany.mock.calls[0];
+    expect(rcArg.where.status.notIn).toEqual(expect.arrayContaining(["SIGNED", "FINALIZED"]));
   });
 });

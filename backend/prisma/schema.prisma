@@ -1830,6 +1830,14 @@ model Load {
   cancelledAt            DateTime?
   cancelledById          String?
   tonuFaultSide      String? // CUSTOMER | CARRIER | BROKER — Arc 2 Item 5. Required at the TONU flip; drives the two-sided TONU decision in lib/tonuPolicy.
+  // Un-cancel arc (2026-09-24). The before-image of every write the cancel
+  // cascade performed, taken inside the cancel transaction and keyed by row.
+  // Shipment.status in particular is recoverable from nowhere else: the sync
+  // overwrites it in place and records no prior value. Every key is written
+  // even when empty, so an ABSENT key means the cancel predates this column --
+  // which the un-cancel REFUSES rather than defaulting, because a default here
+  // is a guess about what a load used to be.
+  cancellationSnapshot Json?
 
   // v3.8.ali §13.3 Item 192 — per-load risk-email kill switch. When
   // riskEmailMuted=true the risk engine still writes RiskLog + still

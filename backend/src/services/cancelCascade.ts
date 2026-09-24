@@ -32,8 +32,9 @@
  * sites can both fire for one load (deleteLoad sets status CANCELLED and the
  * status path may already have).
  */
-import type { Prisma, PrismaClient } from "@prisma/client";
-import { voidLiveRateConfirmations } from "./rateConfirmationVoidService";
+import { Prisma } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
+import { voidLiveRateConfirmations, VOIDABLE_EXCLUSIONS } from "./rateConfirmationVoidService";
 
 /** Accepts either the client or a transaction client. */
 type Db = PrismaClient | Prisma.TransactionClient;
@@ -46,6 +47,31 @@ export interface CascadeResult {
   trackingTokenRevoked: boolean;
   shipperTokensExpired: number;
 }
+
+/**
+ * The before-image of a cancel, keyed by the cascade row it restores.
+ *
+ * RATE CONFIRMATIONS ARE RECORDED, NOT REPLAYED. voidLiveRateConfirmations
+ * also nulls signTokenHash, and a hash is not recoverable -- an un-void would
+ * produce a document that says SENT and cannot be signed. The un-cancel reports
+ * these so an AE re-issues through the issuance path, which is the only thing
+ * that can mint a working signing token. SIGNED and FINALIZED never appear here
+ * at all: the void excludes them, so the cancel never touched them.
+ */
+export interface CancellationSnapshot {
+  version: number;
+  takenAt: string;
+  /** Spec row 4. Recoverable from NOWHERE else: the sync overwrites in place. */
+  shipments: Array<{ id: string; status: string }>;
+  /** Spec row 5. The uuid survives; this says whether THIS cancel revoked it. */
+  trackingTokenRevoked: boolean;
+  /** Spec row 6. Expired, never deleted, so each row is still here to push back. */
+  shipperTrackingTokens: Array<{ id: string; expiresAt: string }>;
+  /** Spec row 7. Recorded for the audit and the confirm dialog -- see above. */
+  rateConfirmations: Array<{ id: string; status: string }>;
+}
+
+export const CANCELLATION_SNAPSHOT_VERSION = 1;
 
 export const CASCADE_EVENT_TYPE = "cancel_cascade";
 
@@ -62,6 +88,19 @@ export async function cascadeLoadCancellation(
   opts: { reason?: string | null; actorId?: string | null; actorName?: string | null } = {},
 ): Promise<CascadeResult> {
   const now = new Date();
+
+  // THE BEFORE-IMAGE IS TAKEN FIRST, before a single write. Read it after and
+  // it records the damage rather than what preceded it. Every key below is
+  // written even when empty, so an ABSENT key can only mean the cancel predates
+  // this column -- which the un-cancel refuses by name instead of defaulting.
+  const [priorShipments, priorShipperTokens, priorRateConfirmations] = await Promise.all([
+    db.shipment.findMany({ where: { loadId, status: { not: "CANCELLED" } }, select: { id: true, status: true } }),
+    db.shipperTrackingToken.findMany({ where: { loadId, expiresAt: { gt: now } }, select: { id: true, expiresAt: true } }),
+    db.rateConfirmation.findMany({
+      where: { loadId, status: { notIn: [...VOIDABLE_EXCLUSIONS] } },
+      select: { id: true, status: true },
+    }),
+  ]);
 
   // Shipments — the surface that kept emailing. Scoped to non-CANCELLED so a
   // second call moves nothing.
@@ -109,6 +148,23 @@ export async function cascadeLoadCancellation(
     trackingTokenRevoked: token.count > 0,
     shipperTokensExpired: shipperTokens.count,
   };
+
+  // The before-image, persisted. Scoped to not-yet-snapshotted so a SECOND
+  // call cannot overwrite the first: by then the "before" state is the
+  // already-cancelled one, and recording that would quietly replace the truth
+  // with a copy of the damage.
+  const snapshot: CancellationSnapshot = {
+    version: CANCELLATION_SNAPSHOT_VERSION,
+    takenAt: now.toISOString(),
+    shipments: priorShipments.map((s) => ({ id: s.id, status: String(s.status) })),
+    trackingTokenRevoked: result.trackingTokenRevoked,
+    shipperTrackingTokens: priorShipperTokens.map((t) => ({ id: t.id, expiresAt: t.expiresAt.toISOString() })),
+    rateConfirmations: priorRateConfirmations.map((r) => ({ id: r.id, status: String(r.status) })),
+  };
+  await db.load.updateMany({
+    where: { id: loadId, cancellationSnapshot: { equals: Prisma.DbNull } },
+    data: { cancellationSnapshot: snapshot as unknown as Prisma.InputJsonValue },
+  });
 
   // One row, so "why did this shipment cancel itself" is answerable from the
   // load timeline rather than by inference from timestamps.
