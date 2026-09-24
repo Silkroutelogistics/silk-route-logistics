@@ -12,7 +12,9 @@ import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
 import { $Enums } from "@prisma/client";
+import type { LoadStatus } from "@prisma/client";
 import { shipmentSyncFor } from "../../../src/lib/shipmentStatusFor";
+import { getAllowedNextStatuses } from "../../../src/lib/loadStateMachine";
 
 /** The mapping under test, read through the one export that has a caller. */
 const shipmentStatusFor = (ls: Parameters<typeof shipmentSyncFor>[0]) => shipmentSyncFor(ls).status;
@@ -42,12 +44,21 @@ describe("shipmentStatusFor — every LoadStatus lands on a real ShipmentStatus"
     }
   });
 
-  it("preserves the carrier path's existing answers exactly — no shipper-visible status moves", () => {
-    expect(shipmentStatusFor("AT_PICKUP")).toBe("PICKED_UP");
+  it("preserves the carrier path's existing answers — except the one Item 317 corrected", () => {
     expect(shipmentStatusFor("LOADED")).toBe("PICKED_UP");
     expect(shipmentStatusFor("IN_TRANSIT")).toBe("IN_TRANSIT");
     expect(shipmentStatusFor("AT_DELIVERY")).toBe("DELIVERED");
     expect(shipmentStatusFor("DELIVERED")).toBe("DELIVERED");
+  });
+
+  it("AT_PICKUP reads as arrived, NOT as picked up (C2, Item 317)", () => {
+    // The truck is at the shipper and the freight is not on it. DISPATCHED is
+    // the nearest pre-pickup member; PICKED_UP asserted something that had not
+    // happened, on the row the billing projection is built from.
+    expect(shipmentStatusFor("AT_PICKUP")).toBe("DISPATCHED");
+    // It must stay BEFORE the loaded answer rather than merging into it --
+    // remapping it to PICKED_UP's neighbour would be the same claim again.
+    expect(shipmentStatusFor("AT_PICKUP")).not.toBe(shipmentStatusFor("LOADED"));
   });
 
   it("a cancelled or TONU load does not read as live freight", () => {
@@ -56,13 +67,31 @@ describe("shipmentStatusFor — every LoadStatus lands on a real ShipmentStatus"
   });
 
   it("stamps pickup when the freight is on, delivery when it has arrived", () => {
-    expect(shipmentSyncFor("AT_PICKUP").setActualPickup).toBe(true);
+    // AT_PICKUP no longer stamps: the timestamp and the status are ONE claim,
+    // and a row reading DISPATCHED must not carry a pickup time (C2).
+    expect(shipmentSyncFor("AT_PICKUP").setActualPickup).toBe(false);
     expect(shipmentSyncFor("LOADED").setActualPickup).toBe(true);
     expect(shipmentSyncFor("PICKED_UP").setActualPickup).toBe(true);
     expect(shipmentSyncFor("DISPATCHED").setActualPickup).toBe(false);
     expect(shipmentSyncFor("AT_DELIVERY").setActualDelivery).toBe(true);
     expect(shipmentSyncFor("DELIVERED").setActualDelivery).toBe(true);
     expect(shipmentSyncFor("IN_TRANSIT").setActualDelivery).toBe(false);
+  });
+
+  it("the stamp is DEFERRED by C2, never lost — every way out of AT_PICKUP stamps", () => {
+    // The reason dropping the AT_PICKUP stamp is safe rather than a silent data
+    // loss: both onward AE transitions from AT_PICKUP land on a status that
+    // stamps, so the pickup time is still recorded, at the moment it is true.
+    const onward = getAllowedNextStatuses("AT_PICKUP" as LoadStatus, "AE").filter(
+      (s) => s !== "CANCELLED" && s !== "TONU",
+    );
+    expect(onward.length, "AT_PICKUP has no non-terminal onward move — re-read this").toBeGreaterThan(0);
+    for (const s of onward) {
+      expect(
+        shipmentSyncFor(s).setActualPickup,
+        `${s} follows AT_PICKUP and does not stamp — C2 would be losing the pickup time, not deferring it`,
+      ).toBe(true);
+    }
   });
 });
 

@@ -625,8 +625,11 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
   // Shipment status sync — maps load statuses to ShipmentStatus enum.
   const linkedShipment = await prisma.shipment.findFirst({ where: { loadId: load.id } });
   if (linkedShipment) {
-    // The map that used to live here is now lib/shipmentStatusFor.ts -- its
-    // answers are preserved exactly, so nothing a shipper sees moves.
+    // The map that used to live here is now lib/shipmentStatusFor.ts. It kept
+    // this path's answers exactly when it was extracted; C2 then corrected the
+    // one that was wrong -- AT_PICKUP reads DISPATCHED, not PICKED_UP, because
+    // arriving is not loading. Nothing a shipper SEES moves either way: every
+    // shipper-facing surface reads Load, not Shipment.
     const sync = shipmentSyncFor(status);
     const shipmentUpdate: Record<string, unknown> = { status: sync.status };
     if (sync.setActualPickup) shipmentUpdate.actualPickup = new Date();

@@ -19025,7 +19025,26 @@
 // stays pinned by name inside the skip set so the Item 8.4 cascade backstop
 // does not depend on the derivation. runLateDetection is untouched -- its load
 // filter is byte-identical, which is why the edit was bounded to one function.
-export const SRL_VERSION = "3.8.bje";
+// v3.8.bjf — C2 (Item 317): AT_PICKUP stops claiming the freight is on the
+// truck. The Load->Shipment mapper projected AT_PICKUP to PICKED_UP and
+// stamped actualPickup at the same moment; the truck had only ARRIVED. It maps
+// to DISPATCHED -- the nearest pre-pickup member -- and the stamp moved with
+// it, because the status and the timestamp are ONE claim and a row reading
+// DISPATCHED must not carry a pickup time. The stamp is deferred, not lost:
+// both onward moves from AT_PICKUP still stamp, asserted from the state
+// machine rather than by hand.
+//   ITEM 317 BANKED TWO RISKS AND THE CODE CARRIES NEITHER. "Moves a
+// customer-facing status" -- shipperPortalController has ZERO prisma.shipment
+// queries; every shipper surface reads Load. "Moves the timestamp detention
+// and on-time-pickup read" -- §9 reads Load.actualPickupDatetime via
+// loadEventStamps (untouched) and detention takes LoadStop arrival as given;
+// Shipment.actualPickup has three writers and ZERO readers.
+//   THE ONE REAL CONSUMER IS WHY C1 SHIPPED FIRST. runPreTracing selects
+// shipments on status in (BOOKED, DISPATCHED), so this remap pushes a
+// dock-arrived shipment INTO that selection -- re-creating C1's defect through
+// another door. Proven both ways: 6/6 with C1 in place, and 5/6 with C1's
+// filter removed, failing exactly the dock assertion.
+export const SRL_VERSION = "3.8.bjf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -31,11 +31,38 @@
  * Only the AE path changes, and only from "throws" to "maps" -- there is no
  * prior behaviour there to preserve.
  *
- * ONE DIVERGENCE IS DELIBERATELY NOT FIXED HERE. `AT_PICKUP -> PICKED_UP` says
- * the freight is picked up when the truck has only ARRIVED; LOADED is when it
- * is actually on. Correcting it would move a customer-facing status on loads
- * that are live right now, which is a product decision rather than a
- * unification, so it is banked (§13.3) rather than taken silently.
+ * THE ONE DIVERGENCE IT LEFT IS NOW CORRECTED (C2, Item 317).
+ * `AT_PICKUP -> PICKED_UP` claimed the freight was picked up when the truck had
+ * only ARRIVED. It maps to `DISPATCHED` -- the nearest pre-pickup member --
+ * because arrival is not loading, and `LOADED` is when the freight is actually
+ * on. `setActualPickup` moved with it for the same reason: the status and the
+ * timestamp are ONE claim, and leaving the stamp on AT_PICKUP would have left a
+ * row reading DISPATCHED while carrying a pickup time. The stamp is not lost,
+ * only deferred to the moment it becomes true -- AT_PICKUP -> LOADED and
+ * AT_PICKUP -> PICKED_UP are both allowed AE transitions and both still stamp.
+ *
+ * ITEM 317 BANKED TWO RISKS FOR THIS CHANGE AND THE CODE CARRIES NEITHER.
+ * Both were checked rather than trusted (§19 Sub-pattern 15):
+ *
+ *   "moves a customer-facing status" -- `shipperPortalController` contains ZERO
+ *   `prisma.shipment` queries; every shipper-facing surface, including the
+ *   tracking stepper and the shipments list, reads `prisma.load`. Nothing a
+ *   customer sees reads this column.
+ *
+ *   "moves the timestamp detention and on-time-pickup read" -- it does not.
+ *   §9's on-time factor and every analytics surface read
+ *   `Load.actualPickupDatetime`, stamped by `lib/loadEventStamps.ts`, which
+ *   this file does not touch. Detention takes stop arrival as given from
+ *   `LoadStop`. `Shipment.actualPickup` has THREE writers and ZERO readers in
+ *   backend/src or frontend/src -- the two greps that look like reads are
+ *   output fields merely NAMED actualPickup, sourced from the Load column.
+ *
+ * THE ONE CONSUMER THAT REALLY WOULD HAVE FIRED DIFFERENTLY IS WHY C1 SHIPPED
+ * FIRST. `runPreTracing` selects shipments on `status in (BOOKED, DISPATCHED)`,
+ * so this remap pushes a dock-arrived shipment back INTO that selection --
+ * re-creating, through a different door, the exact defect C1 had just closed.
+ * C1's load-level filter is what holds it shut, and the proof drives both
+ * together rather than reasoning about the interaction.
  */
 import type { LoadStatus, ShipmentStatus } from "@prisma/client";
 
@@ -55,8 +82,9 @@ const LOAD_TO_SHIPMENT: Record<LoadStatus, ShipmentStatus> = {
   CONFIRMED: "BOOKED",
   BOOKED: "BOOKED",
   DISPATCHED: "DISPATCHED",
-  // carrierLoads' existing answer, preserved. See the note above.
-  AT_PICKUP: "PICKED_UP",
+  // Arrived at the shipper, not yet loaded. The nearest pre-pickup member --
+  // the truck is there and the freight is not on it (C2, Item 317).
+  AT_PICKUP: "DISPATCHED",
   LOADED: "PICKED_UP",
   PICKED_UP: "PICKED_UP",
   IN_TRANSIT: "IN_TRANSIT",
@@ -91,7 +119,10 @@ export interface ShipmentSync {
 export function shipmentSyncFor(loadStatus: LoadStatus): ShipmentSync {
   return {
     status: LOAD_TO_SHIPMENT[loadStatus],
-    setActualPickup: loadStatus === "AT_PICKUP" || loadStatus === "LOADED" || loadStatus === "PICKED_UP",
+    // NOT AT_PICKUP: arriving is not loading, and the stamp is the same claim
+    // the status makes (C2, Item 317). Deferred, not lost -- both moves out of
+    // AT_PICKUP land on a status that stamps.
+    setActualPickup: loadStatus === "LOADED" || loadStatus === "PICKED_UP",
     setActualDelivery: loadStatus === "AT_DELIVERY" || loadStatus === "DELIVERED",
   };
 }
