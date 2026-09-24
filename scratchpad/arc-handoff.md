@@ -1,4 +1,128 @@
-# RC countersign + acceptance arc — carried follow-ups
+# Carried follow-ups — most recent arc first
+
+Each section is one arc's findings that were deliberately NOT built in it.
+Nothing below is a regression introduced by the arc it sits under.
+
+---
+
+## cleanup arc (`v3.8.bjb`) — C1/C2/C3/C4/C5 + R1
+
+Branch `arc/cleanup`, based on `origin/main` `7b799bad`. Commits `4f82d966`,
+`91c31c7c`, `b5dfeebb`.
+
+### C3 — the single BOOKED→AT_PICKUP edge is an instrument artifact, not a defect
+
+Traced per the brief: which load, which actor, which code path, and whether
+DISPATCHED was skipped by the UI or by the API. **No code path was found that
+lets a load skip DISPATCHED.** The AE map does not allow `BOOKED → AT_PICKUP`;
+the CARRIER map does (`loadStateMachine.ts:51`), deliberately, because a
+carrier reporting arrival is not making an AE's dispatch decision. The edge the
+transition observer recorded is therefore a legitimate carrier-side move that
+the AE-actor lens tags `expected:false` — the observer judges AE then AUTO and
+has no CARRIER branch, so a carrier's own legal transition reads as unexpected.
+
+**Nothing was allow-listed, per the brief.** The edge is not widened and no map
+changed. What this says about the Item 194 A1 enforcement gate is the useful
+part: `unexpected_cumulative` counts carrier-legal moves alongside genuine
+surprises, so the gate's "zero across a full deploy cycle" condition is
+measuring a number that cannot reach zero while carriers report arrivals.
+**Before enforcement is decided, the observer needs a CARRIER branch** — that is
+a change to the instrument, not to the machine, and it should land before
+anybody reads the counter as a defect count.
+
+The per-row identifiers came from a read-only production query run in-session
+and since deleted; they are in the session transcript rather than reproduced
+here, because re-deriving them needs another production read and the
+conclusion does not depend on them.
+
+### C4 — HALT. The Item 317 remap is NOT shipped, and the reason is one consumer
+
+The ruling: a load at the pickup dock is not picked up, so `AT_PICKUP` should
+map to the nearest PRE-pickup `ShipmentStatus`, and `PICKED_UP` should come
+only from Load `PICKED_UP` or later. The brief's own gate was: list every
+trigger, email or billing step keyed on Shipment `PICKED_UP`, and HALT if any
+would fire differently.
+
+**One would, and it is the one that reaches a human.** `runPreTracing`
+(`schedulerService.ts:75-77`) selects `status IN ("BOOKED","DISPATCHED")` with
+a pickup date inside 48 hours and emails the carrier to confirm they are on
+schedule. Remapping `AT_PICKUP` to the nearest pre-pickup status puts it in
+that set — so the platform would email a carrier who is **standing at the dock**
+asking whether they will make the pickup. That is worse than the mislabel the
+change was meant to fix, because the mislabel is internal and the email is not.
+
+**Every other consumer is unaffected, checked individually:** `runLateDetection`
+selects `IN_TRANSIT` only; `Shipment.actualPickup` has no reader;
+billing aggregates filter on `customerId` and never on shipment status; the
+shipper portal's `mapLoadStatus` reads the LOAD status, not the shipment's.
+`shipmentStatusFor.ts` is unchanged (`AT_PICKUP: "PICKED_UP"`, and
+`setActualPickup` on AT_PICKUP/LOADED/PICKED_UP).
+
+**What unblocks it:** gate `runPreTracing` on something that cannot include a
+load already at the dock — exclude `AT_PICKUP` explicitly, or key the sweep on
+the load rather than the shipment — and then the remap is safe. That is a
+separate commit with its own proof, and it is a decision about who gets
+emailed, which is why it was not folded in here.
+
+### C5 — what shipped, and the one thing deliberately not built
+
+Shipped: `stamp-build.mjs` (postbuild → `out/build-info.json`), a `_headers`
+no-store rule for that path, `check-pages-deploy.mjs`, a 7-case guard, and the
+CLAUDE.md §2.5 rule that frontend deploy verification is this script rather
+than an Actions job name.
+
+**NOT built: Cloudflare API mode.** No credential exists anywhere — `git grep`
+finds none in the repo, `env` has none, `gh secret list` holds only
+`RENDER_DEPLOY_HOOK_URL`, and the Cloudflare MCP server needs an authorization
+no non-interactive session can perform. It would have shipped unexercisable.
+The stronger reason is that the API reports what Cloudflare RECORDED while the
+marker reports what a browser RECEIVES, and only the second is what a halt card
+claims. If it is ever wanted it is additive, behind
+`CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_PAGES_PROJECT`,
+reporting the deployment stage ALONGSIDE the served check and never instead of
+it.
+
+**Unverifiable from here, and it decides whether the check can ever pass:**
+Cloudflare's configured build command is dashboard state. If it is not
+`npm run build`, the `postbuild` hook never fires and no marker is ever served.
+The check reports that case as its own exit code (2) with that cause named, so
+it degrades to a clear question rather than a silent pass.
+
+### R1 — the CRLF census (report only; nothing executed)
+
+Full text in `docs/claude/backlog-open.md` Item 268. The headline: **the brief's
+premise is falsified — 0 tracked files carry CRLF in the index**, so there is
+nothing to renormalize. The defect is checkout smudging from SYSTEM-scope
+`core.autocrlf=true`, and the complete fix has sat unmerged on
+`housekeeping/eol-normalize` (`9006bbb3`) for 16 days while `origin/main`
+carries a one-rule subset of it.
+
+### OPEN — the repository state that outlives this arc
+
+1. **Local `main` and `origin/main` have DIVERGED: 163 behind, 34 ahead.**
+   Local `main` (`b4aa9c80`) is not a descendant of `origin/main` (`7b799bad`)
+   and carries 34 unpushed commits of real feature work (`v3.8.bfy`→`bha`: RC
+   countersign, settlements, BOL gating) plus Items 302-304. **Its CLAUDE.md is
+   5,978 lines; `origin/main`'s is 1,203** — origin/main holds a consolidation
+   that moved §13.3's items into `docs/claude/backlog-open.md`, and local main
+   predates it. A session reading the main checkout's CLAUDE.md is reading the
+   stale document. **Not this arc's to resolve**, and nothing here touched local
+   `main`. Whoever owns those 34 commits needs to rebase them onto the
+   consolidation before they can land.
+2. **The transition observer has no CARRIER branch** — see C3. Blocks a
+   meaningful reading of `unexpected_cumulative`, and therefore blocks the
+   Item 194 A1 enforcement decision.
+3. **`runPreTracing` must stop reaching loads at the dock** before the C4 remap
+   can ship.
+4. **`housekeeping/eol-normalize` is a decision, not a design** — merge it when
+   the dirty-worktree count is lowest (today 12 of 19).
+5. **`inject-chrome.mjs` dirties two tracked files on every Windows build** with
+   an empty content diff. Merging (4) fixes it; until then they must never be
+   staged.
+
+---
+
+## RC countersign + acceptance arc — carried follow-ups
 
 Four findings surfaced during the C4/C5/C6/C7 arc and **deliberately not built
 in it**. Each is real, each was verified against the code at the line cited,
