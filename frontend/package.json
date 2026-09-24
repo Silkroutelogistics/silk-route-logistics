@@ -6,6 +6,7 @@
     "dev": "next dev",
     "prebuild": "node scripts/check-next-patch.mjs && node scripts/inject-chrome.mjs",
     "build": "next build",
+    "postbuild": "node scripts/stamp-build.mjs",
     "start": "next start",
     "lint": "next lint",
     "inject-chrome": "node scripts/inject-chrome.mjs",

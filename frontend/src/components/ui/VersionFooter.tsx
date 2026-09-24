@@ -1,3 +1,28 @@
+// v3.8.bjb — CLOUDFLARE PAGES DEPLOY VERIFICATION READS THE SERVED BYTES.
+//
+// The frontend deploys through Cloudflare Pages, which builds outside GitHub
+// Actions entirely -- so no Actions job, green or red or absent, was ever
+// evidence about what Cloudflare served. Citing one as frontend deploy
+// verification is the §19 Sub-pattern 16 shape: the check ran, and it was not
+// watching the thing its name implied.
+//
+// THE COMMIT WAS ALREADY BEING COMPUTED AND THROWN AWAY. next.config.ts has
+// read CF_PAGES_COMMIT_SHA into NEXT_PUBLIC_BUILD_ID for a long time, and
+// config/env.ts exports it as BUILD_ID with ZERO importers -- the deployment's
+// own identity, resolved on every Cloudflare build and then discarded.
+//
+// A postbuild step now writes it to out/build-info.json; _headers marks that
+// file no-store so the edge cannot answer a freshness check from cache; and
+// check-pages-deploy.mjs compares the SERVED sha to the pushed one. Exit 0
+// means a browser receives that commit, and no other code means that.
+//
+// It deliberately does not read the Cloudflare API: the API reports what
+// Cloudflare RECORDED, this reports what a browser RECEIVES, and only the
+// second is what a halt card claims. There is also no credential for it
+// anywhere -- repo, env, or GitHub secrets -- so that branch would have been
+// unexercisable, and an unexercised verification path is a claim rather than
+// a capability.
+//
 // v3.8.bgh — C3a. THE RETURN ADDRESS IS BACK, AND DROPPING IT IN C3 WAS
 // THE REGRESSION.
 //
@@ -18987,7 +19012,7 @@
 // happen before it offers the action, lists what will be restored, and names
 // the one thing that will not -- voided rate confirmations, whose signing
 // links cannot come back.
-export const SRL_VERSION = "3.8.bja";
+export const SRL_VERSION = "3.8.bjb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

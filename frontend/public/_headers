@@ -7,6 +7,12 @@
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://browser.sentry-cdn.com https://cdn.jsdelivr.net https://static.cloudflareinsights.com; style-src 'self' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; img-src 'self' data: blob: https: https://maps.googleapis.com https://maps.gstatic.com https://images.unsplash.com; connect-src 'self' https://api.silkroutelogistics.ai https://maps.googleapis.com https://*.sentry.io https://api.pwnedpasswords.com; font-src 'self' data: https://fonts.gstatic.com; object-src 'none'; frame-src 'self' blob: https://www.google.com; frame-ancestors 'none'; worker-src 'self' blob:; base-uri 'self'; form-action 'self' https://api.silkroutelogistics.ai; upgrade-insecure-requests
 
+# The deploy marker must never be answered from a cache. The whole value of
+# check-pages-deploy.mjs is that its green means the CURRENT bytes carry the
+# pushed commit; a cached copy would let it pass on the previous deploy.
+/build-info.json
+  Cache-Control: no-cache, no-store, must-revalidate
+
 /*.html
   Cache-Control: no-cache, must-revalidate
 
