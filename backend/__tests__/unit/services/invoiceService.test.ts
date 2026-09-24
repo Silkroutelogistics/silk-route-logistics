@@ -35,8 +35,8 @@ beforeEach(() => {
   (mockPrisma.$transaction as any).mockImplementation(async (cb: any) => cb(mockPrisma));
   (mockPrisma.invoiceLineItem.createMany as any).mockResolvedValue({ count: 1 });
   (mockPrisma.notification.create as any).mockResolvedValue({});
-  // numbering now reads recent invoices via findMany (nextSequentialInvoiceNumber);
-  // default to none -> INV-1001. Individual tests override for a specific max.
+  // A load-backed invoice mirrors its load number, so the INV- sequence is not
+  // consulted at all; this stays mocked to prove it is never read.
   (mockPrisma.invoice.findMany as any).mockResolvedValue([]);
 });
 
@@ -83,16 +83,16 @@ describe("autoGenerateInvoice — DELIVERED -> shipper-AR draft", () => {
 
   it("drafts a shipper invoice at the CUSTOMER rate, owned to the poster, in DRAFT", async () => {
     (mockPrisma.invoice.findFirst as any).mockResolvedValue(null); // dup guard
-    (mockPrisma.invoice.findMany as any).mockResolvedValue([{ invoiceNumber: "INV-1042" }]); // numbering -> INV-1043
+    (mockPrisma.invoice.findMany as any).mockResolvedValue([{ invoiceNumber: "INV-1042" }]); // must be ignored
     (mockPrisma.load.findUnique as any).mockResolvedValue(makeLoad({ customerRate: 2400 }));
-    (mockPrisma.invoice.create as any).mockResolvedValue({ id: "inv-1", invoiceNumber: "INV-1043", amount: 2400 });
+    (mockPrisma.invoice.create as any).mockResolvedValue({ id: "inv-1", invoiceNumber: "SRL-5001I", amount: 2400 });
 
     const result = await autoGenerateInvoice("load-1");
 
     expect(mockPrisma.invoice.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          invoiceNumber: "INV-1043",
+          invoiceNumber: "SRL-5001I", // mirrors the load, does NOT take INV-1043
           amount: 2400, // customer rate, NOT a carrier rate
           lineHaulAmount: 2400,
           status: "DRAFT",
@@ -107,7 +107,7 @@ describe("autoGenerateInvoice — DELIVERED -> shipper-AR draft", () => {
     expect(mockPrisma.notification.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ userId: "ae-1", title: "Shipper invoice drafted" }) }),
     );
-    expect(result).toEqual({ id: "inv-1", invoiceNumber: "INV-1043", amount: 2400 });
+    expect(result).toEqual({ id: "inv-1", invoiceNumber: "SRL-5001I", amount: 2400 });
   });
 
   it("adds the load fuel surcharge to the total", async () => {
@@ -127,16 +127,16 @@ describe("autoGenerateInvoice — DELIVERED -> shipper-AR draft", () => {
     expect(byType).toEqual({ LINEHAUL: 2400, FUEL_SURCHARGE: 180 });
   });
 
-  it("numbers the first-ever invoice INV-1001 when no prior invoice exists", async () => {
+  it("takes the load number even with the INV- sequence empty", async () => {
     (mockPrisma.invoice.findFirst as any).mockResolvedValue(null);
-    (mockPrisma.invoice.findMany as any).mockResolvedValue([]); // no prior -> INV-1001
+    (mockPrisma.invoice.findMany as any).mockResolvedValue([]); // would be INV-1001
     (mockPrisma.load.findUnique as any).mockResolvedValue(makeLoad({ customerRate: 500 }));
-    (mockPrisma.invoice.create as any).mockResolvedValue({ id: "inv-3", invoiceNumber: "INV-1001" });
+    (mockPrisma.invoice.create as any).mockResolvedValue({ id: "inv-3", invoiceNumber: "SRL-5001I" });
 
     await autoGenerateInvoice("load-1");
 
     expect(mockPrisma.invoice.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ invoiceNumber: "INV-1001", amount: 500 }) }),
+      expect.objectContaining({ data: expect.objectContaining({ invoiceNumber: "SRL-5001I", srlDocNumber: "SRL-5001I", amount: 500 }) }),
     );
   });
 });

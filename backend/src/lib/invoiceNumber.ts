@@ -1,7 +1,19 @@
 import { prisma } from "../config/database";
 
 /**
- * Next invoice number in the canonical INV-<n> sequential format.
+ * Next invoice number in the RETIRED INV-<n> sequential format.
+ *
+ * §21.2 ruling 3 (2026-09-24): INV-#### is no longer issued to a load-backed
+ * invoice. That invoice carries the bare load number, the same number as its
+ * BOL, its rate confirmation and its CarrierPay, and `invoiceNumber` mirrors
+ * `srlDocNumber` so a customer quoting 5001 names the load and the invoice at
+ * once. The sequence survives for ONE case and is not deleted: an invoice with
+ * no load has no stem to take, and refusing to bill over a missing internal
+ * reference would be the wrong failure.
+ *
+ * LEGACY INV- NUMBERS ARE NEVER REWRITTEN. They are what a customer has in
+ * their accounts-payable system and on the remittance advice they already sent;
+ * search resolves them, and the column keeps them.
  *
  * go-live audit: robust against legacy date-format numbers (INV-YYYYMMDD-XXXX,
  * produced by accountingController.createInvoice). Those are IGNORED when
@@ -40,9 +52,22 @@ export async function nextSequentialInvoiceNumber(client: any = prisma): Promise
  * and would otherwise swallow the P2002 and leave the load with no invoice).
  */
 export async function createInvoiceWithRetry<T>(
+  srlDocNumber: string | null,
   build: (invoiceNumber: string) => Promise<T>,
   attempts = 6,
 ): Promise<T> {
+  // §21.2 ruling 3 — a load-backed invoice MIRRORS its document number, and
+  // there is nothing here to retry. The number is DERIVED from the load rather
+  // than allocated by scanning, so a P2002 on it does not mean "somebody took
+  // this number, take the next one" — it means an invoice already carries this
+  // load's document number, which is a real error. Retrying would recompute the
+  // same string six times and rethrow the same error six attempts later, which
+  // is strictly worse than failing at once: it hides the cause behind a delay.
+  //
+  // The revision case is already handled upstream by withDocumentNumber, which
+  // is what hands this function 5001-2 when 5001 is taken.
+  if (srlDocNumber) return build(srlDocNumber);
+
   let lastErr: unknown;
   for (let i = 0; i < attempts; i++) {
     const invoiceNumber = await nextSequentialInvoiceNumber();

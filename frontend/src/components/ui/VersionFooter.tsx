@@ -18766,7 +18766,34 @@
 // so the prefix constant stopped being read the moment that landed.
 // The supplemental RULE stays and is tested: the letter map, the format and the
 // parse. What went is the plumbing with nothing on either end of it.
-export const SRL_VERSION = "3.8.bik";
+// v3.8.bil - numbering C1a, ruling 3: a load-backed invoice IS the load number.
+// The invoice on load 5001 is numbered 5001, the same string as its BOL and its
+// rate confirmation, so a customer quoting one number names all of them and an
+// AE searching it finds the whole file. INV-<n> is not deleted and is not
+// rewritten: it survives for the one case that has no stem to take, an invoice
+// with no load, and every INV- number already issued stays exactly as the
+// customer has it in their accounts-payable system.
+// srlDocNumber is the REQUIRED FIRST parameter of createInvoiceWithRetry rather
+// than an optional trailing one. An optional argument makes forgetting the
+// mirror silent - the invoice simply takes an INV- number and looks fine - while
+// a required one makes tsc refuse the call site. The type system enforces the
+// rule instead of a reviewer remembering it.
+// A P2002 ON A MIRRORED NUMBER IS NOT RETRIED. The number is derived from the
+// load rather than allocated by scanning, so a duplicate does not mean "somebody
+// took this number, take the next one" - it means an invoice already carries
+// this load number, which is a real error. Retrying would recompute the
+// identical string six times and rethrow the same error six attempts later,
+// hiding the cause behind a delay. withDocumentNumber upstream is what hands
+// this function 5001-2 when 5001 is taken.
+// THE COMPILE GATE COULD NOT SEE THE TEST CORPUS. tsconfig includes src only, so
+// "tsc clean" proved the services compile and said nothing about three test
+// files still declaring the old single-argument contract; vitest found all
+// three. Two of them asserted the RETIRED numbering outright - a load-backed
+// invoice taking INV-1043 - and their going red is the change working rather
+// than a regression. They are re-aimed, not deleted: their fixture stem is
+// legacy, so they now stand as the lock that an old load keeps its suffixed
+// scheme while new loads take the bare number.
+export const SRL_VERSION = "3.8.bil";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

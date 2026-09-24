@@ -329,7 +329,7 @@ export async function creditRejectedAccessorials(loadId: string) {
     const stem = resolveLoadStem(load);
 
     const buildCredit = (srlDocNumber: string | null) =>
-      createInvoiceWithRetry((invoiceNumber) =>
+      createInvoiceWithRetry(srlDocNumber, (invoiceNumber) =>
         prisma.$transaction(async (tx) => {
           const inv = await tx.invoice.create({
             data: {
@@ -586,7 +586,7 @@ export async function autoGenerateInvoice(loadId: string) {
   // customer over a missing internal reference would be the wrong failure.
   const stem = resolveLoadStem(load);
   const buildInvoice = (srlDocNumber: string | null) =>
-    createInvoiceWithRetry((invoiceNumber) =>
+    createInvoiceWithRetry(srlDocNumber, (invoiceNumber) =>
     prisma.$transaction(async (tx) => {
       const inv = await tx.invoice.create({
         data: {
@@ -913,7 +913,7 @@ export async function raiseTonuCustomerCharge(loadId: string): Promise<{ created
   // and moves the totals, which is what keeps this on the one path rather than
   // re-implementing itemisation here.
   const buildInvoice = (srlDocNumber: string | null) =>
-    createInvoiceWithRetry((invoiceNumber) =>
+    createInvoiceWithRetry(srlDocNumber, (invoiceNumber) =>
       prisma.invoice.create({
         data: {
           invoiceNumber,
@@ -1040,7 +1040,7 @@ export async function syncInvoiceAccessorials(loadId: string) {
   const stem = resolveLoadStem(load);
 
   const buildSupplemental = (srlDocNumber: string | null) =>
-    createInvoiceWithRetry((invoiceNumber) =>
+    createInvoiceWithRetry(srlDocNumber, (invoiceNumber) =>
       prisma.$transaction(async (tx) => {
         const inv = await tx.invoice.create({
           data: {

@@ -27,7 +27,7 @@ vi.mock("../../../src/lib/logger", () => ({
   log: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
 }));
 vi.mock("../../../src/lib/invoiceNumber", () => ({
-  createInvoiceWithRetry: (fn: any) => fn("INV-TEST-0001"),
+  createInvoiceWithRetry: (srlDoc: any, fn: any) => fn(srlDoc ?? "INV-TEST-0001"),
 }));
 // withDocumentNumber lives in documentNumber, not invoiceNumber. Mocking the
 // wrong module let the real allocator run and fail on client[model].findMany —
@@ -54,7 +54,7 @@ const TONU_LOAD = {
 function armHappyPath() {
   mockPrisma.load.findUnique.mockResolvedValue(TONU_LOAD);
   mockPrisma.invoice.findFirst.mockResolvedValue(null); // no base yet
-  mockPrisma.invoice.create.mockResolvedValue({ id: "inv-1", invoiceNumber: "INV-TEST-0001" });
+  mockPrisma.invoice.create.mockResolvedValue({ id: "inv-1", invoiceNumber: "SRL-121485I" });
   // unbilledCustomerAccessorials reads these two.
   mockPrisma.loadAccessorial.findMany.mockResolvedValue([
     { id: "acc-1", type: "TONU", amount: TONU_AMOUNT, customerAmount: null, quantity: null, billedTo: "SHIPPER", notes: null },
