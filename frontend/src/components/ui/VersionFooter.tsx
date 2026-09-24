@@ -18836,7 +18836,29 @@
 // is a no-op there. Which is also why the pin could not have caught the defect -
 // it is blind to a divergence its fixture does not contain, so the new guard
 // renders fixtures built to diverge.
-export const SRL_VERSION = "3.8.bin";
+// v3.8.bio - numbering C2, ruling 6: an exact document number outranks the rows
+// that merely contain it.
+// Under the bare scheme this matters more than it did. A load number is now a
+// short run of digits, so "5001" is a substring of 50010, of 15001 and of every
+// accessorial number hanging off them - a flat substring OR buries the row the
+// AE actually pasted somewhere in a list of near-misses, ordered by whatever the
+// table sorts by. The exact pass is what puts it first.
+// The legacy pass is a convenience, not a fallback: an AE reading SRL-121485 off
+// a printed page types the part that varies and skips the prefix, so "SRL-" plus
+// the term is tried as its own exact pass rather than by making the exact pass
+// fuzzy, which would defeat the point of having one.
+// ONE DEFINITION, because five search boxes with five hand-written OR blocks is
+// how the invoice box came to search srlDocNumber while the load board did not,
+// and the same number pasted into two screens found it in one of them.
+// THE PERMANENCE GUARD CAUGHT THE FIRST CUT AND WAS RIGHT. The search helper
+// built the SRL- form itself, which teaches a second module what numbers look
+// like - exactly the drift the guard exists to stop. The spelling moved into
+// documentNumber, which owns the scheme, and LEGACY_PREFIX came back with it:
+// v3.8.bik removed that constant as unreachable and said it should land again
+// with the caller that needs it. Search is that caller.
+// Pagination spans the two passes rather than running one query per page, so a
+// search with no term is the same two queries the handler always made.
+export const SRL_VERSION = "3.8.bio";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

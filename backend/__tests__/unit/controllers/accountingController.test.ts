@@ -27,7 +27,7 @@ const { onInvoicePaid, sumAtCostReimbursements } = vi.hoisted(() => ({
 }));
 vi.mock("../../../src/services/integrationService", () => ({ onInvoicePaid, sumAtCostReimbursements }));
 
-import { markInvoicePaid } from "../../../src/controllers/accountingController";
+import { markInvoicePaid, getInvoices } from "../../../src/controllers/accountingController";
 
 const mockPrisma = vi.mocked(prisma, true);
 
@@ -128,5 +128,76 @@ describe("markInvoicePaid — payment ledger (go-live audit R1/R2/R3)", () => {
 
     expect(res.status).toHaveBeenCalledWith(404);
     expect(mockPrisma.invoice.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+
+// §21.2 ruling 6 — exact document number first, substring after.
+//
+// The helper's own tests cover the CLAUSES. These cover the WIRING, which is
+// the part that can be right in isolation and wrong in place: whether the exact
+// query actually runs first, whether its rows are excluded from the second, and
+// whether a handler with no search term still behaves exactly as it did.
+describe("getInvoices — search ranks an exact document number first", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (mockPrisma.invoice.count as any).mockResolvedValue(0);
+  });
+
+  // The handler enriches every row with aging, so a fixture row needs the
+  // columns that computation reads or the handler throws into its catch and
+  // the assertion fails for a reason that has nothing to do with ordering.
+  const ROW = { createdAt: new Date("2026-09-01T00:00:00.000Z"), dueDate: null, status: "DRAFT" };
+
+  function req(query: Record<string, any>) {
+    return { query, user: { id: "ae-1", role: "ADMIN" } } as any;
+  }
+
+  it("makes NO exact query when there is no search term", async () => {
+    // The no-search case is the common one and must not have grown a round trip.
+    (mockPrisma.invoice.findMany as any).mockResolvedValue([]);
+    await getInvoices(req({}), mockRes());
+    expect(mockPrisma.invoice.findMany).toHaveBeenCalledTimes(1);
+    const where = (mockPrisma.invoice.findMany as any).mock.calls[0][0].where;
+    expect(where.OR, "an empty search built a filter clause").toBeUndefined();
+    expect(where.AND).toBeUndefined();
+  });
+
+  it("queries EXACT first and puts those rows at the top", async () => {
+    (mockPrisma.invoice.findMany as any)
+      .mockResolvedValueOnce([{ id: "inv-exact", invoiceNumber: "5001", ...ROW }])
+      .mockResolvedValueOnce([{ id: "inv-sub", invoiceNumber: "50010", ...ROW }]);
+    (mockPrisma.invoice.count as any).mockResolvedValue(1);
+
+    const res = mockRes();
+    await getInvoices(req({ search: "5001" }), res);
+
+    const firstWhere = (mockPrisma.invoice.findMany as any).mock.calls[0][0].where;
+    expect(JSON.stringify(firstWhere), "the first query was not the exact pass").toContain(
+      '"equals":"5001"',
+    );
+    // 50010 CONTAINS 5001, which is exactly the row that used to bury the one
+    // the AE pasted. It must come second, not first.
+    const body = (res.json as any).mock.calls[0][0];
+    const ids = (body.invoices ?? body.data ?? body).map((r: any) => r.id);
+    expect(ids).toEqual(["inv-exact", "inv-sub"]);
+  });
+
+  it("excludes the exact rows from the substring pass, so none appears twice", async () => {
+    (mockPrisma.invoice.findMany as any)
+      .mockResolvedValueOnce([{ id: "inv-exact", ...ROW }])
+      .mockResolvedValueOnce([]);
+    await getInvoices(req({ search: "5001" }), mockRes());
+
+    const secondWhere = (mockPrisma.invoice.findMany as any).mock.calls[1][0].where;
+    expect(JSON.stringify(secondWhere)).toContain('"notIn":["inv-exact"]');
+  });
+
+  it("tries the legacy SRL- form of a bare term", async () => {
+    // An AE reading SRL-121485 off a printed page types 121485.
+    (mockPrisma.invoice.findMany as any).mockResolvedValue([]);
+    await getInvoices(req({ search: "121485" }), mockRes());
+    const firstWhere = (mockPrisma.invoice.findMany as any).mock.calls[0][0].where;
+    expect(JSON.stringify(firstWhere)).toContain('"equals":"SRL-121485"');
   });
 });

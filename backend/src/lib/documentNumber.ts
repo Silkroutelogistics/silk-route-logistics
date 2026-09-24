@@ -171,6 +171,39 @@ export function isLegacyStem(stem: string): boolean {
   return !isBareStem(stem);
 }
 
+/**
+ * The prefix every number carried before the scheme was amended.
+ *
+ * It came back. v3.8.bik removed this constant because isBareStem had
+ * superseded it as the DISCRIMINATOR — "is the stem all digits" answers which
+ * scheme a stem belongs to without needing to know the prefix — and that commit
+ * said it should land again with the caller that needs it. Search is that
+ * caller, and it needs the opposite question: not which scheme a stem is in,
+ * but how to SPELL a term in the older one.
+ */
+export const LEGACY_PREFIX = "SRL-";
+
+/**
+ * The legacy spelling of a search term, or null when it already carries the
+ * prefix.
+ *
+ * Lives here rather than in the search helper because this module owns the
+ * scheme, and a second place that knows numbers start with SRL- is a second
+ * place that can disagree about it. The permanence guard enforces exactly that
+ * — it failed on the search helper building the string itself, which is the
+ * guard working rather than the guard being in the way.
+ *
+ * isLegacyStem is deliberately NOT the test. It asks whether a stem is all
+ * digits, so it answers false for 121485I and the AE who typed the suffix off a
+ * printed document without the prefix would never reach the legacy pass.
+ */
+export function legacySearchForm(term: string | null | undefined): string | null {
+  const t = String(term ?? "").trim();
+  if (!t) return null;
+  if (t.toUpperCase().startsWith(LEGACY_PREFIX)) return null;
+  return LEGACY_PREFIX + t;
+}
+
 /** The shape every derivation needs off a load. Deliberately structural rather
  *  than the Prisma type: renderers are handed plain fixture objects by
  *  scripts/verify-rc-matrix.ts and by pdfController's ad-hoc BOL payload. */

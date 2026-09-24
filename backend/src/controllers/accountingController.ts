@@ -8,6 +8,7 @@ import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { etStartOfMonth, etStartOfWeek } from "../lib/financePeriods";
 import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
 import { createInvoiceWithRetry } from "../lib/invoiceNumber";
+import { buildDocumentSearch, excludingIds } from "../lib/documentSearch";
 import { generateInvoicePdf } from "../services/pdfService";
 import { sendCustomerInvoiceEmail } from "../services/emailService";
 import {
@@ -257,46 +258,73 @@ export async function getInvoices(req: AuthRequest, res: Response) {
       if (dateFrom) where.createdAt.gte = new Date(dateFrom as string);
       if (dateTo) where.createdAt.lte = new Date(dateTo as string);
     }
-    if (search) {
-      where.OR = [
-        { invoiceNumber: { contains: search as string, mode: "insensitive" } },
-        // The number the customer actually has in front of them. Without this
-        // branch, an AE pasting "SRL-121485I" off the emailed invoice — the only
-        // number that document prints — got zero results, because invoiceNumber
-        // holds the internal INV- sequence and referenceNumber holds the bare
-        // stem with no suffix letter.
-        { srlDocNumber: { contains: search as string, mode: "insensitive" } },
-        { load: { referenceNumber: { contains: search as string, mode: "insensitive" } } },
+    // §21.2 ruling 6 — exact document number first, then substring. The column
+    // list is unchanged; what is new is that a pasted number outranks the rows
+    // that merely contain it. Under the bare scheme that matters more than it
+    // used to: "5001" is a substring of 50010, of 15001, and of every
+    // accessorial number hanging off them.
+    const { exact, substring } = buildDocumentSearch(search as string, {
+      numberFields: [
+        "invoiceNumber",
+        // The number the customer has in front of them. Without this an AE
+        // pasting SRL-121485I off the emailed invoice got zero results.
+        "srlDocNumber",
+        "load.referenceNumber",
         // Loads numbered before referenceNumber and loadNumber were kept in
-        // step still match on the stem the documents were derived from.
-        { load: { loadNumber: { contains: search as string, mode: "insensitive" } } },
-      ];
-    }
+        // step still match on the stem their documents were derived from.
+        "load.loadNumber",
+      ],
+    });
 
-    const [invoices, total] = await Promise.all([
-      prisma.invoice.findMany({
-        where,
-        include: {
-          load: {
-            select: {
-              referenceNumber: true,
-              originCity: true,
-              originState: true,
-              destCity: true,
-              destState: true,
-              customerRate: true,
-              customer: { select: { id: true, name: true } },
-            },
-          },
-          user: { select: { id: true, firstName: true, lastName: true, company: true } },
-          lineItems: true,
+    const include = {
+      load: {
+        select: {
+          referenceNumber: true,
+          originCity: true,
+          originState: true,
+          destCity: true,
+          destState: true,
+          customerRate: true,
+          customer: { select: { id: true, name: true } },
         },
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-      }),
-      prisma.invoice.count({ where }),
+      },
+      user: { select: { id: true, firstName: true, lastName: true, company: true } },
+      lineItems: true,
+    } as const;
+    const orderBy = { createdAt: "desc" } as const;
+
+    // The exact pass is bounded by nature — it matches issued numbers, and a
+    // term cannot be more than a handful of those. The cap is a backstop, not
+    // a page size: past it the substring pass carries the rest rather than the
+    // query growing without limit.
+    const EXACT_CAP = 50;
+    const exactHits = exact
+      ? await prisma.invoice.findMany({ where: { ...where, ...exact }, include, orderBy, take: EXACT_CAP })
+      : [];
+    const exactIds = exactHits.map((i) => i.id);
+
+    // The substring pass excludes what the exact pass already returned, so no
+    // row appears twice in one list.
+    const restClause = excludingIds(substring, exactIds);
+    const restWhere = restClause ? { ...where, ...restClause } : where;
+
+    // Paginate ACROSS the two passes: the exact hits occupy the first slots of
+    // page 1 and the substring pass picks up wherever they leave off. With no
+    // search term the exact clause is null, so this costs the same two queries
+    // the handler has always made and behaves identically.
+    const headSlice = exactHits.slice(Math.min(skip, exactHits.length), Math.min(skip + limit, exactHits.length));
+    const remaining = limit - headSlice.length;
+    const restSkip = Math.max(0, skip - exactHits.length);
+
+    const [restRows, restTotal] = await Promise.all([
+      remaining > 0
+        ? prisma.invoice.findMany({ where: restWhere, include, orderBy, skip: restSkip, take: remaining })
+        : Promise.resolve([] as typeof exactHits),
+      prisma.invoice.count({ where: restWhere }),
     ]);
+
+    const invoices = [...headSlice, ...restRows];
+    const total = exactHits.length + restTotal;
 
     // Enrich with aging info
     const now = new Date();
