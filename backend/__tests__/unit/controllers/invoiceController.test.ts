@@ -75,6 +75,52 @@ describe("invoiceController", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ invoiceNumber: "INV-1006" })
     );
+
+    // This fixture's load has NO stem, so it exercises the load-less branch:
+    // the retired INV- sequence is still correct here and srlDocNumber stays
+    // null. Asserting the CREATE PAYLOAD rather than the mocked return value,
+    // because the old assertion read back its own mock and was therefore blind
+    // to what the handler actually wrote.
+    expect(mockPrisma.invoice.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ srlDocNumber: null }) }),
+    );
+  });
+
+  // §21.2 ruling 3 — the hand-raised invoice takes the load's number.
+  // Both cases assert the CREATE PAYLOAD: the number the handler writes is the
+  // thing under test, and a mocked return value cannot show it.
+  it("createInvoice — a load-backed invoice mirrors a BARE load number", async () => {
+    mockPrisma.load.findUnique.mockResolvedValue({ status: "DELIVERED", tonuFaultSide: null, deletedAt: null, loadNumber: "5001", referenceNumber: "5001" } as any);
+    mockPrisma.invoice.findMany.mockResolvedValue([] as any); // no prior document on this load
+    mockPrisma.invoice.create.mockResolvedValue({ id: "inv-9" } as any);
+    mockPrisma.invoiceLineItem.createMany.mockResolvedValue({ count: 0 } as any);
+    mockPrisma.invoice.findUnique.mockResolvedValue({ id: "inv-9", invoiceNumber: "5001" } as any);
+
+    const { req, res } = mockReqRes({ loadId: "load-1", amount: 2500 }, { id: "user-1", role: "BROKER" });
+    await createInvoice(req, res);
+
+    const data = (mockPrisma.invoice.create as any).mock.calls[0][0].data;
+    expect(data.invoiceNumber).toBe("5001");
+    expect(data.srlDocNumber).toBe("5001");
+    // The mirror itself: one string, not two columns that happen to agree.
+    expect(data.invoiceNumber).toBe(data.srlDocNumber);
+    expect(data.invoiceNumber).not.toMatch(/^INV-/);
+  });
+
+  it("createInvoice — a LEGACY load keeps its suffixed scheme", async () => {
+    // An old load is not renumbered. SRL-5001 takes the I suffix it always did.
+    mockPrisma.load.findUnique.mockResolvedValue({ status: "DELIVERED", tonuFaultSide: null, deletedAt: null, loadNumber: null, referenceNumber: "SRL-5001" } as any);
+    mockPrisma.invoice.findMany.mockResolvedValue([] as any);
+    mockPrisma.invoice.create.mockResolvedValue({ id: "inv-10" } as any);
+    mockPrisma.invoiceLineItem.createMany.mockResolvedValue({ count: 0 } as any);
+    mockPrisma.invoice.findUnique.mockResolvedValue({ id: "inv-10", invoiceNumber: "SRL-5001I" } as any);
+
+    const { req, res } = mockReqRes({ loadId: "load-1", amount: 2500 }, { id: "user-1", role: "BROKER" });
+    await createInvoice(req, res);
+
+    const data = (mockPrisma.invoice.create as any).mock.calls[0][0].data;
+    expect(data.invoiceNumber).toBe("SRL-5001I");
+    expect(data.srlDocNumber).toBe("SRL-5001I");
   });
 
   // ── getInvoices ─────────────────────────────────────────

@@ -18793,7 +18793,28 @@
 // than a regression. They are re-aimed, not deleted: their fixture stem is
 // legacy, so they now stand as the lock that an old load keeps its suffixed
 // scheme while new loads take the bare number.
-export const SRL_VERSION = "3.8.bil";
+// v3.8.bim - numbering C1b: the two hand-raised invoice paths join the rule.
+// POST /invoices and POST /invoices/from-load/:loadId both minted from the
+// retired INV- sequence on loads that have a stem, so one load could carry two
+// numbering schemes depending on which button raised the invoice - the auto
+// path produced 5001 and an AE clicking here produced INV-1043 on the same
+// load. Both now resolve the stem and go through withDocumentNumber, which is
+// the same allocator the auto path uses, so a second invoice on one load gets
+// 5001-2 rather than silently colliding.
+// THE AR EMAIL AND THE STORED PDF PATH NOW READ THE NUMBER BACK OFF THE CREATED
+// ROW. They interpolated a local that the handler had allocated minutes earlier;
+// reading the row means the number the customer is emailed, the number on the
+// file in storage and the number in the column are one string by construction
+// rather than three copies that happen to agree. This is the "AR emails key on
+// the bare number" half of ruling 3, and it needed no separate wiring once the
+// column was right.
+// The existing controller test passed unchanged across this change because it
+// asserted the MOCKED RETURN of invoice.create rather than the payload - it read
+// back its own fixture and was blind to what the handler wrote. It now asserts
+// the payload, and two cases cover the load-backed branch its fixture had never
+// reached (that load carried no stem, so it had been exercising the load-less
+// path by accident).
+export const SRL_VERSION = "3.8.bim";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

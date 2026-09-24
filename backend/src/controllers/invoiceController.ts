@@ -8,7 +8,8 @@ import { assessLoadBillable } from "../services/invoiceService";
 import { sendEmail, wrap } from "../services/emailService";
 import { onInvoicePaid } from "../services/integrationService";
 import { log } from "../lib/logger";
-import { nextSequentialInvoiceNumber } from "../lib/invoiceNumber";
+import { createInvoiceWithRetry } from "../lib/invoiceNumber";
+import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
 
 export async function createInvoice(req: AuthRequest, res: Response) {
   const data = createInvoiceSchema.parse(req.body);
@@ -16,14 +17,12 @@ export async function createInvoice(req: AuthRequest, res: Response) {
   // B4b — this path never read the load, so a CANCELLED load could be
   // invoiced by hand. One rule with the auto path and carrier pay.
   const load = await prisma.load.findUnique({
-    where: { id: data.loadId }, select: { status: true, tonuFaultSide: true, deletedAt: true },
+    where: { id: data.loadId },
+    select: { status: true, tonuFaultSide: true, deletedAt: true, loadNumber: true, referenceNumber: true },
   });
   if (!load) { res.status(404).json({ error: "Load not found" }); return; }
   const billable = assessLoadBillable(load);
   if (!billable.ok) { res.status(409).json({ error: billable.message, code: billable.code }); return; }
-  // go-live audit: robust against legacy date-format numbers (no parseInt jump).
-  const invoiceNumber = await nextSequentialInvoiceNumber();
-
   const { lineItems, ...invoiceData } = data;
 
   // If line items provided, compute amount from them
@@ -31,35 +30,52 @@ export async function createInvoice(req: AuthRequest, res: Response) {
     ? lineItems.reduce((sum, li) => sum + li.amount, 0)
     : data.amount;
 
-  const invoice = await prisma.$transaction(async (tx) => {
-    const inv = await tx.invoice.create({
-      data: {
-        ...invoiceData,
-        amount: computedAmount,
-        invoiceNumber,
-        userId: req.user!.id,
-      } as any,
-    });
+  // §21.2 ruling 3 — an invoice raised by hand is load-backed like any other,
+  // so it takes the load's document number. This was the last path still
+  // minting from the retired sequence on a load that HAS a stem: an AE raising
+  // an invoice here produced INV-1043 on load 5001 while the auto path produced
+  // 5001, so one load could carry two numbering schemes depending on which
+  // button raised the invoice.
+  const stem = resolveLoadStem(load);
+  const build = (srlDocNumber: string | null) =>
+    createInvoiceWithRetry(srlDocNumber, (invoiceNumber) =>
+      prisma.$transaction(async (tx) => {
+        const inv = await tx.invoice.create({
+          data: {
+            ...invoiceData,
+            amount: computedAmount,
+            invoiceNumber,
+            srlDocNumber,
+            userId: req.user!.id,
+          } as any,
+        });
 
-    if (lineItems && lineItems.length > 0) {
-      await tx.invoiceLineItem.createMany({
-        data: lineItems.map((li, idx) => ({
-          invoiceId: inv.id,
-          description: li.description,
-          quantity: li.quantity,
-          rate: li.rate,
-          amount: li.amount,
-          type: li.type,
-          sortOrder: li.sortOrder ?? idx,
-        })),
-      });
-    }
+        if (lineItems && lineItems.length > 0) {
+          await tx.invoiceLineItem.createMany({
+            data: lineItems.map((li, idx) => ({
+              invoiceId: inv.id,
+              description: li.description,
+              quantity: li.quantity,
+              rate: li.rate,
+              amount: li.amount,
+              type: li.type,
+              sortOrder: li.sortOrder ?? idx,
+            })),
+          });
+        }
 
-    return tx.invoice.findUnique({
-      where: { id: inv.id },
-      include: { load: true, lineItems: { orderBy: { sortOrder: "asc" } } },
-    });
-  });
+        return tx.invoice.findUnique({
+          where: { id: inv.id },
+          include: { load: true, lineItems: { orderBy: { sortOrder: "asc" } } },
+        });
+      }),
+    );
+
+  // A load with no stem still invoices. Refusing to bill a customer over a
+  // missing internal reference would be the wrong failure — the auto path's rule.
+  const invoice = stem
+    ? await withDocumentNumber("INVOICE", stem, build)
+    : await build(null);
 
   res.status(201).json(invoice);
 }
@@ -291,10 +307,6 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
     return;
   }
 
-  // Generate invoice number
-  // go-live audit: robust against legacy date-format numbers (no parseInt jump).
-  const invoiceNumber = await nextSequentialInvoiceNumber();
-
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 30);
 
@@ -309,32 +321,47 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
     lineItems.push({ description: "Fuel Surcharge", quantity: 1, rate: fuelSurcharge, amount: fuelSurcharge, type: "FUEL_SURCHARGE", sortOrder: 1 });
   }
 
-  const invoice = await prisma.$transaction(async (tx) => {
-    const inv = await tx.invoice.create({
-      data: {
-        invoiceNumber,
-        userId: req.user!.id,
-        createdById: req.user!.id,
-        loadId,
-        amount: totalAmount,
-        totalAmount,
-        lineHaulAmount: customerRate,
-        fuelSurchargeAmount: fuelSurcharge,
-        status: "DRAFT",
-        dueDate,
-      },
-    });
-    await tx.invoiceLineItem.createMany({
-      data: lineItems.map((li) => ({ invoiceId: inv.id, ...li })),
-    });
-    return tx.invoice.findUnique({ where: { id: inv.id }, include: { load: { include: { customer: true } }, user: { select: { firstName: true, lastName: true, company: true } }, lineItems: { orderBy: { sortOrder: "asc" } } } });
-  });
+  // §21.2 ruling 3 — the invoice takes the load's document number. The AR
+  // email and the stored PDF path below read it back OFF THE CREATED ROW
+  // rather than from a local, so the number the customer is emailed, the
+  // number on the file in storage and the number in the column are one string
+  // by construction rather than three copies that agree today.
+  const stem = resolveLoadStem(load);
+  const build = (srlDocNumber: string | null) =>
+    createInvoiceWithRetry(srlDocNumber, (invoiceNumber) =>
+      prisma.$transaction(async (tx) => {
+        const inv = await tx.invoice.create({
+          data: {
+            invoiceNumber,
+            srlDocNumber,
+            userId: req.user!.id,
+            createdById: req.user!.id,
+            loadId,
+            amount: totalAmount,
+            totalAmount,
+            lineHaulAmount: customerRate,
+            fuelSurchargeAmount: fuelSurcharge,
+            status: "DRAFT",
+            dueDate,
+          },
+        });
+        await tx.invoiceLineItem.createMany({
+          data: lineItems.map((li) => ({ invoiceId: inv.id, ...li })),
+        });
+        return tx.invoice.findUnique({ where: { id: inv.id }, include: { load: { include: { customer: true } }, user: { select: { firstName: true, lastName: true, company: true } }, lineItems: { orderBy: { sortOrder: "asc" } } } });
+      }),
+    );
+
+  const invoice = stem
+    ? await withDocumentNumber("INVOICE", stem, build)
+    : await build(null);
+  const docNumber = invoice!.invoiceNumber;
 
   // Generate PDF
   try {
     const pdfBuffer = await generateInvoicePdf(invoice as any);
     const { uploadFileToPath } = await import("../services/storageService");
-    const pdfUrl = await uploadFileToPath(pdfBuffer, `invoices/${invoiceNumber}.pdf`, "application/pdf");
+    const pdfUrl = await uploadFileToPath(pdfBuffer, `invoices/${docNumber}.pdf`, "application/pdf");
     await prisma.invoice.update({ where: { id: invoice!.id }, data: { pdfUrl } });
   } catch (e: any) {
     log.error({ err: e }, "[Invoice] PDF generation error:");
@@ -350,7 +377,7 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
   if (invoiceRecipients.length > 0 && load.customer) {
     const shipperName = load.customer.contactName || load.customer.name;
     const body = `
-      <h2 style="color:#1e293b;margin:0 0 12px">Invoice ${invoiceNumber}</h2>
+      <h2 style="color:#1e293b;margin:0 0 12px">Invoice ${docNumber}</h2>
       <p style="color:#475569">Dear ${shipperName},</p>
       <p style="color:#475569">Please find your invoice for shipment <strong>${load.referenceNumber}</strong>.</p>
       <table style="width:100%;border-collapse:collapse;margin:16px 0">
@@ -366,7 +393,7 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
       <p style="color:#94a3b8;font-size:12px">If you have questions, contact us at info@silkroutelogistics.ai</p>
     `;
     for (const r of invoiceRecipients) {
-      await sendEmail(r.email, `Invoice ${invoiceNumber} — ${load.referenceNumber}`, wrap(body)).catch((e: any) => log.error({ err: e }, "[Invoice] Email error:"));
+      await sendEmail(r.email, `Invoice ${docNumber} — ${load.referenceNumber}`, wrap(body)).catch((e: any) => log.error({ err: e }, "[Invoice] Email error:"));
     }
 
     await prisma.invoice.update({ where: { id: invoice!.id }, data: { status: "SENT", sentDate: new Date() } });
