@@ -18743,7 +18743,19 @@
 // exact number OR the hyphen form, never startsWith(stem). The rulings do not
 // reach this case - it only arises once core documents lose their suffix - so
 // the separator is flagged as an open decision rather than taken quietly.
-export const SRL_VERSION = "3.8.bii";
+// v3.8.bij - numbering C2: download filenames carry the number first.
+// 5001_BOL.pdf, 5001_Rate_Confirmation.pdf, 5001_Invoice.pdf. The download
+// folder is where a customer actually meets the string, and a TYPE- prefix
+// (BOL-5001.pdf) sorts their folder by type across every load they have ever
+// saved - the one ordering nobody wants, and the same argument the numbering
+// scheme itself rests on. Underscores rather than spaces (which force quoting
+// in Content-Disposition) or hyphens (already load-bearing as the core revision
+// separator, so 5001-2_Invoice.pdf would be ambiguous to read).
+// THE SETTLEMENT BATCH KEEPS STL-<n> AND IS NOT RENAMED. Ruling 2: it is one
+// carrier over one period, spans many loads, and structurally cannot carry a
+// load number. It is not a load document, so the rule does not reach it - a
+// decision recorded at the call site rather than an oversight.
+export const SRL_VERSION = "3.8.bij";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

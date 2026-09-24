@@ -5,6 +5,12 @@ import { generateBOLFromLoad, generateEnhancedRateConfirmation, generateShipperL
 import { generateBOLPrintToken } from "../services/shipperTrackingTokenService";
 import { resolveStopContacts } from "../lib/stopContact";
 import { log } from "../lib/logger";
+import {
+  documentFilename,
+  documentNumberFor,
+  resolveLoadStem,
+  DOCUMENT_FILENAME_LABEL,
+} from "../lib/documentNumber";
 
 export async function downloadRateConfirmation(req: AuthRequest, res: Response) {
   try {
@@ -35,7 +41,10 @@ export async function downloadRateConfirmation(req: AuthRequest, res: Response) 
     // Dock contacts, same resolver the BOL uses — see lib/stopContact.
     const stopContacts = await resolveStopContacts(load, prisma);
     const doc = generateEnhancedRateConfirmation({ ...load, stopContacts }, formData);
-    const filename = `RC-${load.referenceNumber}.pdf`;
+    const filename = documentFilename(
+      documentNumberFor(rc?.rateConNumber, load, "RATE_CONFIRMATION") ?? load.referenceNumber,
+      DOCUMENT_FILENAME_LABEL.RATE_CONFIRMATION,
+    );
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
@@ -66,7 +75,10 @@ export async function downloadEnhancedRateConfirmation(req: AuthRequest, res: Re
     // Dock contacts, same resolver the BOL uses — see lib/stopContact.
     const stopContacts = await resolveStopContacts(load, prisma);
     const doc = generateEnhancedRateConfirmation({ ...load, stopContacts }, formData);
-    const filename = `RC-Enhanced-${load.referenceNumber}.pdf`;
+    const filename = documentFilename(
+      documentNumberFor(rc?.rateConNumber, load, "RATE_CONFIRMATION") ?? load.referenceNumber,
+      DOCUMENT_FILENAME_LABEL.RATE_CONFIRMATION,
+    );
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
@@ -95,7 +107,9 @@ export async function downloadShipperLoadConfirmation(req: AuthRequest, res: Res
     }
 
     const doc = generateShipperLoadConfirmation(load, {});
-    const filename = `LoadConfirmation-${load.referenceNumber}.pdf`;
+    // Not a numbered document of its own: it is the load, confirmed to the
+    // shipper, so it carries the load number and says what it is.
+    const filename = documentFilename(resolveLoadStem(load) ?? load.referenceNumber, "Load_Confirmation");
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
@@ -135,7 +149,10 @@ export async function downloadInvoicePDF(req: AuthRequest, res: Response) {
     if (!isOwner && !isEmployee && !isShipperOwner) { res.status(403).json({ error: "Not authorized" }); return; }
 
     const doc = generateInvoicePDF(invoice);
-    const filename = `${invoice.invoiceNumber}.pdf`;
+    const filename = documentFilename(
+      documentNumberFor(invoice.srlDocNumber, invoice.load, "INVOICE") ?? invoice.invoiceNumber,
+      DOCUMENT_FILENAME_LABEL.INVOICE,
+    );
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
@@ -302,7 +319,10 @@ export async function downloadBOLFromLoad(req: AuthRequest, res: Response) {
     };
 
     const doc = await generateBOLFromLoad(bolData, { trackingToken });
-    const filename = `BOL-${load.referenceNumber}.pdf`;
+    const filename = documentFilename(
+      documentNumberFor(load.srlBolNumber, load, "BOL") ?? load.referenceNumber,
+      DOCUMENT_FILENAME_LABEL.BOL,
+    );
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
@@ -331,6 +351,9 @@ export async function downloadSettlementPDF(req: AuthRequest, res: Response) {
     if (!settlement) { res.status(404).json({ error: "Settlement not found" }); return; }
 
     const doc = generateSettlementPDF(settlement);
+    // RULING 2: the Settlement BATCH is one carrier over one period, spans many
+    // loads, and structurally cannot carry a load number. It keeps STL-<n> and is
+    // deliberately NOT renamed — it is not a load document.
     const filename = `${settlement.settlementNumber}.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");

@@ -346,6 +346,56 @@ export function documentNumberFor(
   return formatDocumentNumber(stem, kind);
 }
 
+// ─── Download filenames ─────────────────────────────────────────────────────
+
+/**
+ * THE filename rule (§21.2): the number first, then what the document is.
+ *
+ *     5001_BOL.pdf   5001_Rate_Confirmation.pdf   5001A_Lumper.pdf
+ *
+ * NUMBER FIRST IS THE WHOLE POINT, and it is the same argument the numbering
+ * scheme itself rests on. A customer saving four documents for one load wants
+ * them adjacent in the folder; a TYPE- prefix (BOL-5001.pdf, RC-5001.pdf) sorts
+ * them by type across every load they have ever saved, which is the one ordering
+ * nobody wants. The download folder is where a customer actually meets the
+ * string, so it is not a lesser surface than the document body.
+ *
+ * Underscores rather than spaces or hyphens: a space forces quoting in
+ * Content-Disposition and breaks naive shell and email clients, and a hyphen is
+ * already load-bearing as the core revision separator (5001-2), so reusing it
+ * here would make 5001-2_Invoice.pdf ambiguous to read.
+ */
+export function documentFilename(documentNumber: string, label: string, extension = "pdf"): string {
+  return `${documentNumber}_${label}.${extension}`;
+}
+
+/** Filename label per core kind. SUPPLEMENTAL_INVOICE is absent deliberately:
+ *  a supplemental is labelled by its accessorial type, not by the word
+ *  "supplemental" — 5001A_Lumper.pdf says what was charged. */
+export const DOCUMENT_FILENAME_LABEL: Record<Exclude<DocumentKind, "SUPPLEMENTAL_INVOICE">, string> = {
+  BOL: "BOL",
+  RATE_CONFIRMATION: "Rate_Confirmation",
+  INVOICE: "Invoice",
+  SETTLEMENT: "Settlement",
+};
+
+/** Filename label per accessorial type, for supplementals. Same single-source
+ *  argument as ACCESSORIAL_LETTER: the type is legible from the filename. */
+export const ACCESSORIAL_FILENAME_LABEL: Record<AccessorialLetterType, string> = {
+  LUMPER: "Lumper",
+  DETENTION_PU: "Detention_Pickup",
+  DETENTION_DEL: "Detention_Delivery",
+  TONU: "TONU",
+  LAYOVER: "Layover",
+  HAZMAT: "Hazmat",
+  DEADHEAD: "Deadhead",
+  DRIVER_ASSIST: "Driver_Assist",
+  REEFER_FUEL: "Reefer_Fuel",
+  INSIDE_DELIVERY: "Inside_Delivery",
+  LIFTGATE: "Liftgate",
+  PALLET_EXCHANGE: "Pallet_Exchange",
+};
+
 // ─── Load number ────────────────────────────────────────────────────────────
 
 /**
