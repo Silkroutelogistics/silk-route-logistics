@@ -18973,7 +18973,14 @@
 // void nulls signTokenHash and a hash cannot be recovered, so an un-void would
 // produce a document that says SENT and no carrier can sign. Tenders move
 // through tenderTransitionService, the only writer of LoadTender.status.
-export const SRL_VERSION = "3.8.biy";
+// v3.8.biz — C5: PUT /loads/:id/uncancel. PUT because a second call finds the
+// load no longer CANCELLED and refuses rather than reversing twice. ADMIN and
+// CEO only, checked at the route AND again in the service. The lifecycle row
+// lands on the same trail as the cancel it reverses. The carrier is told
+// IN-APP ONLY, once, deduped on the action link -- and that notice fires from
+// the controller rather than the service, because the service is guarded
+// against importing any sender at all.
+export const SRL_VERSION = "3.8.biz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

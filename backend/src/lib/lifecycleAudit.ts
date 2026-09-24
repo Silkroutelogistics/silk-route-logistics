@@ -52,6 +52,12 @@ export type LifecycleActionDetail =
   | "CUSTOMER_REACTIVATED"
   | "CUSTOMER_DELETED"
   | "CUSTOMER_RESTORED"
+  // Reversing a cancellation is a lifecycle act and belongs on the SAME trail
+  // as the cancel it reverses -- a reader asking "what happened to this load"
+  // should not have to know that the two live in different tables (§13.3 Item
+  // 286). STATUS_CHANGE rather than a new enum member, for the reason the
+  // header gives: actionDetail is what a reader greps.
+  | "LOAD_UNCANCELLED"
   | "CARRIER_ARCHIVED"
   | "CARRIER_RESTORED"
   // A contact's consent decides whether a CUSTOMER is written to, and its
@@ -78,6 +84,7 @@ export const LIFECYCLE_ACTION: Readonly<Record<LifecycleActionDetail, AuditActio
   // a DELETE-class act, not a cancellation; recording it as CANCEL would be false.
   LOAD_ARCHIVED: "DELETE",
   LOAD_RESTORED: "STATUS_CHANGE",
+  LOAD_UNCANCELLED: "STATUS_CHANGE",
   CUSTOMER_INACTIVATED: "DEACTIVATE",
   CUSTOMER_REACTIVATED: "STATUS_CHANGE",
   CUSTOMER_DELETED: "DELETE",

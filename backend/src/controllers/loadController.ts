@@ -8,7 +8,7 @@ import { voidForTender as voidQuickPayElection } from "../services/quickPayElect
 import { settleTender } from "../services/tenderTransitionService";
 
 import { AuthRequest } from "../middleware/auth";
-import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../validators/load";
+import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema, uncancelLoadSchema } from "../validators/load";
 import { autoGenerateInvoice } from "../services/invoiceService";
 import { calculateMileage } from "../services/mileageService";
 import { actualEventStamps } from "../lib/loadEventStamps";
@@ -35,6 +35,8 @@ import { buildDocumentSearch, runRankedSearch } from "../lib/documentSearch";
 import { invoicedTotalsForLoads } from "../lib/invoiceTotals";
 import { heldByCarrier, notHeldByCarrier } from "../lib/tenderLifecycle";
 import { shipmentSyncFor } from "../lib/shipmentStatusFor";
+import { uncancelLoad } from "../services/uncancelLoad";
+import { createNotification } from "../services/notificationService";
 
 const RELEASED_VALUE_BASIS_VALUES = ["PER_POUND", "PER_PIECE", "TOTAL", "NVD"] as const;
 type ReleasedValueBasisLiteral = (typeof RELEASED_VALUE_BASIS_VALUES)[number];
@@ -1393,6 +1395,97 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
   res.json({ success: true, message: "Load archived" });
 }
 
+/**
+ * PUT /loads/:id/uncancel — reverse a cancellation.
+ *
+ * The decision and the restore both live in services; this handler does the
+ * three things a service must not: it answers HTTP, it records the lifecycle
+ * row, and it tells the carrier.
+ *
+ * THE CARRIER NOTICE FIRES FROM HERE RATHER THAN FROM THE SERVICE, and that is
+ * enforced rather than merely preferred: uncancelLoad is guarded against
+ * importing any sender, because a reversal that re-runs the forward path would
+ * re-tender the load and credit the shipper twice. Keeping the one notice that
+ * SHOULD go out at the edge is what lets that guard stay absolute.
+ *
+ * IN-APP ONLY, NO EMAIL (ratified). A carrier who was told a load was cancelled
+ * and is now told it is back needs it in the place they act on loads, not a
+ * second inbox item; and an email cannot be un-sent if the AE reverses again.
+ */
+export async function uncancelLoadHandler(req: AuthRequest, res: Response) {
+  const { reason } = uncancelLoadSchema.parse(req.body);
+
+  const before = await prisma.load.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, status: true, referenceNumber: true, carrierId: true, cancellationReasonCode: true },
+  });
+  if (!before) {
+    res.status(404).json({ error: "Load not found" });
+    return;
+  }
+
+  const result = await uncancelLoad({
+    loadId: before.id,
+    actorId: req.user!.id,
+    actorRole: req.user!.role,
+    actorName: `${req.user!.firstName ?? ""} ${req.user!.lastName ?? ""}`.trim() || null,
+    reason,
+  });
+
+  if (!result.ok) {
+    // 409: the load is in a state that refuses, rather than the request being
+    // malformed. The code is what the confirm dialog keys on; the message is
+    // what it shows, and every one of them names what to do instead.
+    res.status(409).json({ error: result.message, code: result.code });
+    return;
+  }
+
+  // The lifecycle row goes on the SAME trail as the cancel it reverses.
+  await recordLifecycleEvent({
+    actionDetail: "LOAD_UNCANCELLED",
+    entityType: "Load",
+    entityId: before.id,
+    entityName: before.referenceNumber,
+    reasonCode: before.cancellationReasonCode,
+    reason,
+    previous: { status: "CANCELLED", cancellationReasonCode: before.cancellationReasonCode },
+    new: { status: result.report.restoredTo, restored: result.report },
+    actor: { userId: req.user!.id, email: req.user!.email },
+    req,
+  });
+
+  // Fire-and-forget: a notice that fails must not fail a reversal that has
+  // already committed, or the AE retries and gets LOAD_NOT_CANCELLED.
+  if (before.carrierId) {
+    notifyCarrierReinstated(before.carrierId, before.id, before.referenceNumber).catch((e) =>
+      log.error({ err: e }, "[Uncancel] carrier reinstatement notice failed:"),
+    );
+  }
+
+  res.json({ success: true, ...result.report });
+}
+
+/**
+ * Tell the carrier their load is back. In-app only.
+ *
+ * IDEMPOTENT ON THE ACTION LINK. A load can be cancelled and reversed more than
+ * once, and the second reversal must not stack a second identical notice on a
+ * carrier who already has one open. The link carries the load id, so it is the
+ * natural key -- the same shape podReminderService uses to dedup without a
+ * column (§13.3 Item 195 F-8).
+ */
+async function notifyCarrierReinstated(carrierUserId: string, loadId: string, reference: string | null) {
+  const actionUrl = `/carrier/dashboard/my-loads?reinstated=${loadId}`;
+  const existing = await prisma.notification.findFirst({ where: { userId: carrierUserId, actionUrl } });
+  if (existing) return;
+  await createNotification(
+    carrierUserId,
+    "LOAD_UPDATE",
+    "Load reinstated",
+    `Load ${reference ?? loadId} was cancelled and has been reinstated. It is back on your loads.`,
+    { actionUrl },
+  );
+}
 export async function restoreLoad(req: AuthRequest, res: Response) {
   const load = await prisma.load.findUnique({ where: { id: req.params.id } });
   if (!load || !load.deletedAt) {

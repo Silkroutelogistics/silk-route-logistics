@@ -117,7 +117,7 @@ describe("recordLifecycleEvent — the row", () => {
 
 describe("LIFECYCLE_ACTION — the enum it lands on", () => {
   const details: LifecycleActionDetail[] = [
-    "LOAD_CANCELLED", "LOAD_TONU", "LOAD_ARCHIVED", "LOAD_RESTORED",
+    "LOAD_CANCELLED", "LOAD_TONU", "LOAD_ARCHIVED", "LOAD_RESTORED", "LOAD_UNCANCELLED",
     "CUSTOMER_INACTIVATED", "CUSTOMER_REACTIVATED", "CUSTOMER_DELETED", "CUSTOMER_RESTORED",
     "CARRIER_ARCHIVED", "CARRIER_RESTORED",
     "CONTACT_DELETED", "CONTACT_CONSENT_CHANGED",
@@ -152,6 +152,10 @@ describe("LIFECYCLE_ACTION — the enum it lands on", () => {
     expect(LIFECYCLE_ACTION.CUSTOMER_DELETED).toBe("DELETE");
     expect(LIFECYCLE_ACTION.LOAD_ARCHIVED).toBe("DELETE");
     expect(LIFECYCLE_ACTION.LOAD_RESTORED).toBe("STATUS_CHANGE");
+    // Reversing a cancellation lands on the SAME trail as the cancel it
+    // reverses, under STATUS_CHANGE for the reason LOAD_RESTORED does: the
+    // enum has no member for it, and actionDetail is what a reader greps.
+    expect(LIFECYCLE_ACTION.LOAD_UNCANCELLED).toBe("STATUS_CHANGE");
     expect(LIFECYCLE_ACTION.CONTACT_DELETED).toBe("DELETE");
     // A consent change is an edit to a field, so it lands under UPDATE and
     // actionDetail is what a reader greps to find it — see the lib header.

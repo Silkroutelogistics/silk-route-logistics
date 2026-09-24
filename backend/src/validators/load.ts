@@ -126,6 +126,17 @@ export const createLoadSchema = z.object({
   customerId: z.string().optional(),
 }).passthrough(); // Allow extra fields to pass through
 
+/**
+ * Reversing a cancellation needs a reason, and a real one.
+ *
+ * min(10) matches the compliance-override convention rather than being picked
+ * fresh: both are an admin overriding a decision the platform already made, and
+ * both end up in an audit row somebody reads months later. "ok" is not a reason.
+ */
+export const uncancelLoadSchema = z.object({
+  reason: z.string().trim().min(10, "Give a reason of at least 10 characters.").max(2000),
+});
+
 export const updateLoadStatusSchema = z.object({
   status: z.enum([
     "DRAFT", "POSTED", "TENDERED", "CONFIRMED", "BOOKED", "DISPATCHED",

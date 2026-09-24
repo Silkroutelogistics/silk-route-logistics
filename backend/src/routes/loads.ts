@@ -1,10 +1,10 @@
 import { Router, Response } from "express";
-import { createLoad, getLoads, getLoadById, updateLoad, updateLoadStatus, deleteLoad, restoreLoad, getDistance, getLoadAudit } from "../controllers/loadController";
+import { createLoad, getLoads, getLoadById, updateLoad, updateLoadStatus, deleteLoad, restoreLoad, getDistance, getLoadAudit, uncancelLoadHandler } from "../controllers/loadController";
 import { createLoadWithTender } from "../controllers/withTenderController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
 import { validateBody, validateQuery } from "../middleware/validate";
-import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../validators/load";
+import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema, uncancelLoadSchema } from "../validators/load";
 import { prisma } from "../config/database";
 import { z } from "zod";
 
@@ -101,6 +101,19 @@ router.patch(
 router.delete("/:id", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), auditLog("DELETE", "Load"), deleteLoad);
 // audit-pass1: MISSING-UI — soft-delete restore has no console affordance (see §13.3 Item 8.2 cancelled-loads tab).
 router.put("/:id/restore", authorize("ADMIN", "BROKER", "DISPATCH", "OPERATIONS"), auditLog("UPDATE", "Load"), restoreLoad);
+
+// PUT rather than POST: reversing a cancellation is idempotent by
+// construction -- the second call finds the load no longer CANCELLED and
+// refuses LOAD_NOT_CANCELLED rather than reversing twice. ADMIN and CEO only,
+// matching the ratified policy; the service checks the role again, because a
+// route gate protects the route and the rule belongs to the act.
+router.put(
+  "/:id/uncancel",
+  authorize("ADMIN", "CEO"),
+  validateBody(uncancelLoadSchema),
+  auditLog("UPDATE", "Load"),
+  uncancelLoadHandler,
+);
 
 // Field-level audit trail
 router.get("/:id/audit", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getLoadAudit);
