@@ -373,6 +373,69 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
 
    **`expected` is derived from the AUTO map at read time and is NOT stored**, so reconciling the map reclassifies history with it. That is what lets the map change END the soak rather than leave an admitted edge counting against it forever.
 
+    **THE UNCANCEL LENS — 2026-09-25. The gate stops counting AUTHORISED cancellation reversals, and
+    keeps counting unauthorised ones.**
+
+    `CANCELLED` is terminal in BOTH the AE and AUTO maps, so `accountedByLens` can never account for a
+    `CANCELLED -> X` edge and every reversal landed in `unexpected_cumulative`. That made the gate
+    unreachable for the one act the un-cancel arc had just been built to support:
+
+    - **SRL-121496, 2026-09-25T00:31:58Z.** Reversed `CANCELLED -> DISPATCHED` through the canonical
+      `PUT /loads/:id/uncancel` by `whaider@silkroutelogistics.ai` with the typed reason
+      *"Need to issue TONU"*; the carrier reinstatement notice reached `trucks@jetexfreight.com` 48ms
+      later. Fully authorised, and the gate counted it: `unexpected_cumulative` 0 → 1.
+
+    **`lib/uncancelLens.ts` is the one definition**, imported by BOTH the observer and the durable
+    reader so the log tag and the gate cannot disagree about what a reversal IS. A reversal counts as
+    authorised only when an `audit_trails` row exists for that load with
+    `changedFields.actionDetail = "LOAD_UNCANCELLED"`, **an actor AND a reason**, inside a **5-second**
+    window. Marker alone is not enough: a row with neither actor nor reason is a trace, and clearing the
+    gate on a trace makes the gate a formality.
+
+    **IT SUBTRACTS RATHER THAN SKIPS.** The counter row is keyed `(fromStatus, toStatus)` and carries no
+    loadId, so an authorised reversal and a raw write land on the SAME edge. The read subtracts the
+    authorised count and keeps the residual — so a raw `CANCELLED -> DISPATCHED` write is still counted
+    even when an authorised reversal sits beside it. `authorised_uncancels` on `/api/health` surfaces
+    what was cleared, because "the gate is zero" and "the gate is zero because two reversals were
+    authorised" are different facts and only the second lets a reader check the lens still matches.
+
+    **CLASSIFIED AT READ TIME, AND THAT IS FORCED BY ORDERING RATHER THAN CHOSEN.** `recordLifecycleEvent`
+    writes the authorising row AFTER the transition commits — measured at **20ms** after on SRL-121496
+    (counter 00:31:58.095Z, audit row 00:31:58.115Z) — so at the instant `observeLoadTransition` fires the
+    row does not exist yet and a write-time check would call **every** reversal unauthorised. The observer
+    therefore TAGS (`uncancelEdge: true`) and the read DECIDES. This preserves the property the section
+    above insists on: `expected` is never stored, so history reclassifies.
+
+    **The aggregation limit, stated rather than hidden.** Because the row aggregates by edge, the read
+    counts authorising rows inside `[firstSeenAt − 5s, lastSeenAt + 5s]` and subtracts. Exact when
+    `count = 1`; conservative above it. It can never clear an observation with no authorising row anywhere
+    near it, which is the property that matters. `wasAuthorisedUncancel` is the strict per-load per-event
+    rule and is what the guard drives; it is not on the read path for the ordering reason above.
+
+    **NOTHING WAS WRITTEN TO THE COUNTER ROW.** The lens is a read. A test asserts the upsert is never
+    called while classifying, because "fix the gate by editing the row it is judging" was the tempting
+    remedy and it destroys the record.
+
+    **CORRECTION TO MY OWN EARLIER REPORT (Item 318 arc halt card, 2026-09-25).** That card attributed the
+    `CANCELLED -> DISPATCHED` edge to *"another session's documented one-off un-cancel script"*
+    (`backend/scripts/reactivate-load-121495.ts`). **That was wrong, and it was an inference from the
+    script's existence plus a timestamp rather than evidence.** Two facts refute it, either alone
+    sufficient: the script is hardcoded to `LOAD_REF "SRL-121495"` and refuses a reference mismatch, so it
+    cannot touch 121496; and it builds `new PrismaClient({ datasourceUrl })` rather than importing the
+    shared singleton, so the `$allOperations` observer never sees its writes and it **cannot create a
+    counter row at all**. The actual writer was the canonical endpoint, used correctly by a human.
+    A read-only census as `srl_readonly` settled it (`backend/scripts/_r0-121496-census.ts`).
+
+    **And the counter is a function of the WRITE PATH, not of authorisation — which the same census
+    exposes.** SRL-121496 was reversed TWICE. At 2026-09-24T20:50Z an untracked script
+    `reactivate-load-121496` moved it `CANCELLED -> BOOKED` and DID write a `LOAD_UNCANCELLED` audit row —
+    yet produced **no counter row**, because it used its own client. At 00:31:58Z the endpoint moved it
+    `CANCELLED -> DISPATCHED` and produced one. **The same logical act, counted or not purely by which
+    client wrote it.** The lens fixes the classification; the blind spot in what the observer can SEE is
+    a separate, still-open gap, and any script that writes `Load.status` through its own client is
+    invisible to the gate by construction.
+
+
    **First reading, 2026-09-01 -- superseded as evidence, kept as the reason the field changed.** Production on `8be7a561`, booted 21:50:21Z, **uptime 8,264s (2h18m)**: `violations_since_boot: 0`, `unexpected_since_boot: 0`. Recorded before the next deploy replaced the process, because the counters are per-process and a deploy resets them -- a number read at 51 seconds of uptime, as the first one was, says only that nothing has happened yet. **This is one clean window, not the gate.** A single 2-hour sample on a pre-revenue platform with little traffic is weak evidence: zero violations may mean the map is right, or may mean almost no status writes occurred. That limitation is precisely what the cumulative counter removes. The cumulative record starts empty at the v3.8.bbp deploy and is read from `cumulative_since` onward.
 
    **— FINAL dispositions (2026-06-18 "close down all the gaps" pass).** **CLOSED (shipped + pushed):** F1 fraud-respond authz (ani) · C1 legacy-HTML deletion (ani) · F2 session-timeout unify (anj) · F3 forced-sequential server enforcement (anj) · D2 suspension-reason unify + backfill (ank) · B1/B2/B3/B4 test cluster (suite 243→295) · D3 corroborated-skip. **D1 dual-status — CLOSED as documented-canonical** (anl): not a destructive merge (changes smartMatch matching behavior + needs a full reader/writer audit = a dedicated migration sprint, banked); instead `onboardingStatus` is documented as canonical in `schema.prisma` with the drift risk (smartMatchService:48 also gates on `status`) + the merge plan + a "keep both in sync on write" interim rule. ShipmentStatus documented as a narrow billing projection (Load.status = operational SoT). **E1 email failure-tracking — CLOSED** (built, anl): see §11 row. **E4 async PDF — CLOSED as DEFERRED-until-scale** (decision): synchronous PDF gen on the request path is fine at pre-revenue volume; the audit itself put the scaling risk ">50 carriers". Trigger to revisit: sustained PDF-endpoint p95 latency > ~2s OR carrier count > 50 OR a user-visible timeout on RC/BOL/cert download. Building the 202-accept/job-queue contract change now is premature + adds polling complexity for no current benefit. **E2 Sentry DSN — BLOCKED on Wasi:** Sentry is wired (`server.ts:2` `Sentry.init`, `enabled: !!SENTRY_DSN`) — it activates automatically the moment `SENTRY_DSN` is set in the Render env; nothing to build, just the secret. **A1 enforcement — DOCUMENTED careful sprint (Item 159 Sprint-3):** the log-first investigation (above) is the closed deliverable; the AUTO-actor map reconcile + per-site wiring + the log-only→enforce deploy cycle is its own sprint (rushing it would block legit loadboard/waterfall dispatch + fall-off recovery — the exact prod-break the investigation identified). **Net: every audit gap is either shipped, safely-documented-with-plan, or blocked-on-a-secret; the only remaining BUILD work (A1 enforcement) is the one I deliberately won't rush.**
@@ -2344,6 +2407,89 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     **This one carried NO migration, and that is what makes it the cleanest case for shape (b) so far.** The three prior occurrences each had a schema change that shape (b) would deliberately let through early, which muddies the argument — a reader can reasonably ask what the split actually buys when the migration is the risky half and it lands first either way. Here there was nothing to let through: the release was bundle-only, so a migration-first / bundle-second split would have held **the entire release** until E2E reported, at a cost of 2m15s. There is no case in which the split would have shipped anything sooner, and no schema-ahead-of-code property to preserve.
 
     **Also worth recording: the cutover window is not observable from a single health read.** The arc's own poller printed `LIVE 43c65f0c` and then dumped a body reading `"sha":"1fd66498"` with the old `bootedAt` — two curls 0.2s apart, straddling the 10:47:03 boot, hitting different instances. Only six reads with monotonically climbing `uptime` settled it. Anyone timing a deploy from one sample can be off by a whole process.
+
+    ---
+
+    **273.11 AND 273.12 — CLOSED 2026-09-25. The deploy job now waits for E2E on the pushed SHA.**
+
+    `.github/workflows/ci.yml` job `deploy` reads `needs: [backend, frontend, e2e]`. Shape **(a)** of
+    273.12, not (b) — and (b) was the better fit on the argument as written, so the reason for taking (a)
+    is worth stating rather than glossing: (a) is the change that makes the gate ABLE TO REFUSE, which is
+    the property 273.11 says it lacks, and it is one line. (b) buys back the ~3 minutes a migration would
+    otherwise wait, at the cost of two hooks, two Render services or a hook that knows which half it is
+    triggering, and a second ordering to reason about. The margin (a) costs is small and measurable; the
+    ambiguity (b) adds is neither. (b) stays available if the wait ever bites.
+
+    **What makes (a) safe now and did not in 2026-08-19.** Item 198 excluded E2E because the job hung
+    **6h02m** on a Playwright browser download, and gating every deploy on an unbounded infrastructure
+    hang is worse than not gating. The e2e job now carries `timeout-minutes: 25` (ci.yml), so the worst
+    case is a bounded 25-minute delay rather than an unbounded block. **The exclusion was right for its
+    facts; the facts changed.** The history is superseded in the ci.yml comment block rather than deleted.
+
+    **COUNT THE LIST, per this item's own warning — and the count is not four.** Four occurrences are
+    WRITTEN UP here (2026-09-01 `35297444702`; 2026-09-22 `35741274701`; 2026-09-24 `35943707804`;
+    2026-09-24 `35988837287`). A **fifth** was measured 2026-09-24 (`36056847555`, 3m03s) and
+    deliberately not written up, on this item's own reasoning that another retelling adds nothing. The
+    Item 318 arc then measured **two more**, both on 2026-09-25 and both after that decision:
+
+    | Release | Hook fired | Production booted | E2E finished | Hook→E2E margin |
+    |---|---|---|---|---|
+    | `e3d5f180` run `36079786561` | 00:58:52Z | 01:00:22Z | 01:01:56Z green | **3m04s** |
+    | `5ecba446` run `36080345401` | 01:06:12Z | 01:07:47Z | 01:09:29Z green | **3m17s** |
+
+    So **seven measurements across six unrelated arcs**, four of them formally recorded. No new tables are
+    added for the fifth, sixth or seventh beyond the two rows above, for the reason this item already
+    gives. Every one of the seven was green, so nothing shipped broken — **the margin was always the
+    finding, and it is now closed rather than counted again.**
+
+    **The cost, stated so nobody rediscovers it as a regression.** `e2e` needs `[backend, frontend]` and
+    `deploy` now needs `[backend, frontend, e2e]`, so the deploy is serialised after E2E and every
+    release gains roughly the E2E duration — about **3 minutes** on the measurements above. That is the
+    price of a gate that can refuse.
+
+    **Adversarially verified AT CI LEVEL, and the obvious way to verify it is VACUOUS.** The deploy job's
+    `if: github.event_name == 'push' && github.ref == 'refs/heads/main'` means a pull-request run skips
+    the deploy whatever `needs` says, so "PR with failing E2E → deploy skipped" proves nothing — and
+    GitHub renders a needs-skip and an if-skip as the same grey tick (§19 Sub-pattern 16: a signal with
+    no discriminating power). **A test-level adversarial does not close it either.** Reverting
+    `deploy.needs` and watching `deployGate.test.ts` go red proves the YAML says what it says, which is
+    the presence-is-not-function shape that sub-pattern exists to name.
+
+    **THE DISCRIMINATOR IS A CONTROL JOB, and the run is recorded.** Ephemeral branch `ci-proof/e2e-gate`
+    (`fd63ff1b`, pushed and deleted within the hour), **run `36089202252`**: the deploy `if` widened to
+    admit that ref, E2E forced to fail on its first step, and a `deploy-needs-control` job whose `if`
+    evaluates the same way on that ref but carries `needs: [backend, frontend]` WITHOUT e2e.
+
+    | Job | Result |
+    |---|---|
+    | Backend | success |
+    | Frontend | success |
+    | **E2E - Full Lifecycle Smoke** | **failure** (forced) |
+    | **Deploy gate control (needs WITHOUT e2e)** | **success** — logged `if satisfied on refs/heads/ci-proof/e2e-gate` |
+    | **Deploy to Render** | **skipped** |
+
+    The control RAN, so the `if` was satisfied on that ref; the only remaining difference is `needs: e2e`,
+    so the skip is attributable to it alone. Production never moved — `sha b1c85406`, `bootedAt`
+    02:58:50Z unchanged across the whole proof.
+
+    **The hook POST was replaced by an echo on that branch, for the UNEXPECTED case rather than the
+    expected one.** The expected outcome is that `deploy` never runs at all; but had the forced failure
+    landed in the wrong job and E2E gone green, `deploy` would have run under the widened `if` and POSTed
+    the real hook, deploying a scratch branch to production. With the POST gone, that failure mode
+    reports a failed proof instead of an outage.
+
+    **THE FIRST RUN WAS INCONCLUSIVE, AND THE CONTROL IS WHAT SAID SO.** `next/font` failed fetching
+    Google Fonts — a transient flake unrelated to the change, with frontend green on `main` twenty
+    minutes earlier — so E2E was SKIPPED rather than failed and **the control skipped with it**. Nothing
+    was attributable, and without the control a run reporting "deploy skipped" would have read as a pass.
+    Re-running the failed job produced the table above. A control that can only confirm is worth less
+    than one that can also refuse.
+
+    **One consequence fixed in the same change:** the "E2E red" pinned-issue body asserted "E2E is outside
+    the deploy gate by design, so this failure blocks no deploy". That became false the moment this
+    landed, and a stale claim in the one artefact a person reads when E2E is broken is the Sub-pattern 15
+    shape. Rewritten in ci.yml.
+
 
 
 274. **`InfoRequestThread` gates the attachment list on `resolvedNote` being truthy — attachments are coupled to a field they do not depend on.** Read 2026-09-17 while confirming the AE Info Req tab renders a carrier's files (it does: [`InfoRequestThread.tsx:336-353`](frontend/src/components/carriers/InfoRequestThread.tsx#L336), fed by the `attachments` include at [`infoRequests.ts:113-121`](backend/src/routes/infoRequests.ts#L113)). The whole Carrier-response block, files included, sits behind `request.status === "RESOLVED" && request.resolvedNote` ([`:328`](frontend/src/components/carriers/InfoRequestThread.tsx#L328)). **Safe today** because both ends refuse an empty note: [`carrierAuth.ts:1836-1837`](backend/src/routes/carrierAuth.ts#L1836) 400s on `< 1` char, and the shared predicate `canSubmitInfoRequestAnswer` ([`infoRequestCategories.ts:131`](shared/constants/infoRequestCategories.ts#L131)) mirrors it, so a resolved request always carries a note. **If a note is ever made optional when a file is attached** — a plausible relaxation now that v3.8.bby makes the file the load-bearing half of a document-category answer — the files disappear from the thread silently: the GET still returns them, the `<li>` branch still exists, and nothing renders because the gate above it is false. The v3.8.bcs-era test (`c15c099a`) would not catch it either, since its fixture carries a note. Fix shape when touched: render the block on `status === "RESOLVED"` alone, then gate the note paragraph on `resolvedNote` and the attachment list on `attachments.length` independently; add the fixture with a file and no note. Not BKN-blocking; nothing to change until the note rule changes.

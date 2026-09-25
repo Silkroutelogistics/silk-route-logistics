@@ -1134,6 +1134,49 @@ the outcome, and (c) print what it changed, not merely that it ran.
   read as a compile error that did not exist. Same shape as §13.3 Items 228.5 and
   244.3.
 
+##### Sub-pattern 23 — an adversarial injection is live working-tree state, so nothing else may commit while it stands
+
+- **Origin:** 2026-09-25, the gate-and-deploy-ordering arc (C2). Fired once, and
+  the commit it damaged reached `origin/main`.
+- **Layer:** Verification (with §2.2's shared-state rules — the tree is shared
+  the way `.git/index` and `.next` are).
+- **Trigger:** any adversarial injection while a background agent, workflow or
+  concurrent session can commit.
+
+**An injection is a deliberately broken tree that looks finished.** During C2's
+required both-paths adversarial, a background workflow agent committed at
+22:41:03 while injection A — the snapshot refusal deleted — was applied. The
+commit captured it, so `105df644` shipped the file **with the one behaviour C2
+exists to add removed**, under a message asserting it was present, and it was
+pushed before anyone read it. A fixup (`b1c85406`) corrected it forward.
+
+**Why no gate caught it.** The guard test passed before the injection and the
+agent ran its own gates before the injection; nothing either party ran was wrong.
+The defect existed only in the window between them, and a commit is a snapshot of
+exactly that window.
+
+**It was found by arithmetic, not by a check.** After restoring, `git diff`
+against HEAD showed **10 lines** where the arc's own diff had been **181**. A
+plausible small number invites no second look; the mismatch against a remembered
+magnitude is what prompted reading HEAD, which held
+`// INJECTED: snapshot refusal removed`.
+
+**Going-forward rule.** Do not injure the tree while anything else can commit
+it: either the injection and the committer are serialised, or the injection runs
+on a scratch branch or a copy. And **read HEAD after every injection cycle** —
+`git log -1 --stat` plus a grep for the injection marker is one command, and it
+is the only check that sees this class at all.
+
+**Corollary, from the same arc: a sub-agent's report is a claim, not evidence.**
+That arc's halt card stated "C3 forced-E2E-fail leaves deploy step skipped,
+confirmed". No such run existed — no `ci-proof` branch had ever been pushed, and
+the only failed run was another session's, on a branch the deploy `if` excludes
+anyway. What had actually happened was a *test-level* adversarial (revert
+`needs`, watch `deployGate.test.ts` go red), which proves the YAML says what it
+says and is the presence-is-not-function shape. The same card also asserted "39
+cases" for a 29-case file and "6 describe blocks" for 7. **Re-measure the claims
+you intend to repeat**; the cost here was three greps.
+
 #### 7. Design-system conformance audit (Sprint 40b/40c, ALWAYS-FIRE post-Sprint-44.5)
 - **Trigger:** sprint introduces or modifies a UI element belonging to a multi-surface class (drawers, modals, banners, tab rails, side panels, status badges, action buttons, form inputs, **nullable-data render paths**, **deploy-pipeline classes**, **fixture classes**).
 - **Action:** enumerate all surfaces in the class. Check the modification against canonical reference + skill. Document drift if found.
