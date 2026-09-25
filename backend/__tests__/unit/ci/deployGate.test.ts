@@ -1,13 +1,28 @@
-// The deploy job must depend on backend + frontend, and must NOT depend on E2E.
+// The deploy job must depend on backend, frontend AND e2e.
 //
-// This looks like a nit and is not. On 2026-08-19 the E2E job hung for 6h02m on
-// a Playwright browser download and was killed by GitHub's job timeout. If the
-// deploy gate had waited on E2E, every deploy would have been blocked for that
-// window by an infrastructure hang that had nothing to do with the code.
+// It did not always, and the earlier shape was correct when it was written.
+// From 2026-08-19 — the day this job was born — until §13.3 Item 273.12
+// shape (a) was taken, `needs` was DELIBERATELY [backend, frontend] with e2e
+// excluded on purpose: that same day the E2E job hung for 6h02m on a
+// Playwright browser download and was killed by GitHub's job timeout. Gating
+// deploys on an unbounded job would have blocked every deploy for that
+// window over an infrastructure hang that had nothing to do with the code —
+// so this file used to argue AGAINST adding e2e to the list, for a real
+// reason, and this same test used to assert the opposite of what it asserts
+// now.
 //
-// The temptation to "make the gate stricter" by adding e2e to the needs list is
-// exactly the change that reintroduces that failure mode, and it would look like
-// an improvement in review. This test is the thing that argues back.
+// The reason stopped holding once two things were both true: the e2e job
+// gained `timeout-minutes: 25`, which bounds the hang this test used to
+// guard against, and §13.3 Item 273.11 measured the cost of leaving e2e out
+// — the deploy hook firing, the migration applying, and the new process
+// booting, all before E2E had finished reporting, more than once. A red E2E
+// on a pushed SHA was stopping nothing.
+//
+// So "make the gate stricter by adding e2e" was the failure mode this file
+// used to guard against, until the day the bounded timeout made it the fix
+// instead. If this test fails, read the deploy job's own header comment in
+// ci.yml before reverting it back out — that comment carries the same
+// argument this one does.
 //
 // Parsed with a regex rather than a YAML library because the repo has no YAML
 // parser in backend deps, and adding one to assert a two-line invariant is a
@@ -55,11 +70,15 @@ describe("CI deploy gate", () => {
     expect(needs).toContain("frontend");
   });
 
-  it("does NOT wait for e2e", () => {
-    // If this fails, read the comment at the top of this file before changing it.
-    // A 6-hour Playwright hang is the reason, and it is a real event, not a
-    // hypothetical.
-    expect(needsFor("deploy")).not.toContain("e2e");
+  it("DOES wait for e2e", () => {
+    // Inverted deliberately — see the file header. This test used to assert
+    // needs did NOT contain e2e, guarding a real event: a 6h02m Playwright
+    // hang with no timeout to bound it. The e2e job now carries
+    // `timeout-minutes: 25` (added after that hang), and §13.3 Item 273.11
+    // measured what excluding e2e cost — the deploy hook firing before E2E
+    // had finished reporting, more than once. If this fails, read the
+    // deploy job's header comment in ci.yml before changing it back.
+    expect(needsFor("deploy")).toContain("e2e");
   });
 
   it("deploys only on a push to main, never on a pull request", () => {

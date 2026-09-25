@@ -24,12 +24,14 @@ Production ran a commit with a red build for twelve seconds before anyone could 
 
 `.github/workflows/ci.yml` has a `deploy` job that:
 
-- waits for **backend and frontend** to pass,
+- waits for **backend, frontend and E2E** to pass,
 - runs only on a push to `main` (never on a pull request),
 - **fails loudly** if `RENDER_DEPLOY_HOOK_URL` is unset, rather than skipping — a job that silently no-ops on a missing secret is worse than no gate, because it reports success while deploying nothing,
 - fails if Render's hook returns anything outside 2xx.
 
-It deliberately does **not** wait for the E2E job. On the same day, E2E hung for 6h02m on a Playwright browser download and was killed by GitHub's job timeout; gating deploys on it would have blocked every deploy for that window over an infrastructure hang unrelated to the code. `backend/__tests__/unit/ci/deployGate.test.ts` asserts this, so a later well-meaning "make the gate stricter" change fails CI instead of quietly reintroducing the hang.
+**It now waits for the E2E job too** (§13.3 Item 273.12 shape (a)). It did not always — from the day this job was written until that change, it deliberately excluded E2E, because on this same day E2E hung for 6h02m on a Playwright browser download and was killed by GitHub's job timeout; gating deploys on an unbounded job would have blocked every deploy for that window over an infrastructure hang unrelated to the code.
+
+That exclusion had a real cost, measured directly and more than once (§13.3 Item 273.11): the Render hook firing, the migration applying, and the new process booting, all before the E2E job had finished reporting — a red E2E on a pushed SHA stopped nothing. The e2e job now carries `timeout-minutes: 25`, which is what makes waiting on it affordable: the worst case is a 25-minute delay to a deploy, not the unbounded block that justified excluding it in the first place. `backend/__tests__/unit/ci/deployGate.test.ts` asserts e2e IS in the deploy job's `needs:`, so a later change that pulls it back out to make deploys land faster fails CI instead of quietly reopening the gap Item 273.11 measured.
 
 ---
 

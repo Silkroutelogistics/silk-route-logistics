@@ -120,13 +120,17 @@ jobs:
       # enrolled carrier between login and dashboard. A broken assertion there
       # SHOULD stop a release.
       #
-      # That is not in tension with the E2E job being excluded from the deploy
-      # gate (v3.8.asv). E2E was excluded because it downloads Playwright
-      # browsers and stands up Postgres — infrastructure that once hung for six
-      # hours on a failure unrelated to any code. These run in jsdom with no
-      # network and no download step, which is the same risk profile as the
-      # backend tests that already gate deploy. The rule was never "frontend
-      # tests do not gate"; it was "a flaky infrastructure job does not gate".
+      # E2E gates the deploy too now (§13.3 Item 273.12 shape (a)), so this is
+      # no longer in tension with anything — but it once was, and the reason
+      # it stopped being worth recording. E2E was excluded because it
+      # downloads Playwright browsers and stands up Postgres — infrastructure
+      # that once hung for six hours (v3.8.asv) on a failure unrelated to any
+      # code, with no timeout to bound it. These tests run in jsdom with no
+      # network and no download step, which was always the same risk profile
+      # as the backend tests that already gated deploy — the rule was never
+      # "frontend tests do not gate"; it was "an unbounded infrastructure job
+      # does not gate". E2E now carries `timeout-minutes: 25`, which is what
+      # let it rejoin the jobs that do.
       - run: npm test
 
       - run: npm run build
@@ -142,9 +146,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend, frontend]
 
-    # A Playwright browser download once hung for 6h02m (§13.3 Item 198),
-    # which is why E2E is not in the deploy gate. A hang should FAIL rather
-    # than burn a runner for hours and leave the result ambiguous.
+    # A Playwright browser download once hung for 6h02m (§13.3 Item 198) with
+    # nothing to bound it, which is why E2E used to sit outside the deploy
+    # gate. This timeout is the fix, not the exclusion: it turns an unbounded
+    # hang into a 25-minute wait, which is what let E2E back into `deploy`'s
+    # `needs:` (§13.3 Item 273.12 shape (a)) — see that job's own header
+    # comment. A hang should still FAIL rather than burn a runner for hours
+    # and leave the result ambiguous; now it also fails fast enough that
+    # waiting on it is affordable.
     timeout-minutes: 25
 
     # Job-level permissions REPLACE the default for this job, so `contents:
@@ -270,15 +279,24 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-      # ── E2E visibility (Item 254) ──────────────────────────────────────
-      # E2E stays OUTSIDE the deploy gate. That exclusion is deliberate and
-      # correct — v3.8.asv removed it after a Playwright browser-download
-      # hang ran six hours, and gating deploys on an infrastructure flake is
-      # worse than not gating them.
+      # ── E2E visibility (Item 254 → §13.3 Item 273.12 shape (a)) ──────────
+      # E2E used to sit OUTSIDE the deploy gate — v3.8.asv put it there after
+      # a Playwright browser-download hang ran six hours — and while it did,
+      # this issue was the ONLY signal a red E2E existed at all: the workflow
+      # read green, the deploy job succeeded, and §13.3 Item 273.11 measured
+      # what that cost directly, more than once — the Render hook firing, the
+      # migration applying, and the new process booting, all before E2E had
+      # finished reporting. A red E2E on a pushed SHA stopped nothing.
       #
-      # What the exclusion cost was VISIBILITY, not safety. A red E2E blocks
-      # nothing and colours no gating job, so the workflow reads green while
-      # the suite is broken. It went unread for fourteen commits.
+      # E2E is now IN the deploy gate (`deploy`'s own `needs:`, below), which
+      # is what closes 273.11 — see that job's header comment for why waiting
+      # on it is affordable now when it was not on 2026-08-19. A red run here
+      # means the deploy job is SKIPPED, not merely unwatched: every commit
+      # behind it is stuck until E2E is green again. That makes this issue
+      # MORE load-bearing than before, not less — it is still the fastest way
+      # to see "is E2E currently blocking shipping" without reading run
+      # history, and it still closes itself the instant that stops being
+      # true.
       #
       # A single pinned issue is the signal: opened on the first red, updated
       # rather than duplicated on each subsequent red, and closed on the next
@@ -306,7 +324,7 @@ jobs:
           BODY=$(printf '%s\n\n%s\n\n%s\n' \
             "E2E - Full Lifecycle Smoke failed on \`$GITHUB_SHA\`." \
             "Run: $RUN_URL" \
-            "E2E is outside the deploy gate by design, so this failure blocks no deploy and colours no gating job. This issue is the signal. It closes automatically on the next green E2E run on main.")
+            "E2E blocks the deploy now (§13.3 Item 273.12 shape (a)) — this run's deploy did not fire. This issue is the signal that E2E is still red. It closes automatically on the next green E2E run on main.")
           if [ -n "$NUM" ]; then
             echo "Updating existing issue #$NUM"
             gh issue comment "$NUM" --body "$BODY"
@@ -343,17 +361,40 @@ jobs:
   # reached production. That one was harmless (a dead export, no behaviour
   # change) but the same path ships a genuinely broken commit just as happily.
   #
-  # needs is DELIBERATELY [backend, frontend] and NOT e2e. On the same day the
-  # E2E job hung for 6h02m on a Playwright browser download and was killed by
-  # GitHub's job timeout; gating deploys on it would have blocked every deploy
-  # for that window over an infrastructure hang unrelated to the code. Backend
-  # and frontend are the jobs that actually exercise what is being deployed.
-  # __tests__/unit/ci/deployGate.test.ts asserts this, so a later "fix" that
-  # adds e2e to the needs list fails rather than quietly reintroducing the hang.
+  # needs is [backend, frontend, e2e] — it was DELIBERATELY [backend, frontend]
+  # only, from the day this job was born until §13.3 Item 273.12 shape (a) was
+  # taken. The reason it excluded e2e: on 2026-08-19, the same day this job
+  # shipped, the E2E job hung for 6h02m on a Playwright browser download and
+  # was killed by GitHub's job timeout — with no bound on the job at the time,
+  # gating deploys on it would have blocked every deploy for that window over
+  # an infrastructure hang unrelated to the code.
+  #
+  # That exclusion had a cost the timeout on e2e did not yet exist to bound:
+  # §13.3 Item 273.11 measured it directly, more than once — the Render hook
+  # firing, the migration applying, and the new process booting, all before
+  # the E2E job had finished reporting. A red E2E on a pushed SHA stopped
+  # nothing; the deploy had already shipped by the time anyone could know it
+  # was red.
+  #
+  # The e2e job now carries `timeout-minutes: 25` (added after the 6h02m
+  # hang — see that job's own header comment), which is what makes waiting on
+  # it affordable: the worst case today is a 25-minute delay to a deploy, not
+  # the unbounded block that justified the exclusion in the first place. §13.3
+  # Item 273.12 named two ways to close 273.11 — shape (a), gate on e2e
+  # outright, and shape (b), split the deploy into a migration-first /
+  # bundle-second pair so a red e2e only holds the bundle. This is shape (a):
+  # the one-line fix, taken because the timeout removed the reason it was
+  # rejected the first time — not because the tradeoff it costs (every deploy
+  # now waits as long as e2e takes, up to 25 minutes) stopped being real.
+  #
+  # __tests__/unit/ci/deployGate.test.ts now asserts e2e IS in this list, so a
+  # later "fix" that pulls it back out to make deploys land faster reintroduces
+  # exactly the gap Item 273.11 measured, and fails CI instead of doing it
+  # quietly.
   deploy:
     name: Deploy to Render
     runs-on: ubuntu-latest
-    needs: [backend, frontend]
+    needs: [backend, frontend, e2e]
     # Pushes to main only. A pull_request run must never deploy.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
