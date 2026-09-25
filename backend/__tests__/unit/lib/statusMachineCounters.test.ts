@@ -44,13 +44,48 @@ function row(from: string, to: string, count: number, first = T0, last = T1) {
   return { fromStatus: from as any, toStatus: to as any, count, firstSeenAt: first, lastSeenAt: last };
 }
 
-function store(rows: any[] = [], opts: { upsert?: any; findMany?: any } = {}): CounterStore {
+/**
+ * `audit` defaults to EMPTY rather than to something authorising.
+ *
+ * So every pre-existing case keeps the verdict it had: with no authorising rows
+ * the UNCANCEL lens subtracts nothing, and a CANCELLED edge still counts. A
+ * default that authorised would have quietly relaxed every case in this file.
+ */
+function store(
+  rows: any[] = [],
+  opts: { upsert?: any; findMany?: any; audit?: any[]; auditFindMany?: any } = {},
+): CounterStore {
   return {
     statusMachineCounter: {
       upsert: opts.upsert ?? vi.fn().mockResolvedValue({}),
       findMany: opts.findMany ?? vi.fn().mockResolvedValue(rows),
     },
+    auditTrail: {
+      findMany: opts.auditFindMany ?? vi.fn().mockResolvedValue(opts.audit ?? []),
+    },
   } as any;
+}
+
+/** An authorising LOAD_UNCANCELLED row in the shape recordLifecycleEvent writes. */
+function authRow(
+  loadId: string,
+  to: string,
+  at: Date,
+  over: { actor?: boolean; reason?: string | null; detail?: string } = {},
+) {
+  const withActor = over.actor !== false;
+  return {
+    entityId: loadId,
+    performedById: withActor ? "user_1" : null,
+    performedAt: at,
+    changedFields: {
+      actionDetail: over.detail ?? "LOAD_UNCANCELLED",
+      reason: over.reason === undefined ? "Need to issue TONU" : over.reason,
+      previous: { status: "CANCELLED" },
+      new: { status: to },
+      actor: withActor ? { kind: "USER", userId: "user_1", email: "a@b.c" } : null,
+    },
+  };
 }
 
 // A tick further than the TTL, so a deliberate cache test can be written without
@@ -252,5 +287,153 @@ describe("the health payload actually reads the cumulative counters", () => {
     expect(/status_machine:\s*\{[\s\S]{0,300}?cumulativeStatusMachineCounters\(/.test(importOnly)).toBe(
       false,
     );
+  });
+});
+
+// ─── The UNCANCEL lens, through the read that actually decides ───────────────
+//
+// The pure predicates live in uncancelLens.test.ts. These drive the DERIVATION,
+// because the gate is not the predicate — it is unexpected_cumulative, and a
+// correct predicate wired in wrongly still leaves the gate wrong.
+//
+// Both directions in every case. The directive's own adversarial is "an un-cancel
+// with an audit row is not counted; a raw CANCELLED -> DISPATCHED write is", and a
+// suite that only proved the first half would pass just as happily on a lens that
+// cleared everything.
+describe("the UNCANCEL lens decides cancellation reversals at read time", () => {
+  const OBS = new Date("2026-09-25T00:31:58.095Z");
+  // 20ms after the observation — the real measured gap on SRL-121496, where the
+  // audit row lands after the transition commits.
+  const AUDIT = new Date("2026-09-25T00:31:58.115Z");
+
+  it("an authorised reversal does NOT count against the gate", async () => {
+    const r = await cumulativeStatusMachineCounters(
+      store([row("CANCELLED", "DISPATCHED", 1, OBS, OBS)], {
+        audit: [authRow("load_1", "DISPATCHED", AUDIT)],
+      }),
+      clock,
+    );
+    expect(r.unexpected_cumulative, "the gate must clear for an authorised reversal").toBe(0);
+    expect(r.unexpected_edges).toEqual([]);
+    // Still a violation of the AE map, and still reported as one: authorised is
+    // not the same as legal-by-the-map, and flattening the two would lose the
+    // fact that the reversal happened at all.
+    expect(r.violations_cumulative).toBe(1);
+    expect(r.authorised_uncancels, "the clearing must be visible, not silent").toBe(1);
+  });
+
+  it("a RAW CANCELLED -> DISPATCHED write with no audit row DOES count", async () => {
+    const r = await cumulativeStatusMachineCounters(
+      store([row("CANCELLED", "DISPATCHED", 1, OBS, OBS)], { audit: [] }),
+      clock,
+    );
+    expect(r.unexpected_cumulative, "an unauthorised reversal is exactly what the gate is for").toBe(1);
+    expect(r.unexpected_edges[0]).toMatchObject({ from: "CANCELLED", to: "DISPATCHED", count: 1 });
+    expect(r.authorised_uncancels).toBe(0);
+  });
+
+  it("subtracts rather than skips: two observations, one authorised, leaves one", async () => {
+    // The case a skip-on-any-authorisation lens would get wrong. A load reversed
+    // properly and another moved by a raw write land on the SAME edge, because the
+    // counter row is keyed on (from,to) and carries no loadId.
+    const r = await cumulativeStatusMachineCounters(
+      store([row("CANCELLED", "DISPATCHED", 2, OBS, OBS)], {
+        audit: [authRow("load_1", "DISPATCHED", AUDIT)],
+      }),
+      clock,
+    );
+    expect(r.unexpected_cumulative).toBe(1);
+    expect(r.unexpected_edges[0]).toMatchObject({ count: 1, authorised_count: 1 });
+    expect(r.authorised_uncancels).toBe(1);
+  });
+
+  it("the window is enforced at BOTH ends", async () => {
+    const inside = new Date(OBS.getTime() + 4_900);
+    const outside = new Date(OBS.getTime() + 5_100);
+    const near = await cumulativeStatusMachineCounters(
+      store([row("CANCELLED", "DISPATCHED", 1, OBS, OBS)], {
+        audit: [authRow("load_1", "DISPATCHED", inside)],
+      }),
+      clock,
+    );
+    expect(near.unexpected_cumulative, "4.9s away is within the window").toBe(0);
+
+    __resetCumulativeCache();
+    const far = await cumulativeStatusMachineCounters(
+      store([row("CANCELLED", "DISPATCHED", 1, OBS, OBS)], {
+        audit: [authRow("load_1", "DISPATCHED", outside)],
+      }),
+      clock + 1,
+    );
+    expect(
+      far.unexpected_cumulative,
+      "5.1s away must NOT authorise — otherwise a later reversal retroactively " +
+        "clears an older raw write",
+    ).toBe(1);
+  });
+
+  it("a row with the marker but no reason, or no actor, does not authorise", async () => {
+    for (const [label, bad] of [
+      ["no reason", authRow("load_1", "DISPATCHED", AUDIT, { reason: null })],
+      ["blank reason", authRow("load_1", "DISPATCHED", AUDIT, { reason: "   " })],
+      ["no actor", authRow("load_1", "DISPATCHED", AUDIT, { actor: false })],
+      ["wrong detail", authRow("load_1", "DISPATCHED", AUDIT, { detail: "LOAD_RESTORED" })],
+    ] as Array<[string, any]>) {
+      __resetCumulativeCache();
+      const r = await cumulativeStatusMachineCounters(
+        store([row("CANCELLED", "DISPATCHED", 1, OBS, OBS)], { audit: [bad] }),
+        clock + Math.floor(Math.random() * 0) + 1,
+      );
+      expect(r.unexpected_cumulative, `${label} must not clear the gate`).toBe(1);
+    }
+  });
+
+  it("an authorising row for a DIFFERENT target does not clear this edge", async () => {
+    const r = await cumulativeStatusMachineCounters(
+      store([row("CANCELLED", "DISPATCHED", 1, OBS, OBS)], {
+        audit: [authRow("load_1", "BOOKED", AUDIT)],
+      }),
+      clock,
+    );
+    expect(r.unexpected_cumulative, "a reversal to BOOKED says nothing about one to DISPATCHED").toBe(1);
+  });
+
+  it("does not read the audit trail at all when no reversal edge exists", async () => {
+    // Cost, and blast radius: the audit trail grows without bound, and a read
+    // nobody needs is a read that can fail and turn the gate UNKNOWN.
+    const db = store([row("BOOKED", "DELIVERED", 1)], { audit: [] });
+    await cumulativeStatusMachineCounters(db, clock);
+    expect((db.auditTrail.findMany as any)).not.toHaveBeenCalled();
+  });
+
+  it("bounds the audit read by the observed window rather than scanning everything", async () => {
+    const db = store([row("CANCELLED", "DISPATCHED", 1, OBS, OBS)], { audit: [] });
+    await cumulativeStatusMachineCounters(db, clock);
+    const arg = (db.auditTrail.findMany as any).mock.calls[0][0];
+    expect(arg.where.entityType).toBe("Load");
+    expect(arg.where.performedAt.gte.getTime()).toBe(OBS.getTime() - 5_000);
+    expect(arg.where.performedAt.lte.getTime()).toBe(OBS.getTime() + 5_000);
+  });
+
+  it("a failing audit read reports UNKNOWN, never a clean zero", async () => {
+    // The whole point of the null convention: zero and unknown read identically
+    // at a glance, and this is the field enforcement is decided on.
+    const db = store([row("CANCELLED", "DISPATCHED", 1, OBS, OBS)], {
+      auditFindMany: vi.fn().mockRejectedValue(new Error("audit trail unreachable")),
+    });
+    const r = await cumulativeStatusMachineCounters(db, clock);
+    expect(r.unexpected_cumulative).toBeNull();
+    expect(r.authorised_uncancels).toBeNull();
+    expect(r.error).toBeDefined();
+  });
+
+  it("never writes to the counter row while classifying", async () => {
+    // The directive's explicit prohibition. The lens is a READ: it must not fix
+    // the gate by mutating or deleting the row it is judging.
+    const db = store([row("CANCELLED", "DISPATCHED", 1, OBS, OBS)], {
+      audit: [authRow("load_1", "DISPATCHED", AUDIT)],
+    });
+    await cumulativeStatusMachineCounters(db, clock);
+    expect(db.statusMachineCounter.upsert).not.toHaveBeenCalled();
   });
 });

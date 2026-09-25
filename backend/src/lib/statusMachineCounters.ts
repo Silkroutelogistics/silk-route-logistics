@@ -34,6 +34,12 @@
 import { LoadStatus } from "@prisma/client";
 import { log } from "./logger";
 import { accountedByLens } from "./loadStateMachine";
+import {
+  authorisedCountForEdge,
+  isUncancelEdge,
+  UNCANCEL_WINDOW_MS,
+  type AuthorisingRow,
+} from "./uncancelLens";
 
 /** The subset of the Prisma client this module uses. */
 export interface CounterStore {
@@ -48,6 +54,19 @@ export interface CounterStore {
         lastSeenAt: Date;
       }>
     >;
+  };
+  /**
+   * Required, not optional, and that is deliberate.
+   *
+   * The UNCANCEL lens resolves at READ time (lib/uncancelLens.ts explains why the
+   * observer cannot do it), so this read is what decides whether an authorised
+   * reversal counts against the gate. An optional member would let a caller that
+   * forgot to supply one silently fall back to "nothing is authorised" and pin the
+   * gate open forever -- the silent-degradation shape §19 Sub-pattern 16 keeps
+   * catching. Required means such a caller fails to compile instead.
+   */
+  auditTrail: {
+    findMany(args?: any): Promise<AuthorisingRow[]>;
   };
 }
 
@@ -92,9 +111,20 @@ export function persistTransitionObservation(
 export interface UnexpectedEdge {
   from: LoadStatus;
   to: LoadStatus;
+  /**
+   * The RESIDUAL count — observations with no authorising row behind them.
+   *
+   * For every edge but a cancellation reversal this is the row's own count. For a
+   * CANCELLED -> X row it is count minus the authorised reversals found in window,
+   * so a partially-authorised edge reports only the part nobody accounted for.
+   * Reporting the raw count here would tell a reader to go and investigate
+   * reversals that are already explained.
+   */
   count: number;
   first_seen_at: string;
   last_seen_at: string;
+  /** Authorised reversals matched on this edge. Present only when non-zero. */
+  authorised_count?: number;
 }
 
 export interface CumulativeCounters {
@@ -108,6 +138,16 @@ export interface CumulativeCounters {
   unexpected_last_seen_at: string | null;
   /** The edges to go and read. Bounded by distinct illegal pairs. */
   unexpected_edges: UnexpectedEdge[];
+  /**
+   * Cancellation reversals the UNCANCEL lens accounted for.
+   *
+   * Surfaced rather than merely subtracted, because "the gate is at zero" and "the
+   * gate is at zero because two reversals were authorised" are different facts and
+   * the second is the one that lets a reader check the lens is working rather than
+   * merely quiet. A lens that had silently stopped matching would show this at 0
+   * with the gate back above zero -- which is the failure being made visible.
+   */
+  authorised_uncancels: number | null;
   /** Present only when the read failed. Its presence is what says "unknown". */
   error?: string;
 }
@@ -128,6 +168,10 @@ function unknown(err: unknown): CumulativeCounters {
     cumulative_since: null,
     unexpected_last_seen_at: null,
     unexpected_edges: [],
+    // null, not 0: an unknown read must not claim it found no authorised
+    // reversals, which reads as "the lens matched nothing" rather than "nobody
+    // asked". Same rule as the counts above.
+    authorised_uncancels: null,
     error: String((err as any)?.message ?? err).slice(0, 200),
   };
 }
@@ -155,8 +199,32 @@ export async function cumulativeStatusMachineCounters(
       orderBy: { lastSeenAt: "desc" },
     });
 
+    // The authorising rows, fetched ONCE and only when a reversal edge exists.
+    //
+    // Bounded by the widest observed window across the reversal rows, so this
+    // never becomes a full scan of the audit trail as history grows. The
+    // actionDetail marker is filtered in JS rather than in the where clause on
+    // purpose: it lives inside a Json column, and a Prisma JSON-path filter is
+    // provider-shaped and would tie this read to Postgres specifics for a
+    // predicate that already has one definition in uncancelLens.authorises.
+    const reversalRows = rows.filter((r) => isUncancelEdge(r.fromStatus, r.toStatus));
+    let authRows: AuthorisingRow[] = [];
+    if (reversalRows.length > 0) {
+      const lo = new Date(
+        Math.min(...reversalRows.map((r) => r.firstSeenAt.getTime())) - UNCANCEL_WINDOW_MS,
+      );
+      const hi = new Date(
+        Math.max(...reversalRows.map((r) => r.lastSeenAt.getTime())) + UNCANCEL_WINDOW_MS,
+      );
+      authRows = await db.auditTrail.findMany({
+        where: { entityType: "Load", performedAt: { gte: lo, lte: hi } },
+        select: { entityId: true, performedById: true, performedAt: true, changedFields: true },
+      });
+    }
+
     let violations = 0;
     let unexpected = 0;
+    let authorisedUncancels = 0;
     let since: Date | null = null;
     let lastUnexpected: Date | null = null;
     const edges: UnexpectedEdge[] = [];
@@ -177,14 +245,33 @@ export async function cumulativeStatusMachineCounters(
       const accountedFor = accountedByLens(r.fromStatus, r.toStatus) !== null;
       if (accountedFor) continue;
 
-      unexpected += r.count;
+      // THE UNCANCEL LENS. CANCELLED is terminal in both maps, so accountedByLens
+      // can never account for a reversal -- but a reversal through the canonical
+      // endpoint is an authorised act with a named actor and a typed reason, and
+      // counting it against the gate made the gate unreachable for the one thing
+      // the un-cancel arc was built to do (§13.3, SRL-121496, 2026-09-25).
+      //
+      // It subtracts rather than skips: an edge whose observations outnumber its
+      // authorising rows keeps the difference, so a raw CANCELLED -> X write is
+      // still counted even when an authorised reversal exists on the same edge.
+      let residual = r.count;
+      let authorisedHere = 0;
+      if (isUncancelEdge(r.fromStatus, r.toStatus)) {
+        authorisedHere = authorisedCountForEdge(authRows, r.toStatus, r.firstSeenAt, r.lastSeenAt);
+        authorisedUncancels += Math.min(authorisedHere, r.count);
+        residual = Math.max(0, r.count - authorisedHere);
+        if (residual === 0) continue;
+      }
+
+      unexpected += residual;
       if (!lastUnexpected || r.lastSeenAt > lastUnexpected) lastUnexpected = r.lastSeenAt;
       edges.push({
         from: r.fromStatus,
         to: r.toStatus,
-        count: r.count,
+        count: residual,
         first_seen_at: r.firstSeenAt.toISOString(),
         last_seen_at: r.lastSeenAt.toISOString(),
+        ...(authorisedHere > 0 ? { authorised_count: authorisedHere } : {}),
       });
     }
 
@@ -194,6 +281,7 @@ export async function cumulativeStatusMachineCounters(
       cumulative_since: since ? since.toISOString() : null,
       unexpected_last_seen_at: lastUnexpected ? lastUnexpected.toISOString() : null,
       unexpected_edges: edges,
+      authorised_uncancels: authorisedUncancels,
     };
     cache = { at: nowMs, value };
     return value;

@@ -34,6 +34,7 @@
 import { LoadStatus } from "@prisma/client";
 import { log } from "./logger";
 import { accountedByLens, validateLoadStatusTransition } from "./loadStateMachine";
+import { isUncancelEdge } from "./uncancelLens";
 
 /**
  * Transitions already known to be legitimate and simply absent from the AE map.
@@ -140,6 +141,15 @@ export function observeLoadTransition(obs: TransitionObservation): void {
     // and durable answers disagree about whether it has closed.
     const lens = accountedByLens(from, to);
     const known = isKnown(from, to);
+    // A cancellation reversal. TAGGED here, DECIDED at read time -- and the split
+    // is forced by ordering rather than chosen: recordLifecycleEvent writes the
+    // authorising row AFTER the transition commits (measured 20ms after, on
+    // SRL-121496), so at this instant the row does not exist yet and a check here
+    // would call every reversal unauthorised. lib/uncancelLens.ts carries the
+    // measurement and the reasoning; isUncancelEdge is imported from there rather
+    // than re-tested here so the observer and the durable reader cannot disagree
+    // about what a reversal edge IS.
+    const reversal = isUncancelEdge(from, to);
     violationsSinceBoot += 1;
     if (!lens) unexpectedSinceBoot += 1;
     // Durable counterpart, inside this try so a persistence failure can no more
@@ -154,13 +164,26 @@ export function observeLoadTransition(obs: TransitionObservation): void {
         operation: obs.operation,
         code: verdict.code,
         // grep `expected:false` for the transitions nobody has accounted for.
+        //
+        // A reversal edge stays `expected:false` HERE on purpose. No lens in the
+        // machine accounts for it -- CANCELLED is terminal in both maps -- and
+        // claiming otherwise at write time would hide a raw CANCELLED -> X write,
+        // which is the one thing this observer exists to surface. `uncancelEdge`
+        // is what tells a reader the verdict is not final.
         expected: lens !== null,
         // WHICH lens accounted for it -- so a carrier-reported arrival is
         // legible as one rather than as an anonymous "expected".
         accountedBy: lens ?? undefined,
+        // Set when the edge is a cancellation reversal, whose authorisation is
+        // settled by the UNCANCEL lens at read time against the LOAD_UNCANCELLED
+        // audit row. status_machine.unexpected_cumulative on /api/health is the
+        // authoritative answer for these, never this line.
+        uncancelEdge: reversal ? true : undefined,
         why: known ?? undefined,
       },
-      `[LoadTransition] ${from} -> ${to} not in AE map`,
+      reversal
+        ? `[LoadTransition] ${from} -> ${to} is a cancellation reversal; authorisation resolved at read time`
+        : `[LoadTransition] ${from} -> ${to} not in AE map`,
     );
   } catch {
     // Observation must never surface to a write path.
