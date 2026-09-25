@@ -19063,7 +19063,7 @@
 //   Also swaps this file's vi.restoreAllMocks() for a scoped restore: it wipes
 // the vi.fn() defaults in setup.ts's prisma double and kills whichever file
 // shares the worker next (§13.3 Item 318). Five other suites still do it.
-export const SRL_VERSION = "3.8.bjh";
+export const SRL_VERSION = "3.8.bji";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
