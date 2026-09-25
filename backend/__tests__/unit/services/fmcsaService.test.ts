@@ -32,7 +32,10 @@ describe("fmcsaService.getCarrierAuthority — v3.8.ahj smoke", () => {
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
-    vi.restoreAllMocks();
+    // vi.restoreAllMocks() was here and restored NOTHING: this suite installs no
+    // vi.spyOn, it swaps globalThis.fetch and puts it back on the line above. All
+    // the call did was reset setup.ts's prisma double and wipe its factory
+    // defaults (§13.3 Item 318), so it is gone rather than narrowed.
   });
 
   it("returns a grant date and a positive age in months for a carrier with a single GRANT", async () => {

@@ -9,7 +9,7 @@
 // than the gap, because a reset token in a log line is a live credential sitting
 // in a system with looser access control than the database. Hence the grep.
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 import { logAuthEvent, hashEmail } from "../../../src/lib/authEvents";
@@ -18,7 +18,15 @@ import { log } from "../../../src/lib/logger";
 const CONTROLLER = path.join(__dirname, "../../../src/controllers/authController.ts");
 
 describe("logAuthEvent", () => {
-  beforeEach(() => vi.restoreAllMocks());
+  // SCOPED to the one spy this suite installs, and moved to afterEach -- NOT
+  // vi.restoreAllMocks(). That call also resets every vi.fn() in setup.ts's
+  // prisma double, wiping its factory defaults; a probe added to this file
+  // observed infoRequest.findMany() resolve `undefined` instead of `[]`
+  // (§13.3 Item 318). Every test here installs its own log.info spy, so
+  // restoring after each is sufficient and nothing leaks forward.
+  afterEach(() => {
+    (log.info as unknown as { mockRestore?: () => void }).mockRestore?.();
+  });
 
   it("emits the event name and a hashed email, never the raw address", () => {
     const spy = vi.spyOn(log, "info").mockImplementation((() => {}) as any);

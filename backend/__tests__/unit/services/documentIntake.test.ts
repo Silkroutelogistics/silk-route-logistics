@@ -104,7 +104,12 @@ describe("the review state is WRITTEN, not merely mentioned", () => {
   // watching them stay green. Presence is not function (§19 Sub-pattern 16),
   // committed in a guard written against that very failure.
   beforeEach(() => {
-    vi.restoreAllMocks();
+    // SCOPED to the two spies this suite installs -- NOT vi.restoreAllMocks(),
+    // which also resets setup.ts's prisma double and wipes its factory defaults
+    // (§13.3 Item 318). The explicit upsert reset below is a different thing and
+    // stays: that IS a setup.ts vi.fn(), deliberately re-armed per test.
+    (storage.getFileStream as unknown as { mockRestore?: () => void }).mockRestore?.();
+    (reader.extractCOIData as unknown as { mockRestore?: () => void }).mockRestore?.();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (prisma as any).documentExtraction.upsert.mockReset();
   });

@@ -80,7 +80,20 @@ describe("census credential resolver — the role is the enforcement, not the se
     return f;
   };
 
-  afterEach(() => vi.restoreAllMocks());
+  // SCOPED to the two spies this suite installs -- NOT vi.restoreAllMocks().
+  // That call also resets every vi.fn() in setup.ts's prisma double, wiping the
+  // defaults its factory installed (`findMany: vi.fn().mockResolvedValue([])` and
+  // ~47 others), so any test added here that touches one gets `undefined` -- a
+  // TypeError in controller code rather than a failed assertion. Proven by probe,
+  // not assumed: §13.3 Item 318.
+  //
+  // AND clearAllMocks would be WRONG here specifically: it clears call history
+  // without uninstalling, which would leave process.exit stubbed for every later
+  // test in this file.
+  afterEach(() => {
+    (process.exit as unknown as { mockRestore?: () => void }).mockRestore?.();
+    (console.error as unknown as { mockRestore?: () => void }).mockRestore?.();
+  });
 
   /** die() ends the process; make that observable instead of fatal. */
   function resolve(file: string) {
