@@ -35,6 +35,21 @@
  *     would point at whatever `.env` says, which is the wrong database for a
  *     proof and the whole point of the rail for everything else.
  *
+ *   PRODUCTION_WRITE — a one-off operator script that must reach PRODUCTION to
+ *     do its job. Structurally the same argument as READ_ONLY_CENSUS, only the
+ *     role differs: the §2.2 rail resolves `backend/.env` to the local container,
+ *     so a script that writes to production cannot use the singleton no matter
+ *     how much anyone would like it to.
+ *
+ *     FOUND BY USING THIS GUARD, AND NOT FULLY ACTED ON. Several entries sitting
+ *     in MAINTENANCE below almost certainly belong here — apply-email-citext, the
+ *     rotate-* pair and the reconcile-* pair all target production. So the
+ *     MAINTENANCE ceiling is a number over a bucket whose definition is looser
+ *     than it reads. Re-auditing those twenty is its own pass and would be
+ *     unreviewable bundled into an unrelated commit, so it is recorded rather
+ *     than done. Until then read MAINTENANCE as 'not yet classified', not as a
+ *     proven claim that each could use the singleton.
+ *
  *   MAINTENANCE — one-off repair, backfill, rotation or verification. This is
  *     the bucket that should shrink: most of these predate the singleton being
  *     a comfortable thing to import from a script.
@@ -88,7 +103,7 @@ function trackedScripts(): string[] {
     .map((l) => l.replace(/^scripts\//, ""));
 }
 
-type Reason = "READ_ONLY_CENSUS" | "PROOF" | "MAINTENANCE";
+type Reason = "READ_ONLY_CENSUS" | "PRODUCTION_WRITE" | "PROOF" | "MAINTENANCE";
 
 const OWN_CLIENT_INVENTORY: Record<string, Reason> = {
   // Read production as srl_readonly through _census-credential.ts.
@@ -108,6 +123,8 @@ const OWN_CLIENT_INVENTORY: Record<string, Reason> = {
 
   // Drive a throwaway container; the singleton would target the wrong database.
   "_arc-c1-foreign-client-proof.ts": "PROOF",
+  // Reaches production to write; the singleton resolves to the local container.
+  "repair-load-121495-cancel-residue.ts": "PRODUCTION_WRITE",
   "_arc-a2-counter-proof.ts": "PROOF",
   "_arc-inforequest-concurrent-proof.ts": "PROOF",
   "_b11-countersign-proof.ts": "PROOF",
@@ -246,11 +263,11 @@ describe("scripts do not gain their own PrismaClient", () => {
     expect(maintenance.length).toBeLessThanOrEqual(MAINTENANCE_CEILING);
   });
 
-  it("every READ_ONLY_CENSUS entry actually uses the census credential", () => {
+  it("every credential-routed entry actually uses the census credential", () => {
     // The permanent bucket is the one worth policing: labelling an ordinary
     // maintenance script READ_ONLY_CENSUS would exempt it from ever shrinking.
     const mislabelled = Object.entries(OWN_CLIENT_INVENTORY)
-      .filter(([, reason]) => reason === "READ_ONLY_CENSUS")
+      .filter(([, reason]) => reason === "READ_ONLY_CENSUS" || reason === "PRODUCTION_WRITE")
       .map(([rel]) => rel)
       .filter((rel) => {
         const full = path.join(BACKEND, "scripts", rel);
@@ -263,7 +280,8 @@ describe("scripts do not gain their own PrismaClient", () => {
       mislabelled,
       mislabelled.length === 0
         ? ""
-        : `Labelled READ_ONLY_CENSUS but not routed through _census-credential.ts:\n` +
+        : `Reaches production but does not route through _census-credential.ts — the\n` +
+            `Item 304.2 shape, where a script parses the production env itself:\n` +
             mislabelled.map((m) => `  ${m}`).join("\n"),
     ).toEqual([]);
   });
