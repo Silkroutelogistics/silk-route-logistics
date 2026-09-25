@@ -298,7 +298,16 @@ async function main(): Promise<void> {
     // shipments, tracking tokens, tenders, shipper credit, carrier pays --
     // which this script never has and never will. See the header's
     // "SUPERSEDED" note.
-      // INJECTED: snapshot refusal removed (10 lines)
+    if (load.cancellationSnapshot !== null) {
+      refuse(
+        `${LOAD_REF} carries a cancellation snapshot. Use PUT /loads/:id/uncancel instead ` +
+          `(GET /loads/:id/uncancel previews it) -- it restores from the snapshot (shipments, ` +
+          `tracking tokens, tenders, shipper credit, carrier pays) and writes the full ` +
+          `LOAD_UNCANCELLED audit row. This script restores none of that; it exists only for a ` +
+          `load cancelled BEFORE the snapshot migration applied, which has no snapshot to restore ` +
+          `from.`,
+      );
+    }
 
     const shipment = await prisma.shipment.findUnique({
       where: { id: SHIPMENT_ID },

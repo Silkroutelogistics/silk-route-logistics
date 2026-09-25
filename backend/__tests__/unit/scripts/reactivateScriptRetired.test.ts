@@ -179,7 +179,15 @@ describe("reactivate-load-121495.ts emits the carrier reinstatement notice", () 
   });
 
   it("gates the notice on the load actually having a carrier", () => {
-    expect(CODE).toMatch(/if\s*\(\s*load\.carrierId\s*\)/);
+    // Anchored to the notice itself. A bare if-load.carrierId regex is ALSO satisfied by the
+    // dry-run print block further up, so it stayed green with this whole notice block deleted --
+    // a case with no discriminating power for its own name (CLAUDE.md 19 Sub-pattern 16).
+    const notice = CODE.indexOf("await createNotification(");
+    expect(notice).toBeGreaterThan(-1);
+    const guardBefore = CODE.lastIndexOf("if (load.carrierId) {", notice);
+    expect(guardBefore).toBeGreaterThan(-1);
+    // and it is the notice's own guard, not the dry-run print's a few hundred lines above
+    expect(notice - guardBefore).toBeLessThan(600);
   });
 });
 
