@@ -33,11 +33,12 @@
 
 import { LoadStatus } from "@prisma/client";
 import { log } from "./logger";
-import { accountedByLens } from "./loadStateMachine";
+import { accountedByLens, validateLoadStatusTransition } from "./loadStateMachine";
 import {
   authorisedCountForEdge,
   isUncancelEdge,
   UNCANCEL_WINDOW_MS,
+  wasAuthorisedUncancel,
   type AuthorisingRow,
 } from "./uncancelLens";
 
@@ -68,45 +69,59 @@ export interface CounterStore {
   auditTrail: {
     findMany(args?: any): Promise<AuthorisingRow[]>;
   };
+  /**
+   * The trigger-written transition log (C1).
+   *
+   * Required for the same reason auditTrail is: a caller that omitted it would
+   * silently report only the frozen pre-migration aggregates and call that the
+   * gate — the silent-degradation shape §19 Sub-pattern 16 keeps catching.
+   * Required means such a caller fails to compile instead.
+   *
+   * TWO READS, EACH BOUNDED, and the split is the design rather than an
+   * optimisation.
+   *
+   * `groupBy` returns the same (from, to, count, first, last) shape the counter
+   * table has, so it is bounded by the number of DISTINCT edges rather than by
+   * load volume. A read on /api/health must not grow with the business, and the
+   * counter model's own header gives that reasoning for its grain.
+   *
+   * `findMany` is then used for reversal edges ALONE — rare, and the one case
+   * needing per-event resolution. The uncancel lens pairs an observation with its
+   * authorising audit row, and the counter table could never do that because it
+   * carries no loadId, which is why it had to settle for a conservative
+   * window-aggregate. These rows carry one, so the strict per-event rule applies
+   * to everything the log records.
+   */
+  loadStatusTransition: {
+    groupBy(args: any): Promise<
+      Array<{
+        fromStatus: LoadStatus;
+        toStatus: LoadStatus;
+        _count: { _all: number };
+        _min: { occurredAt: Date | null };
+        _max: { occurredAt: Date | null };
+      }>
+    >;
+    findMany(args?: any): Promise<
+      Array<{ loadId: string; fromStatus: LoadStatus; toStatus: LoadStatus; occurredAt: Date }>
+    >;
+  };
 }
 
-/**
- * Record one observed violation against the durable counter.
- *
- * FIRE AND FORGET, AND IT MUST STAY THAT WAY. The caller is a database write
- * path that has already succeeded; awaiting a second write there would put this
- * counter's latency on every status transition, and letting it throw would fail
- * an operation that was fine. Observation must never be able to affect the thing
- * observed -- the same rule recordCompassRecalcRun follows.
- *
- * ONE UPSERT PER OBSERVATION, deliberately un-buffered. Violations are bounded
- * by status writes, which at present volume is a handful a day; buffering would
- * buy nothing and would cost a flush timer, which is a lifecycle hazard in a
- * library module (tests leak it, the process will not exit). If volume ever
- * makes this a hot path, the fix is a buffered flush and this comment is the
- * note saying so.
- */
-export function persistTransitionObservation(
-  db: CounterStore,
-  from: LoadStatus,
-  to: LoadStatus,
-): void {
-  try {
-    void db.statusMachineCounter
-      .upsert({
-        where: { fromStatus_toStatus: { fromStatus: from, toStatus: to } },
-        update: { count: { increment: 1 } },
-        create: { fromStatus: from, toStatus: to, count: 1 },
-      })
-      .catch((err: unknown) => {
-        log.warn({ err, from, to }, "[StatusMachine] could not persist transition counter");
-      });
-  } catch (err) {
-    // A synchronous throw here would mean the client itself is unusable, which
-    // is not this counter's problem to surface.
-    log.warn({ err, from, to }, "[StatusMachine] counter write threw synchronously");
-  }
-}
+// THE COUNTER TABLE IS NOW READ-ONLY. C1, 2026-09-25.
+//
+// persistTransitionObservation lived here and was called from the $allOperations
+// client extension. It is gone with that extension: a trigger writes every
+// transition to load_status_transitions, so this table stops gaining rows at the
+// deploy that installs the trigger and keeps the ones it has.
+//
+// IT IS KEPT RATHER THAN DROPPED because cumulative_since is the soak window's
+// start date (§13.3 Item 194). Reading only the log would reset it to the
+// migration and restart the clock, discarding the evidence that the gate has been
+// clean since 2026-09-22. Two rows are frozen there: BOOKED -> AT_PICKUP, which
+// the carrier lens now accounts for, and CANCELLED -> DISPATCHED, which the
+// uncancel lens accounts for — so both contribute 0 to the gate and only their
+// dates still matter.
 
 export interface UnexpectedEdge {
   from: LoadStatus;
@@ -222,6 +237,57 @@ export async function cumulativeStatusMachineCounters(
       });
     }
 
+    // ── The trigger-written log (C1) ──────────────────────────────────────
+    //
+    // TWO SOURCES, ONE ANSWER, AND THEY DO NOT OVERLAP. The counter table stops
+    // being written in the same deploy the trigger starts, so it is frozen
+    // pre-migration history and the log is everything after. They are a union of
+    // two disjoint time windows rather than two answers to one question, which
+    // is what keeps this from being the dual-source drift this codebase keeps
+    // unpicking.
+    //
+    // THE COUNTER TABLE IS KEPT RATHER THAN DROPPED, for one concrete reason:
+    // `cumulative_since` is the soak window's start date. Reading only the log
+    // would reset it to the migration and restart Item 194's clock, discarding
+    // the evidence that the gate has been clean since 2026-09-22.
+    //
+    // THE SEAM, STATED. The migration runs during the BUILD while the previous
+    // process is still serving (§13.3 Item 213), so for a minute or two the old
+    // process's client extension could still write a counter row for a
+    // transition the new trigger also logs. That double-counts. It can only
+    // INFLATE the gate, never falsely clear it, so the failure direction is the
+    // safe one — and at a volume of 29 loads all time the expected number of
+    // such transitions is zero.
+    const logEdges = await db.loadStatusTransition.groupBy({
+      by: ["fromStatus", "toStatus"],
+      _count: { _all: true },
+      _min: { occurredAt: true },
+      _max: { occurredAt: true },
+    });
+
+    // Reversal rows in full, and ONLY reversal rows. These are the only edges
+    // that need per-event resolution, and they are rare.
+    const logHasReversal = logEdges.some((e) => isUncancelEdge(e.fromStatus, e.toStatus));
+    const reversalLogRows = logHasReversal
+      ? await db.loadStatusTransition.findMany({
+          where: { fromStatus: "CANCELLED" },
+          select: { loadId: true, fromStatus: true, toStatus: true, occurredAt: true },
+        })
+      : [];
+
+    // One audit fetch covering both sources' reversal windows. Fetching per
+    // source would double the round trips for a predicate with one definition.
+    if (reversalLogRows.length > 0) {
+      const times = reversalLogRows.map((r) => r.occurredAt.getTime());
+      const lo2 = new Date(Math.min(...times) - UNCANCEL_WINDOW_MS);
+      const hi2 = new Date(Math.max(...times) + UNCANCEL_WINDOW_MS);
+      const more = await db.auditTrail.findMany({
+        where: { entityType: "Load", performedAt: { gte: lo2, lte: hi2 } },
+        select: { entityId: true, performedById: true, performedAt: true, changedFields: true },
+      });
+      authRows = authRows.concat(more);
+    }
+
     let violations = 0;
     let unexpected = 0;
     let authorisedUncancels = 0;
@@ -275,6 +341,72 @@ export async function cumulativeStatusMachineCounters(
       });
     }
 
+    // ── The same classification, applied to the log ───────────────────────
+    //
+    // The predicate is not re-derived here: validateLoadStatusTransition and
+    // accountedByLens are the same two functions the loop above calls and the
+    // observer logs from, so the gate cannot mean one thing for pre-migration
+    // history and another for everything since.
+    //
+    // WHAT IS DIFFERENT IS THE UNCANCEL RESOLUTION, and it is strictly better.
+    // The counter table has no loadId, so it could only ask "were there N
+    // authorising rows anywhere in this edge's window" — exact at count 1,
+    // conservative above it. These rows carry the loadId and the instant, so
+    // each observation is paired with its own authorising row or with none.
+    for (const e of logEdges) {
+      const count = e._count._all;
+      const first = e._min.occurredAt;
+      const last = e._max.occurredAt;
+      if (!count || !first || !last) continue;
+
+      // A legal transition is not a violation and never reaches the gate. The
+      // log records every transition, unlike the counter table which only ever
+      // held rejected ones, so this filter is what makes the two comparable.
+      if (validateLoadStatusTransition(e.fromStatus, e.toStatus, "AE").allowed) continue;
+
+      violations += count;
+      if (!since || first < since) since = first;
+
+      if (accountedByLens(e.fromStatus, e.toStatus) !== null) continue;
+
+      let residual = count;
+      let authorisedHere = 0;
+      if (isUncancelEdge(e.fromStatus, e.toStatus)) {
+        for (const row of reversalLogRows) {
+          if (row.toStatus !== e.toStatus) continue;
+          if (wasAuthorisedUncancel(authRows, row.loadId, row.toStatus, row.occurredAt)) {
+            authorisedHere += 1;
+          }
+        }
+        authorisedUncancels += Math.min(authorisedHere, count);
+        residual = Math.max(0, count - authorisedHere);
+        if (residual === 0) continue;
+      }
+
+      unexpected += residual;
+      if (!lastUnexpected || last > lastUnexpected) lastUnexpected = last;
+
+      // Merged by edge rather than appended, so an edge seen both before and
+      // after the migration reads as one row with one total. Two entries for one
+      // pair would read as two distinct problems to investigate.
+      const existing = edges.find((x) => x.from === e.fromStatus && x.to === e.toStatus);
+      if (existing) {
+        existing.count += residual;
+        if (last.toISOString() > existing.last_seen_at) existing.last_seen_at = last.toISOString();
+        if (first.toISOString() < existing.first_seen_at) existing.first_seen_at = first.toISOString();
+        if (authorisedHere > 0) existing.authorised_count = (existing.authorised_count ?? 0) + authorisedHere;
+      } else {
+        edges.push({
+          from: e.fromStatus,
+          to: e.toStatus,
+          count: residual,
+          first_seen_at: first.toISOString(),
+          last_seen_at: last.toISOString(),
+          ...(authorisedHere > 0 ? { authorised_count: authorisedHere } : {}),
+        });
+      }
+    }
+
     const value: CumulativeCounters = {
       violations_cumulative: violations,
       unexpected_cumulative: unexpected,
@@ -289,5 +421,97 @@ export async function cumulativeStatusMachineCounters(
     // Not cached: a transient database problem must not pin "unknown" for the
     // life of the process when the next call could answer properly.
     return unknown(err);
+  }
+}
+
+
+/**
+ * The since-boot pair, derived from the SAME log as the cumulative pair.
+ *
+ * WHY IT IS NO LONGER AN IN-MEMORY COUNTER. It used to be two module-level
+ * integers incremented by the client extension. With the counting moved to a
+ * database trigger, leaving them client-side would have given /api/health two
+ * derivations of the same question — a cumulative pair that sees every writer
+ * and a since-boot pair that sees only the shared Prisma client. They would
+ * disagree the first time a script with its own client moved a status, and the
+ * disagreement would look like a bug in the gate rather than in the counter.
+ * One source, two windows.
+ *
+ * The window is `occurredAt >= bootedAt`, which is what "since this process
+ * started" has always meant; the field names are unchanged and now describe
+ * something true of every writer rather than of one client.
+ *
+ * NOT CACHED, deliberately. It is a single bounded groupBy, and the cumulative
+ * read beside it already carries the 30s TTL that keeps a load-balancer poll off
+ * the database.
+ *
+ * A FAILED READ REPORTS NULL, NEVER ZERO — the same rule the cumulative pair
+ * follows, and for the same reason: zero and unknown read identically at a
+ * glance, on the field used to decide whether enforcement is safe to enable.
+ */
+export async function sinceBootStatusMachineCounters(
+  db: CounterStore,
+  bootedAt: Date,
+): Promise<{ violations_since_boot: number | null; unexpected_since_boot: number | null }> {
+  try {
+    const edges = await db.loadStatusTransition.groupBy({
+      by: ["fromStatus", "toStatus"],
+      _count: { _all: true },
+      _min: { occurredAt: true },
+      _max: { occurredAt: true },
+      where: { occurredAt: { gte: bootedAt } },
+    });
+
+    // Reversal edges need the authorising rows to resolve, exactly as the
+    // cumulative read does. Fetched only when one exists.
+    const reversalRows = edges.some((e) => isUncancelEdge(e.fromStatus, e.toStatus))
+      ? await db.loadStatusTransition.findMany({
+          where: { fromStatus: "CANCELLED", occurredAt: { gte: bootedAt } },
+          select: { loadId: true, fromStatus: true, toStatus: true, occurredAt: true },
+        })
+      : [];
+
+    let authRows: AuthorisingRow[] = [];
+    if (reversalRows.length > 0) {
+      const times = reversalRows.map((r) => r.occurredAt.getTime());
+      authRows = await db.auditTrail.findMany({
+        where: {
+          entityType: "Load",
+          performedAt: {
+            gte: new Date(Math.min(...times) - UNCANCEL_WINDOW_MS),
+            lte: new Date(Math.max(...times) + UNCANCEL_WINDOW_MS),
+          },
+        },
+        select: { entityId: true, performedById: true, performedAt: true, changedFields: true },
+      });
+    }
+
+    let violations = 0;
+    let unexpected = 0;
+
+    for (const e of edges) {
+      const count = e._count._all;
+      if (!count) continue;
+      if (validateLoadStatusTransition(e.fromStatus, e.toStatus, "AE").allowed) continue;
+
+      violations += count;
+      if (accountedByLens(e.fromStatus, e.toStatus) !== null) continue;
+
+      let residual = count;
+      if (isUncancelEdge(e.fromStatus, e.toStatus)) {
+        let authorised = 0;
+        for (const row of reversalRows) {
+          if (row.toStatus !== e.toStatus) continue;
+          if (wasAuthorisedUncancel(authRows, row.loadId, row.toStatus, row.occurredAt)) authorised += 1;
+        }
+        residual = Math.max(0, count - authorised);
+      }
+      unexpected += residual;
+    }
+
+    return { violations_since_boot: violations, unexpected_since_boot: unexpected };
+  } catch (err) {
+    log.warn({ err }, "[StatusMachine] since-boot read failed");
+    return { violations_since_boot: null, unexpected_since_boot: null };
   }
 }

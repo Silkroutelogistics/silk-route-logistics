@@ -23,15 +23,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
-  persistTransitionObservation,
   cumulativeStatusMachineCounters,
+  sinceBootStatusMachineCounters,
   __resetCumulativeCache,
   type CounterStore,
 } from "../../../src/lib/statusMachineCounters";
-import {
-  observeLoadTransition,
-  setTransitionPersister,
-} from "../../../src/lib/loadTransitionObserver";
+import { observeLoadTransition } from "../../../src/lib/loadTransitionObserver";
 import { validateLoadStatusTransition } from "../../../src/lib/loadStateMachine";
 import * as fs from "fs";
 import * as path from "path";
@@ -53,7 +50,16 @@ function row(from: string, to: string, count: number, first = T0, last = T1) {
  */
 function store(
   rows: any[] = [],
-  opts: { upsert?: any; findMany?: any; audit?: any[]; auditFindMany?: any } = {},
+  opts: {
+    upsert?: any;
+    findMany?: any;
+    audit?: any[];
+    auditFindMany?: any;
+    logEdges?: any[];
+    logRows?: any[];
+    logGroupBy?: any;
+    logFindMany?: any;
+  } = {},
 ): CounterStore {
   return {
     statusMachineCounter: {
@@ -62,6 +68,13 @@ function store(
     },
     auditTrail: {
       findMany: opts.auditFindMany ?? vi.fn().mockResolvedValue(opts.audit ?? []),
+    },
+    // C1 — the trigger-written log. Defaults EMPTY so every pre-existing case
+    // keeps its verdict: those cases are about the frozen counter table, and a
+    // log that contributes nothing leaves their arithmetic untouched.
+    loadStatusTransition: {
+      groupBy: opts.logGroupBy ?? vi.fn().mockResolvedValue(opts.logEdges ?? []),
+      findMany: opts.logFindMany ?? vi.fn().mockResolvedValue(opts.logRows ?? []),
     },
   } as any;
 }
@@ -94,42 +107,51 @@ let clock = 1_000_000;
 beforeEach(() => {
   __resetCumulativeCache();
   clock += 10_000_000;
-  setTransitionPersister(null);
 });
 
-describe("persistTransitionObservation writes the durable half", () => {
-  it("increments the row for this exact edge, creating it the first time", () => {
-    const db = store();
-    persistTransitionObservation(db, "BOOKED" as any, "DELIVERED" as any);
+describe("the counter table is frozen, and the trigger is the writer now", () => {
+  // persistTransitionObservation is gone. It was called from the $allOperations
+  // client extension, which could only see writes that went through the shared
+  // Prisma client — the blind spot SRL-121496 fell into. A database trigger
+  // writes load_status_transitions instead, so the counter table stops gaining
+  // rows and keeps the ones it has.
+  const SRC = path.resolve(__dirname, "../../../src");
 
-    expect(db.statusMachineCounter.upsert).toHaveBeenCalledTimes(1);
-    const arg = (db.statusMachineCounter.upsert as any).mock.calls[0][0];
-    expect(arg.where.fromStatus_toStatus).toEqual({ fromStatus: "BOOKED", toStatus: "DELIVERED" });
-    expect(arg.update.count).toEqual({ increment: 1 });
-    // The create branch is load-bearing rather than a formality: the first
-    // observation of any edge has no row, and an update would throw.
-    expect(arg.create).toEqual({ fromStatus: "BOOKED", toStatus: "DELIVERED", count: 1 });
+  it("nothing in src writes the counter table any more", () => {
+    // STRUCTURAL because the property is an absence, and an absence has no
+    // behaviour to drive. A second writer appearing beside the trigger would
+    // double-count every transition, which inflates the gate silently.
+    const files: string[] = [];
+    const walk = (d: string) => {
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        const full = path.join(d, e.name);
+        if (e.isDirectory()) walk(full);
+        else if (e.name.endsWith(".ts")) files.push(full);
+      }
+    };
+    walk(SRC);
+    expect(files.length).toBeGreaterThan(100); // vacuity: the walk found a tree
+
+    const writers = files.filter((f) => {
+      const body = fs.readFileSync(f, "utf8").replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+      return /statusMachineCounter\s*\.\s*(upsert|create|createMany|update|updateMany)/.test(body);
+    });
+    expect(writers).toEqual([]);
   });
 
-  // THE LOAD-BEARING CASE. The caller is a database write that already
-  // succeeded. A counter failure that surfaced there would fail an operation
-  // that was fine — the same rule recordCompassRecalcRun follows.
-  it("never throws when the upsert rejects", async () => {
-    const db = store([], { upsert: vi.fn().mockRejectedValue(new Error("counters on fire")) });
-    expect(() => persistTransitionObservation(db, "BOOKED" as any, "DELIVERED" as any)).not.toThrow();
-    // Let the rejection settle; an unhandled one would fail the run.
-    await new Promise((r) => setImmediate(r));
-  });
-
-  it("never throws when the client itself is unusable", () => {
-    const db = {
-      statusMachineCounter: {
-        upsert: () => {
-          throw new Error("client is not connected");
-        },
-      },
-    } as any;
-    expect(() => persistTransitionObservation(db, "BOOKED" as any, "DELIVERED" as any)).not.toThrow();
+  it("the trigger migration exists and fires on the status column", () => {
+    const mig = path.resolve(
+      __dirname,
+      "../../../prisma/migrations/20260925120000_load_status_transition_log/migration.sql",
+    );
+    expect(fs.existsSync(mig)).toBe(true);
+    const sql = fs.readFileSync(mig, "utf8");
+    // The three properties the design rests on, each of which a later edit
+    // could drop without any test noticing otherwise.
+    expect(sql).toMatch(/AFTER UPDATE OF "status" ON "public"\."loads"/);
+    expect(sql).toMatch(/FOR EACH ROW/);
+    // Null-safe comparison: a plain <> lets a NULL on either side swallow it.
+    expect(sql).toMatch(/IS DISTINCT FROM/);
   });
 });
 
@@ -224,42 +246,31 @@ describe("the cumulative read is the gate, and states what it does not know", ()
   });
 });
 
-describe("the observer drives the durable half, and cannot be broken by it", () => {
-  it("persists a violation, with the edge it observed", () => {
-    const seen: Array<[string, string]> = [];
-    setTransitionPersister((f, t) => seen.push([f, t]));
-
-    observeLoadTransition({ from: "BOOKED" as any, to: "DELIVERED" as any, loadId: "L1" });
-    expect(seen).toEqual([["BOOKED", "DELIVERED"]]);
-  });
-
-  it("persists the documented divergences too, because their counts are the evidence", () => {
-    const seen: Array<[string, string]> = [];
-    setTransitionPersister((f, t) => seen.push([f, t]));
-
-    // Tagging is not whitelisting: how often auto-pilot dispatch actually fires
-    // is exactly what decides whether the map gains the edge or the call site
-    // changes. Recording only the surprises would throw that away.
-    observeLoadTransition({ from: "POSTED" as any, to: "DISPATCHED" as any });
-    expect(seen).toEqual([["POSTED", "DISPATCHED"]]);
-  });
-
-  it("writes nothing for a transition the AE map allows", () => {
-    const persist = vi.fn();
-    setTransitionPersister(persist);
-
-    expect(validateLoadStatusTransition("POSTED" as any, "TENDERED" as any, "AE").allowed).toBe(true);
-    observeLoadTransition({ from: "POSTED" as any, to: "TENDERED" as any });
-    expect(persist).not.toHaveBeenCalled();
-  });
-
-  it("survives a persister that throws", () => {
-    setTransitionPersister(() => {
-      throw new Error("persister exploded");
-    });
+describe("the observer logs and no longer counts", () => {
+  it("still emits a line for a violation, because real-time visibility is worth keeping", () => {
+    // The line names the loadId and the Prisma operation at the instant of the
+    // write. It is NOT the source of truth — it is absent for own-client writes,
+    // which is exactly why the counting moved — but a violation that is
+    // greppable now beats one you learn about at the next health read.
     expect(() =>
-      observeLoadTransition({ from: "BOOKED" as any, to: "DELIVERED" as any }),
+      observeLoadTransition({ from: "BOOKED" as any, to: "DELIVERED" as any, loadId: "L1" }),
     ).not.toThrow();
+  });
+
+  it("exports no counter and no persister", async () => {
+    // The in-memory pair and the persister injection are gone. Leaving either
+    // would give /api/health two derivations of one question: a cumulative pair
+    // that sees every writer and a since-boot pair that sees only the shared
+    // client. They disagree the first time a foreign client moves a status.
+    const mod: Record<string, unknown> = await import(
+      "../../../src/lib/loadTransitionObserver"
+    );
+    expect(Object.keys(mod)).not.toContain("statusMachineCounters");
+    expect(Object.keys(mod)).not.toContain("setTransitionPersister");
+  });
+
+  it("still cannot throw into the write path", () => {
+    expect(() => observeLoadTransition({ from: "X" as any, to: "Y" as any })).not.toThrow();
   });
 });
 
@@ -278,8 +289,17 @@ describe("the health payload actually reads the cumulative counters", () => {
     );
   });
 
-  it("keeps the per-process pair alongside it", () => {
-    expect(stripped).toMatch(/status_machine:\s*\{[\s\S]{0,300}?statusMachineCounters\(\)/);
+  it("takes the since-boot pair from the SAME log, not from memory", () => {
+    // Both windows must come from one source. A since-boot pair still fed by
+    // the client extension would see only shared-client writes while the
+    // cumulative pair beside it saw every writer, and the two would disagree
+    // the first time a script with its own client moved a status.
+    expect(stripped).toContain("sinceBootStatusMachineCounters(");
+    // and it is inside the status_machine block rather than merely somewhere
+    // in the file, which a bare toContain would also accept.
+    const at = stripped.indexOf("status_machine:");
+    expect(at).toBeGreaterThan(-1);
+    expect(stripped.indexOf("sinceBootStatusMachineCounters(", at) - at).toBeLessThan(600);
   });
 
   it("its own matcher would fail on an import-only wiring", () => {

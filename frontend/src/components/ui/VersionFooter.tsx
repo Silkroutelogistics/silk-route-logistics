@@ -19063,7 +19063,21 @@
 //   Also swaps this file's vi.restoreAllMocks() for a scoped restore: it wipes
 // the vi.fn() defaults in setup.ts's prisma double and kills whichever file
 // shares the worker next (§13.3 Item 318). Five other suites still do it.
-export const SRL_VERSION = "3.8.bji";
+// v3.8.bjj — C1: the status-machine gate counts every writer, because the
+// DATABASE counts them. The gate was fed by a $allOperations client extension,
+// which by construction sees only writes through the shared Prisma client —
+// so SRL-121496's two reversals produced one counter row between them, the one
+// from the canonical endpoint. An AFTER UPDATE OF status trigger on loads now
+// writes every transition to load_status_transitions, and both the cumulative
+// and since-boot pairs derive from that one log.
+//   THE COUNTER TABLE IS FROZEN, NOT DROPPED. cumulative_since is Item 194's
+// soak-window start date; reading only the log would reset it and restart the
+// clock, discarding the evidence the gate has been clean. Two disjoint time
+// windows, not two answers to one question.
+//   The observer keeps its log line and stops counting, with a header saying it
+// is explicitly NOT the source of truth — it still cannot see a foreign client,
+// which is exactly why the counting left.
+export const SRL_VERSION = "3.8.bjj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

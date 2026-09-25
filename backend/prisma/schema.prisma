@@ -6157,6 +6157,68 @@ model DocumentExtraction {
 /// derived from the AUTO map at read time, so reconciling the map reclassifies
 /// history automatically. A stored flag would freeze what was true when the row
 /// was first written and quietly disagree with the map that now governs.
+/// Every Load.status transition, written by a DATABASE TRIGGER rather than by
+/// the application.
+///
+/// WHY THE CLIENT COULD NOT DO THIS. Observation used to hang off the
+/// `$allOperations` extension in config/database.ts — one choke point for every
+/// write that went through the shared Prisma client. The words "that went
+/// through the shared client" are the hole. A script that builds its own
+/// `new PrismaClient()` never enters that extension, so its writes were invisible
+/// to the gate by construction, and SRL-121496 proved it: the load was reversed
+/// TWICE on 2026-09-24/25 — once by an untracked script with its own client,
+/// which wrote a proper audit row and produced NO counter row, and once by the
+/// canonical endpoint, which produced one. The same logical act, counted or not
+/// purely by which client wrote it.
+///
+/// Three further blind spots went with it, none of them exotic: `take: 25` on the
+/// prior-status read, so an updateMany touching more rows under-observed
+/// silently; `$executeRaw`, which no extension sees; and `{ status: { set: "X" } }`,
+/// which the `typeof args.data.status === "string"` check does not match.
+///
+/// A trigger has none of those. It fires on the row, in the transaction, for
+/// every writer — psql included.
+///
+/// GRAIN IS THE EVENT, not the edge, and that is the point of having both this
+/// and StatusMachineCounter. An edge-grained counter answers "which illegal edges
+/// fired"; it cannot answer "which LOAD", because it carries no loadId — which is
+/// why the uncancel lens had to reconcile authorising audit rows against an
+/// aggregate window rather than pair them per event. These rows carry the loadId
+/// and the instant, so the strict per-event rule becomes usable.
+///
+/// TXID IS TEXT, not bigint. It exists to group the rows one transaction wrote —
+/// an updateMany over twelve loads is twelve rows and one txid — and equality is
+/// the only operation ever performed on it. Storing it as bigint would put a
+/// BigInt on a row that /api/health serialises, and BigInt has no JSON
+/// representation; text cannot fail that way and loses nothing.
+///
+/// `expected` IS NOT STORED HERE EITHER, for the reason the counter model gives:
+/// it is derived from the maps at read time so reconciling them reclassifies
+/// history.
+///
+/// RETENTION. One row per status change, so it grows with load volume rather
+/// than being bounded like the counter table. At current volume (29 loads all
+/// time) that is nothing; a retention policy belongs here before it is not.
+model LoadStatusTransition {
+  /// gen_random_uuid() because the writer is a trigger and cuid() is a
+  /// client-side function the database cannot call. Text rather than uuid so the
+  /// column reads like every other id in this schema.
+  id String @id @default(dbgenerated("gen_random_uuid()::text"))
+
+  loadId     String     @map("load_id")
+  fromStatus LoadStatus @map("from_status")
+  toStatus   LoadStatus @map("to_status")
+
+  occurredAt DateTime @default(now()) @map("occurred_at")
+
+  /// The Postgres transaction that performed the write. See the model note.
+  txid String @db.VarChar(32)
+
+  @@index([occurredAt])
+  @@index([loadId, occurredAt])
+  @@map("load_status_transitions")
+}
+
 model StatusMachineCounter {
   id String @id @default(cuid())
 

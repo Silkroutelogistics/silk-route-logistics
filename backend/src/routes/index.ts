@@ -1,8 +1,8 @@
 import { buildInfo } from "../lib/buildInfo";
 import { schemaInfo } from "../lib/schemaInfo";
 import { loadNumberSeqInfo } from "../lib/loadNumberSeqInfo";
-import { statusMachineCounters } from "../lib/loadTransitionObserver";
-import { cumulativeStatusMachineCounters } from "../lib/statusMachineCounters";
+
+import { cumulativeStatusMachineCounters, sinceBootStatusMachineCounters } from "../lib/statusMachineCounters";
 import { storageStatus } from "../services/storageService";
 import { parserStatus } from "../services/coiReaderService";
 import { requireTotpEnrolled } from "../middleware/requireTotpEnrolled";
@@ -153,7 +153,13 @@ router.get("/health", async (_req, res) => {
     // would say "clean" about a question nobody answered, on the one field
     // used to decide whether enforcement is safe to switch on.
     status_machine: {
-      ...statusMachineCounters(),
+      // BOTH WINDOWS NOW COME FROM THE TRIGGER-WRITTEN LOG (C1). The since-boot
+      // pair used to be two in-memory integers incremented by the Prisma client
+      // extension, which saw only writes that went through the shared client;
+      // keeping that beside a database-derived cumulative pair would have given
+      // this one field two derivations, disagreeing the first time a script with
+      // its own client moved a status.
+      ...(await sinceBootStatusMachineCounters(prisma as any, new Date(buildInfo().bootedAt))),
       ...(await cumulativeStatusMachineCounters(prisma as any)),
     },
     // Which range is the load number series issuing from? `CREATE SEQUENCE IF

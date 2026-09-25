@@ -67,40 +67,31 @@ function isKnown(from: LoadStatus, to: LoadStatus): string | null {
 }
 
 /**
- * Violations observed since this process booted, surfaced on /api/health as
- * status_machine.violations_since_boot (row 3b).
+ * THIS MODULE NO LONGER COUNTS ANYTHING. C1, 2026-09-25.
  *
- * The number is the ENFORCEMENT GATE. Item 194 ruled that enforcing the
- * canonical map today breaks production, so the plan is: log-only until a full
- * deploy cycle shows no UNEXPECTED edges, then enforce. Counting them in memory
- * rather than querying logs is what makes "has it been clean" answerable at a
- * glance instead of by a log search nobody runs.
+ * It held the in-memory since-boot pair AND pushed a durable counter row, both
+ * driven from the $allOperations client extension. Both moved to the database,
+ * because that extension can only ever see writes that go through the SHARED
+ * Prisma client — and SRL-121496 showed what that costs. The load was reversed
+ * twice: once by an untracked script with its own `new PrismaClient()`, which
+ * wrote a proper audit row and produced NO counter row, and once by the
+ * canonical endpoint, which produced one. The same logical act, counted or not
+ * purely by which client wrote it. Three smaller blind spots went with it —
+ * `take: 25` truncating a large updateMany, `$executeRaw`, and the
+ * `{ status: { set: "X" } }` form the string check does not match.
  *
- * Per-process and resets on boot, which is honest: it answers "since this
- * process started", and the field name says so.
+ * An AFTER UPDATE OF status trigger on `loads` now writes every transition to
+ * load_status_transitions, and statusMachineCounters.ts derives the gate from
+ * it. See prisma/migrations/20260925120000_load_status_transition_log.
+ *
+ * WHAT REMAINS IS THE LOG LINE, AND IT IS EXPLICITLY NOT THE SOURCE OF TRUTH.
+ * It still earns its place: it names the loadId and the Prisma operation at the
+ * instant of the write, so a violation is greppable in real time rather than at
+ * the next health read. But it is emitted only for writes that pass through the
+ * shared client — the very limitation that moved the counting — so an absent
+ * line means nothing and a present one proves nothing about the count.
+ * /api/health's status_machine block is the answer.
  */
-let violationsSinceBoot = 0;
-let unexpectedSinceBoot = 0;
-
-export function statusMachineCounters() {
-  return { violations_since_boot: violationsSinceBoot, unexpected_since_boot: unexpectedSinceBoot };
-}
-
-/**
- * Durable half of the same count, injected rather than imported.
- *
- * config/database imports this module, so importing the writer back would close
- * a cycle at module-init. The client also lives in that file, so it is the only
- * place that can supply one. The observer stays the single place that decides
- * WHAT counts as a violation -- letting database.ts re-derive that would give
- * the in-memory and durable counters two definitions free to drift.
- */
-export type TransitionPersister = (from: LoadStatus, to: LoadStatus) => void;
-let persist: TransitionPersister | null = null;
-
-export function setTransitionPersister(fn: TransitionPersister | null): void {
-  persist = fn;
-}
 
 export interface TransitionObservation {
   from: LoadStatus;
@@ -150,11 +141,6 @@ export function observeLoadTransition(obs: TransitionObservation): void {
     // than re-tested here so the observer and the durable reader cannot disagree
     // about what a reversal edge IS.
     const reversal = isUncancelEdge(from, to);
-    violationsSinceBoot += 1;
-    if (!lens) unexpectedSinceBoot += 1;
-    // Durable counterpart, inside this try so a persistence failure can no more
-    // reach the write path than a log failure can.
-    persist?.(from, to);
     log.warn(
       {
         loadTransition: `${from}->${to}`,
