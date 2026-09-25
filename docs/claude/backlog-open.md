@@ -436,6 +436,62 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     invisible to the gate by construction.
 
 
+    **THE BLIND SPOT IS CLOSED — 2026-09-25 (v3.8.bjj, C1). The gate counts every writer, because
+    the DATABASE counts them.**
+
+    The paragraph above ends by naming this as still open: a script writing `Load.status` through its
+    own client is invisible to the gate by construction. An `AFTER UPDATE OF "status" ON "public"."loads"`
+    trigger (`20260925120000_load_status_transition_log`) now writes every transition to
+    `load_status_transitions` with old, new, loadId, timestamp and `txid_current()`, and both pairs on
+    `/api/health` derive from that log. The trigger is guarded by `IS DISTINCT FROM` (null-safe) and
+    carries NO foreign key on `load_id`, deliberately: a transition log has to outlive a hard-deleted
+    load, which is exactly when its history is most worth having.
+
+    Three smaller blind spots go with the big one — `$executeRaw`, the `{ status: { set: "X" } }` form
+    the extension's string check never matched, and `take: 25` truncating a large `updateMany`.
+
+    **THE SOAK IS NOT RESET, and that is why the counter table was frozen rather than dropped.**
+    `status_machine_counters` stops being written in the same deploy the trigger starts, so it is
+    frozen pre-migration history and the log is everything after — a union of two DISJOINT time
+    windows, not two answers to one question. `cumulative_since` still comes from the table's earliest
+    row, so reading only the log would have reset this soak's start date and discarded the evidence the
+    gate has been clean. The number stays continuous across the migration.
+
+    **THE AGGREGATION LIMIT ABOVE NOW APPLIES ONLY TO PRE-MIGRATION HISTORY.** That paragraph says the
+    counter row aggregates by edge and carries no loadId, so the read subtracts authorising rows over a
+    window and is 'exact when count = 1; conservative above it'. The log rows DO carry loadId, so the
+    log era uses `wasAuthorisedUncancel` — the strict per-load per-event rule the guard already drove —
+    on the read path (`statusMachineCounters.ts:377` cumulative, `:505` since-boot). The conservative
+    window rule survives only for the frozen rows, where there is no loadId to be strict with.
+
+    **THE SINCE-BOOT PAIR MOVED TOO, and that is not tidying.** Leaving it as two integers in the
+    extension would have given `/api/health` two derivations of one question: a cumulative pair seeing
+    every writer beside a since-boot pair seeing only the shared client. They disagree the first time a
+    foreign client moves a status, and the disagreement reads as a bug in the gate rather than in the
+    counter. One source, two windows; the field names are unchanged and now describe something true of
+    every writer. A failed read still reports NULL on both pairs — never zero.
+
+    **THE OBSERVER KEEPS ITS LOG LINE AND STOPS COUNTING.** `loadTransitionObserver` loses the in-memory
+    pair, `statusMachineCounters()` and the persister. What remains names the loadId and the Prisma
+    operation at the instant of the write, so a violation is greppable in real time rather than at the
+    next health read — and its header now says plainly that it is NOT the source of truth, because it
+    still cannot see a foreign client. That limitation is why the counting left.
+
+    **PROVEN, WITH THE CONTROL AS THE LOAD-BEARING HALF.** `scripts/_arc-c1-foreign-client-proof.ts`,
+    15/15 against a real container: a script with its own client flips `BOOKED -> DELIVERED` and the
+    gate moves; a second distinct client does the same under its own txid; a raw `$executeRaw` UPDATE is
+    counted. Section [B] drops the trigger and runs the IDENTICAL script, client and edge — nothing is
+    logged and the gate does not move, which is the pre-C1 world reproduced rather than described.
+    Injection: forcing `logEdges` empty gives 12/15, failing exactly the three gate-delta assertions
+    while every log-reading assertion stays green, so the proof distinguishes 'the trigger writes' from
+    'the gate reads'.
+
+    **DEFENCE IN DEPTH, NOT THE FIX.** `__tests__/unit/scripts/ownPrismaClientCensus.test.ts` freezes
+    the 39-of-151 tracked scripts holding their own client so the population may shrink and never grow.
+    It is worth being precise about what it buys: the trigger already makes a foreign client harmless
+    FOR COUNTING, so this guards the rest of the extension — a foreign write still emits no observer
+    line, and anything attached there later inherits the same blind spot silently.
+
    **First reading, 2026-09-01 -- superseded as evidence, kept as the reason the field changed.** Production on `8be7a561`, booted 21:50:21Z, **uptime 8,264s (2h18m)**: `violations_since_boot: 0`, `unexpected_since_boot: 0`. Recorded before the next deploy replaced the process, because the counters are per-process and a deploy resets them -- a number read at 51 seconds of uptime, as the first one was, says only that nothing has happened yet. **This is one clean window, not the gate.** A single 2-hour sample on a pre-revenue platform with little traffic is weak evidence: zero violations may mean the map is right, or may mean almost no status writes occurred. That limitation is precisely what the cumulative counter removes. The cumulative record starts empty at the v3.8.bbp deploy and is read from `cumulative_since` onward.
 
    **— FINAL dispositions (2026-06-18 "close down all the gaps" pass).** **CLOSED (shipped + pushed):** F1 fraud-respond authz (ani) · C1 legacy-HTML deletion (ani) · F2 session-timeout unify (anj) · F3 forced-sequential server enforcement (anj) · D2 suspension-reason unify + backfill (ank) · B1/B2/B3/B4 test cluster (suite 243→295) · D3 corroborated-skip. **D1 dual-status — CLOSED as documented-canonical** (anl): not a destructive merge (changes smartMatch matching behavior + needs a full reader/writer audit = a dedicated migration sprint, banked); instead `onboardingStatus` is documented as canonical in `schema.prisma` with the drift risk (smartMatchService:48 also gates on `status`) + the merge plan + a "keep both in sync on write" interim rule. ShipmentStatus documented as a narrow billing projection (Load.status = operational SoT). **E1 email failure-tracking — CLOSED** (built, anl): see §11 row. **E4 async PDF — CLOSED as DEFERRED-until-scale** (decision): synchronous PDF gen on the request path is fine at pre-revenue volume; the audit itself put the scaling risk ">50 carriers". Trigger to revisit: sustained PDF-endpoint p95 latency > ~2s OR carrier count > 50 OR a user-visible timeout on RC/BOL/cert download. Building the 202-accept/job-queue contract change now is premature + adds polling complexity for no current benefit. **E2 Sentry DSN — BLOCKED on Wasi:** Sentry is wired (`server.ts:2` `Sentry.init`, `enabled: !!SENTRY_DSN`) — it activates automatically the moment `SENTRY_DSN` is set in the Render env; nothing to build, just the secret. **A1 enforcement — DOCUMENTED careful sprint (Item 159 Sprint-3):** the log-first investigation (above) is the closed deliverable; the AUTO-actor map reconcile + per-site wiring + the log-only→enforce deploy cycle is its own sprint (rushing it would block legit loadboard/waterfall dispatch + fall-off recovery — the exact prod-break the investigation identified). **Net: every audit gap is either shipped, safely-documented-with-plan, or blocked-on-a-secret; the only remaining BUILD work (A1 enforcement) is the one I deliberately won't rush.**
@@ -2831,3 +2887,64 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     **The `e3d5f180` commit message heads this finding "THE PREMISE ITEM 318 GIVES IS FALSE", which is broader than what was proved.** Its body scopes the claim correctly to the wiped-defaults mechanism; the heading should have said so. This paragraph is the accurate statement.
 
     **This arc hit one such crash during C1** — `ERR_IPC_CHANNEL_CLOSED`, no test result, **under `--maxWorkers=3`**, which is the condition Item 300 names as the point where contention stops being the explanation. Per this item's own rule it was re-run rather than banked as a fire: two subsequent full runs on an **identical file set** were green (292 files), which rules out a deterministic defect in the new files and leaves the order-dependent class above. ~~**Not swept here** — it is test-infrastructure hygiene across five files this arc does not otherwise touch, and it wants its own commit and its own verification.~~ **SWEPT 2026-09-24 in `e3d5f180`** — four files, one commit, unversioned (every path under `__tests__/`, which `tsc` does not compile into `dist`, so nothing deploys and the user-visible footer must not claim otherwise). Each suite now restores the spies it installed by name; `fmcsaService`'s call was DELETED outright because that suite installs zero `vi.spyOn` (it swaps `globalThis.fetch` and restores it by hand), so a replacement would have faked a spy that does not exist. `clearAllMocks` is deliberately NOT the universal substitute: it clears history WITHOUT uninstalling, which would leave `credentialGuards`' `process.exit` stub in place for every later test in that file.
+
+319. **Write-path + record-repair arc (2026-09-25) — what shipped, and the three things left open.**
+    Branch `arc/writepath-repair` off `924b5431`. C1 `4f730239` (v3.8.bjj), C2 `6f720a21` (v3.8.bji),
+    C3 `5536266d` (unversioned). R1 is report-only:
+    [`docs/audits/tonu-workflow-trace.md`](../audits/tonu-workflow-trace.md).
+
+    **C1 and C2 are closed** — C1 under Item 194 above (the gate counts every writer); C2 corrected
+    the arc's own stated premise, which is worth keeping: the swapped `audit_trails` population was
+    briefed as *~47 rows* and measured at **3,408 of 3,799 (90%)**, still being written the same day.
+    `entityId = 'status'` was 63 of those — one subset, not the population.
+
+    **OPEN 1 — C3's production write has not been run, and it is not a session's to run.** The repair
+    (`backend/scripts/repair-load-121495-cancel-residue.ts`) is complete and dry-run verified against
+    production as `srl_readonly`; the before-image is written. Executing `--commit` needs an owner
+    role, which contradicts this arc's standing read-only constraint, so it is an operator action:
+
+        REPAIR_COMMIT_DATABASE_URL='postgresql://...neon.tech/...' \
+          npx tsx scripts/repair-load-121495-cancel-residue.ts --commit
+
+    It is idempotent, compare-and-swap pinned to the values it read, and refuses a CANCELLED load or
+    one carrying a snapshot. **Nothing is currently counting SRL-121495 wrongly** — the reader
+    inventory in the script's header found zero readers for `cancellationFaultParty` and
+    `cancelledById`, and every `cancelledAt` reader gates on `status === "CANCELLED"` first. This
+    corrects a record that contradicts itself; it moves no number.
+
+    **OPEN 2 — the MAINTENANCE bucket in the own-client inventory needs re-auditing.** Classifying the
+    C3 repair forced the question and the answer was uncomfortable: a script that must reach PRODUCTION
+    cannot use the shared singleton either, because the §2.2 rail resolves `backend/.env` to the local
+    container. So a fourth reason `PRODUCTION_WRITE` was added — and several entries already sitting in
+    MAINTENANCE (`apply-email-citext`, the `rotate-*` pair, the `reconcile-*` pair) almost certainly
+    belong in it. That makes the MAINTENANCE ceiling of 20 a number over a looser definition than its
+    header claims. Re-auditing those twenty is its own pass; the header now says to read MAINTENANCE as
+    'not yet classified' rather than as a proven claim that each could use the singleton. **The ceiling
+    was NOT raised** — the fourth bucket is a taxonomy correction, not a way around the ratchet.
+
+    **OPEN 3 — R1's proposal is un-ratified.** A cancelled load cannot be flipped to TONU (`CANCELLED:
+    []` is terminal) and the TONU money chain has exactly one trigger — the status flip at
+    `loadController.ts:901`. So billing a TONU on a cancelled load means un-cancelling it first, which
+    is what SRL-121496 required. The report recommends **Option B**: a named
+    'convert this cancellation to a TONU' operation in the shape of `uncancelLoad`, which keeps the map
+    honest, stops the record claiming a reversal that never happened, and removes a real cliff —
+    `UNCANCEL_WINDOW_HOURS` means a cancellation recognised late as a TONU cannot be converted through
+    supported paths at all. Options A (widen the map) and C (decouple the obligation) are argued and
+    rejected in the report. Pairs with Items 277 and 284.
+
+    **Banked observation, not this arc's to fix.** `loadController.ts:537` computes
+    `reversible: cancellationSnapshot !== null` on EVERY list row with **no status gate**, so a stale
+    snapshot would offer a reverse affordance on a delivered load. The endpoint still refuses
+    (`LOAD_NOT_CANCELLED`, `uncancelPolicy.ts:110`), so it is a dead-end button rather than a live
+    hazard — the v3.8.awy class. SRL-121495's snapshot is null so it does not arise today, and it is
+    recorded because the next such row may not be so lucky.
+
+    **Method note worth more than any one finding.** Four defects in this arc were mine and all four
+    surfaced by RUNNING something rather than reading it: a proof asserting an absolute row count that
+    only passed on a never-used container (Item 304.1, in my own fixture); a `tsc --noEmit -p` reporting
+    clean over a file the config excludes (Item 304.3 — `scripts/` is not in `include`); a null read
+    that would have surfaced as a delta mismatch pointing at the wrong subsystem; and a patch script
+    whose `CRLF()` helper produced `
+` because the heredoc that wrote it was itself CRLF. The
+    asserted anchor refused rather than silently no-op'ing, which is the only reason the fourth was
+    cheap (§19 Sub-pattern 22).
