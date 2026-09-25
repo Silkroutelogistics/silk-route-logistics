@@ -10,6 +10,16 @@
  * SRL-121495 has deletedAt = null anyway -- it was cancelled via the status
  * path, never archived -- so restore would 404 on it regardless.
  *
+ * SUPERSEDED BY THE CANONICAL ENDPOINT FOR ANY LOAD THE SNAPSHOT MIGRATION
+ * REACHED. `PUT /loads/:id/uncancel` now exists (lib/uncancelPolicy.ts,
+ * services/uncancelLoad.ts) and restores from `Load.cancellationSnapshot` --
+ * shipments, tracking tokens, tenders, shipper credit, carrier pays -- and
+ * writes the full LOAD_UNCANCELLED audit row this script cannot reconstruct.
+ * This script now REFUSES any load carrying a snapshot and names the endpoint
+ * instead. It remains useful ONLY for a load cancelled BEFORE the snapshot
+ * migration applied (2026-09-24T18:38:11Z) -- SRL-121495's own cancel, at
+ * 2026-09-23T19:50:47Z, predates it, which is why this script exists at all.
+ *
  * TARGETED BY ID, not by a predicate, for the reason cancel-stranded-shipments
  * gives: one known id is a smaller blast radius than a clever query. Four other
  * loads are CANCELLED and are NOT touched here.
@@ -52,17 +62,86 @@
  * Restore to a state below it and make the final hop in the console, where the
  * real endpoint runs the real side effects.
  *
+ * ─── C2: THE AUDIT ROW AND THE NOTICE, AND THE TWO-DATABASE PROBLEM ────────
+ *
+ * recordLifecycleEvent (lib/lifecycleAudit.ts) and createNotification
+ * (services/notificationService.ts) both import `prisma` from
+ * `../config/database` -- the SHARED singleton, which reads its own
+ * DATABASE_URL from process.env at the moment it is first imported. This
+ * script's PREVIOUS revision built its own client with
+ * `datasourceUrl: BACKFILL_DATABASE_URL`, a DIFFERENT value. Calling the
+ * shared helpers unmodified would therefore write the load's status to one
+ * database and the audit row + notice to whatever DATABASE_URL happens to
+ * already be set (or unset) in the environment (typically `backend/.env`'s
+ * LOCAL container, per the production rail at CLAUDE.md §2.2) -- silently
+ * splitting one act across two databases.
+ *
+ * CHOSEN: copy BACKFILL_DATABASE_URL into process.env.DATABASE_URL and
+ * DIRECT_URL BEFORE the first import that pulls in config/database, and use
+ * THAT shared client for every query this script makes -- not just the audit
+ * and notice. TypeScript compiles `import x from "y"` to `const x = require
+ * ("y")` at EXACTLY the position it is written under `module: "commonjs"`
+ * (this repo's target); it is not hoisted the way a native ESM import binding
+ * is. So the plain assignment block below, written before the import block,
+ * genuinely runs first -- verified by the guard test's structural assertion
+ * that no import statement precedes it in source order.
+ *
+ * REJECTED alternative: give the script its own AuditTrail.create /
+ * Notification.create calls in the identical shape, avoiding the shared
+ * client entirely. That would have kept the load-status write UNOBSERVED (no
+ * status_machine_counters row at all for this edge) and split the audit-row
+ * field shape into a second definition free to drift from lifecycleAudit.ts's
+ * -- exactly the dual-writer class CLAUDE.md keeps unpicking (see that file's
+ * own header on why AuditTrail has one writer convention, and why B6a
+ * "CARRIER SUSPENDED is deliberately NOT a LifecycleEvent" for the same
+ * reason in reverse).
+ *
+ * THE TRADE-OFF, STATED: the load-status write now goes through the SAME
+ * `$allOperations` extension (config/database.ts) the real endpoint uses, so
+ * `observeLoadTransition` sees it and status_machine_counters records a
+ * CANCELLED -> <RESTORE_STATUS> edge -- exactly the shape the UNCANCEL lens
+ * (lib/uncancelLens.ts) exists to classify. Because this script ALSO calls
+ * recordLifecycleEvent with a matching LOAD_UNCANCELLED row (same load, same
+ * target, a real actor, a real reason) inside the same process a few
+ * milliseconds later, `cumulativeStatusMachineCounters` will find that row
+ * within the 5s window and NOT count the edge against unexpected_cumulative --
+ * the exact gap a PRIOR untracked reactivation script (reactivate-load-121496,
+ * which used its own separate client and left its transition unobserved and
+ * unclassified) left open. TRANSITION BECOMES OBSERVED: yes, deliberately.
+ *
  * Dry-run by default. Before-image written on both paths and NOT committed: it
  * holds customer load data.
  *
  *   BACKFILL_DATABASE_URL="postgres://..." \
  *   RESEND_API_KEY= OPENPHONE_API_KEY= QUO_API_KEY= \
- *   npx tsx scripts/reactivate-load-121495.ts --commit
+ *   npx tsx scripts/reactivate-load-121495.ts \
+ *     --actor-email=whaider@silkroutelogistics.ai \
+ *     --reason="Cancelled in error; carrier had already delivered." \
+ *     --commit
  */
+
+// MUST run before every import below, in file-source ORDER -- see the header
+// block above ("C2: THE AUDIT ROW AND THE NOTICE, AND THE TWO-DATABASE
+// PROBLEM") for why. This doubles as the presence check for
+// BACKFILL_DATABASE_URL: it has to happen here, before any import, because
+// config/database constructs a PrismaClient at IMPORT time from whatever
+// DATABASE_URL already happens to be set (or unset) -- a script that started
+// importing before validating its target could connect to the wrong database,
+// or to none, before ever reaching a refuse() call.
+const BACKFILL_URL = process.env.BACKFILL_DATABASE_URL;
+if (!BACKFILL_URL) {
+  console.error("REFUSING: set BACKFILL_DATABASE_URL to the target database. See the header.");
+  process.exit(1);
+}
+process.env.DATABASE_URL = BACKFILL_URL;
+process.env.DIRECT_URL = BACKFILL_URL;
+
 import fs from "fs";
 import path from "path";
-import { PrismaClient } from "@prisma/client";
 import { hostOf, isLocalHost } from "./prisma-target-guard";
+import { prisma } from "../src/config/database";
+import { recordLifecycleEvent } from "../src/lib/lifecycleAudit";
+import { createNotification } from "../src/services/notificationService";
 
 const LOAD_ID = "cmuct8gnk001vma2db2hbgrsj";
 const LOAD_REF = "SRL-121495";
@@ -86,6 +165,9 @@ const ALLOWED_RESTORE = [
   "AT_DELIVERY",
 ] as const;
 type RestoreStatus = (typeof ALLOWED_RESTORE)[number];
+
+/** Matches uncancelLoadSchema's own minimum (validators/load.ts:137) -- one reversal standard, two audit rows. */
+const MIN_REASON_LENGTH = 10;
 
 /**
  * Load.status -> Shipment.status.
@@ -116,6 +198,10 @@ const TOKEN_WINDOW_DAYS = 30;
 const COMMIT = process.argv.includes("--commit");
 const toArg = process.argv.find((a) => a.startsWith("--to="));
 const RESTORE_STATUS = (toArg ? toArg.slice(5).toUpperCase() : DEFAULT_RESTORE) as RestoreStatus;
+const reasonArg = process.argv.find((a) => a.startsWith("--reason="));
+const REASON = (reasonArg ? reasonArg.slice("--reason=".length) : "").trim();
+const actorEmailArg = process.argv.find((a) => a.startsWith("--actor-email="));
+const ACTOR_EMAIL = (actorEmailArg ? actorEmailArg.slice("--actor-email=".length) : "").trim();
 const UNDO = path.join(__dirname, "_reactivate-load-121495-undo.json");
 
 function refuse(msg: string): never {
@@ -146,19 +232,44 @@ async function main(): Promise<void> {
     refuse(`--to=${RESTORE_STATUS} is not one of ${ALLOWED_RESTORE.join(", ")}.`);
   }
 
-  const url = process.env.BACKFILL_DATABASE_URL;
-  if (!url) refuse("set BACKFILL_DATABASE_URL to the target database. See the header.");
+  // The AuditTrail row this script now writes needs a reason a dispute can
+  // read -- "ok" is not one -- and matching the endpoint's own minimum
+  // (validators/load.ts:137, uncancelLoadSchema) means the two audit rows a
+  // reader finds for a reversed load hold each other to the same standard.
+  if (REASON.length < MIN_REASON_LENGTH) {
+    refuse(
+      `--reason="..." is required, at least ${MIN_REASON_LENGTH} characters after trimming -- the ` +
+        `same minimum PUT /loads/:id/uncancel enforces on its own reason field.`,
+    );
+  }
 
-  const host = hostOf(url);
+  // AuditTrail.performedById is a required FK to User (lib/lifecycleAudit.ts
+  // header: "a row that cannot name its actor is not the record a dispute
+  // needs"). This script will not invent or hardcode one -- it is resolved
+  // against the database below, and refused if it does not resolve.
+  if (!ACTOR_EMAIL) {
+    refuse(
+      "--actor-email=you@silkroutelogistics.ai is required. AuditTrail.performedById is a " +
+        "required FK to User; this script does not invent or hardcode one.",
+    );
+  }
+
+  const host = hostOf(BACKFILL_URL!);
   console.log(`[reactivate] target  : ${host}`);
   console.log(
     `[reactivate] note    : ${isLocalHost(host) ? "LOCAL host" : "REMOTE host -- writes here are production writes"}`,
   );
   console.log(`[reactivate] restore : ${RESTORE_STATUS}`);
+  console.log(`[reactivate] actor   : ${ACTOR_EMAIL}`);
   console.log(`[reactivate] mode    : ${COMMIT ? "COMMIT" : "DRY RUN"}\n`);
 
-  const prisma = new PrismaClient({ datasourceUrl: url });
   try {
+    const actor = await prisma.user.findUnique({
+      where: { email: ACTOR_EMAIL },
+      select: { id: true, email: true },
+    });
+    if (!actor) refuse(`--actor-email=${ACTOR_EMAIL} does not resolve to a user on this database.`);
+
     const load = await prisma.load.findUnique({
       where: { id: LOAD_ID },
       select: {
@@ -169,6 +280,8 @@ async function main(): Promise<void> {
         cancellationReasonCode: true,
         cancellationReason: true,
         trackingToken: true,
+        cancellationSnapshot: true,
+        carrierId: true,
       },
     });
     if (!load) refuse(`load ${LOAD_ID} not found on this database.`);
@@ -179,6 +292,13 @@ async function main(): Promise<void> {
       console.log(`Nothing to do: ${LOAD_REF} is ${load.status}, not CANCELLED. Already reactivated?`);
       return;
     }
+
+    // C2, item 1. A snapshot means the cancellation happened AFTER the
+    // migration, and the canonical endpoint restores strictly from it --
+    // shipments, tracking tokens, tenders, shipper credit, carrier pays --
+    // which this script never has and never will. See the header's
+    // "SUPERSEDED" note.
+      // INJECTED: snapshot refusal removed (10 lines)
 
     const shipment = await prisma.shipment.findUnique({
       where: { id: SHIPMENT_ID },
@@ -221,6 +341,10 @@ async function main(): Promise<void> {
       );
     }
     console.log("  loadActivity                   + one 'cancellation_reversed' row");
+    console.log("  auditTrail                     + one LOAD_UNCANCELLED row (recordLifecycleEvent)");
+    if (load.carrierId) {
+      console.log("  notification                   carrier reinstatement notice (idempotent on actionUrl)");
+    }
     console.log(
       "\n  UNTOUCHED: rate confirmation (SIGNED), tender (CONFIRMED), carrierId, invoices, carrier pay.\n",
     );
@@ -278,6 +402,42 @@ async function main(): Promise<void> {
       select: { referenceNumber: true, status: true, cancellationReasonCode: true, cancellationReason: true },
     });
     console.log("COMMITTED. After:", JSON.stringify(after));
+
+    // C2, item 2(a). Called AFTER the transition commits, matching
+    // lifecycleAudit.ts's own rule ("an audit failure inside a transaction
+    // would take the transition down with it") and uncancelLoadHandler's own
+    // ordering (loadController.ts:1527 runs after uncancelLoad, not inside
+    // it). recordLifecycleEvent never throws.
+    await recordLifecycleEvent({
+      actionDetail: "LOAD_UNCANCELLED",
+      entityType: "Load",
+      entityId: LOAD_ID,
+      entityName: load.referenceNumber,
+      reasonCode: load.cancellationReasonCode,
+      reason: REASON,
+      previous: { status: "CANCELLED", cancellationReasonCode: load.cancellationReasonCode },
+      new: { status: RESTORE_STATUS },
+      actor: { userId: actor!.id, email: actor!.email },
+    });
+
+    // C2, item 2(b). Same shape and same idempotency as
+    // notifyCarrierReinstated (loadController.ts:1560-1571): in-app only,
+    // keyed on the actionUrl so a load reversed more than once does not stack
+    // a second identical notice on the carrier.
+    if (load.carrierId) {
+      const actionUrl = `/carrier/dashboard/my-loads?reinstated=${LOAD_ID}`;
+      const existing = await prisma.notification.findFirst({ where: { userId: load.carrierId, actionUrl } });
+      if (!existing) {
+        await createNotification(
+          load.carrierId,
+          "LOAD_UPDATE",
+          "Load reinstated",
+          `Load ${load.referenceNumber ?? LOAD_ID} was cancelled and has been reinstated. It is back on your loads.`,
+          { actionUrl },
+        );
+      }
+    }
+
     console.log(
       `\nNext, in the console: advance ${LOAD_REF} to DELIVERED so autoGenerateInvoice and ` +
         `onLoadDelivered fire. Set actual pickup/delivery dates and upload the POD first.`,
