@@ -14,7 +14,13 @@ import { decodeHtmlEntities } from "../utils/htmlEntities";
 // ONE derivation rule for every document identifier this file prints. These are
 // pure reads: the number is allocated and persisted where the document is
 // CREATED, never here, so regenerating a PDF reproduces the same number.
-import { documentNumberFor, resolveLoadStem } from "../lib/documentNumber";
+import {
+  documentDigits,
+  documentNumberFor,
+  printedLoadNumber,
+  resolveLoadStem,
+  type LoadStemSource,
+} from "../lib/documentNumber";
 // Skill chrome library imported from backend/src/lib/srl-chrome.ts (mirrored
 // from .claude/skills/srl-brand-design/scripts/srl_chrome.ts at session HEAD;
 // manually sync when the skill ships canonical updates).
@@ -123,6 +129,17 @@ import {
   rcCountersignStatement,
   type RcCountersign,
 } from "../lib/rcCountersign";
+
+// The load reference a page prints (§21.2, corrected 2026-09-26). A page whose
+// own number is in the bare scheme (it begins with the load's digits) or that
+// has no number yet prints the digits: 121494. A page issued before the scheme
+// (SRL-121494R, INV-…) gets null, and its caller keeps the reference that page
+// was issued with, so a regenerated copy still matches the one already sent.
+function bareLoadRef(docNumber: string | null | undefined, load: LoadStemSource): string | null {
+  const digits = documentDigits(resolveLoadStem(load));
+  if (!digits) return null;
+  return !docNumber || docNumber.startsWith(digits) ? digits : null;
+}
 
 const COMPANY = {
   name: ENTITY_NAME,
@@ -515,7 +532,7 @@ export async function generateBOLFromLoad(
     // onto its own line), and the UTC pickup date rendered a day early in local
     // time. Pickup/delivery dates still appear in the parties Window lines.
     { label: "DATE ISSUED", raw: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), placeholder: null },
-    { label: "LOAD REF", raw: load.referenceNumber, placeholder: null },
+    { label: "LOAD REF", raw: bareLoadRef(bolNum, load) ?? load.referenceNumber, placeholder: null },
     { label: "EQUIPMENT", raw: load.equipmentType, placeholder: "Equipment" },
     { label: "PRO #", raw: load.proNumber, placeholder: null },
     { label: "SHIPPER REF", raw: shipperRefValue, placeholder: null },
@@ -1656,11 +1673,12 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   const docId = documentNumberFor(fd.rateConNumber, load, "RATE_CONFIRMATION") ?? "";
 
   // The load stem, which is NOT the document number. `docId` identifies THIS
-  // Rate Confirmation (SRL-121488R2 on a re-issue); `stem` identifies the
-  // freight (SRL-121488) and is what the body copy means when it tells a driver
+  // Rate Confirmation (121488-2 on a re-issue); `stem` identifies the
+  // freight (121488) and is what the body copy means when it tells a driver
   // which load to check in against, or names the load in the invoicing subject
   // line. Conflating them would put a revision suffix in a driver instruction.
-  const stem = resolveLoadStem(load) ?? "";
+  // An RC issued before the bare scheme keeps its SRL- reference.
+  const stem = bareLoadRef(docId, load) ?? resolveLoadStem(load) ?? "";
 
   // ─── PAGE 1 ────────────────────────────────────────────────────
   // Header (no QR — RC carrier-portal artifact, no scan event per skill)
@@ -2910,11 +2928,11 @@ export function generateShipperLoadConfirmation(load: EnhancedRCLoadData, formDa
   ];
 
   // Shipper-facing Load Confirmation. This is the booking acknowledgement, not
-  // one of the five numbered documents, so it carries the bare load stem with no
+  // one of the five numbered documents, so it carries the load number with no
   // suffix — inventing a sixth letter for it would be scope the scheme has not
-  // ratified. It now resolves the stem through the shared rule (loadNumber, then
-  // referenceNumber) instead of preferring the AE-editable formData copy.
-  const docId = resolveLoadStem(load) ?? "";
+  // ratified. It has no number of its own, so it is generated now every time and
+  // prints the digits (SRL-121494 -> 121494), resolved through the shared rule.
+  const docId = printedLoadNumber(load) ?? "";
   const shipperRate = Number(fd.customerRate ?? (load as any).customerRate ?? 0);
 
   // Header
@@ -3056,6 +3074,7 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
   // never issued. Legacy rows therefore keep their INV- number on their own
   // document, which is what "read-only mirror" means from the customer's side.
   const docId = invoice.srlDocNumber ?? invoice.invoiceNumber;
+  const loadRef = bareLoadRef(docId, invoice.load) ?? invoice.load.referenceNumber;
 
   // Header (REFERENCE mode — no QR; invoice # in the upper-right filing slot)
   let y = drawHeaderFirstPage(doc, {
@@ -3071,7 +3090,7 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
     {
       "DATE ISSUED": fmtDate(invoice.createdAt),
       "INVOICE #": docId,
-      "LOAD REF": invoice.load.referenceNumber,
+      "LOAD REF": loadRef,
       "TERMS": terms,
       "DUE DATE": fmtDate(invoice.dueDate),
       "STATUS": titleCase(invoice.status),
@@ -3197,7 +3216,7 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
   y = drawPaymentReference(
     doc,
     (cust?.name || billName).slice(0, 20),
-    invoice.load.referenceNumber,
+    loadRef,
     docId, // the wire memo quotes the same number as the page
     y,
   );

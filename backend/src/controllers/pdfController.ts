@@ -8,7 +8,7 @@ import { log } from "../lib/logger";
 import {
   documentFilename,
   documentNumberFor,
-  resolveLoadStem,
+  printedLoadNumber,
   DOCUMENT_FILENAME_LABEL,
 } from "../lib/documentNumber";
 
@@ -147,7 +147,7 @@ export async function downloadShipperLoadConfirmation(req: AuthRequest, res: Res
     const doc = generateShipperLoadConfirmation(load, {});
     // Not a numbered document of its own: it is the load, confirmed to the
     // shipper, so it carries the load number and says what it is.
-    const filename = documentFilename(resolveLoadStem(load) ?? load.referenceNumber, "Load_Confirmation");
+    const filename = documentFilename(printedLoadNumber(load) ?? load.referenceNumber, "Load_Confirmation");
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);

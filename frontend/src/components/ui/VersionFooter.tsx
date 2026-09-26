@@ -19181,6 +19181,10 @@
 // v3.8.bkd — a new document for a legacy SRL- load prints its digits: 121494 for a
 // BOL, rate con or settlement, 121494I for an invoice. Issued numbers keep theirs; a
 // legacy supplemental keeps its S (open decision).
+// v3.8.bkh — a page names its load by the number it was issued under. A new BOL, rate
+// confirmation, load confirmation or invoice prints the bare digits, a legacy load's
+// included (SRL-121494 -> 121494); a page already issued with SRL- keeps the
+// reference it was issued with when regenerated (pdfService.bareLoadRef).
 export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {
