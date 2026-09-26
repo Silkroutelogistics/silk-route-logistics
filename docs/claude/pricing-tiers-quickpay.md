@@ -260,6 +260,18 @@ load prints the digits â€” its bill of lading `121494`, its invoice `121494I` â€
 newly generated document carries `SRL-`. The two cannot collide: a legacy load's
 digits end at `121497`, and the sequence continues at `121498`.
 
+**No two invoices share a number, in either spelling (RECONCILE 2026-09-26).** An
+invoice number and its retired twin are one number: `SRL-121494I` is `121494I`,
+and `SRL-121494I2` is `121494I-2`. An invoice issued as `SRL-121494I` therefore
+occupies `121494I`, and the next invoice on that load is `121494I-2`, never a
+second `121494I`. The allocator counts the twin (`nextDocumentNumber`), and every
+invoice create given a document number checks both number columns for it and its
+twin before it writes (`assertInvoiceNumberFree`, refusing with
+`DUPLICATE_INVOICE_NUMBER`). All seven create sites go through `createInvoiceWithRetry`,
+where the check runs. Numbers already delivered are final: never regenerated, reissued or
+resubmitted. Only invoices are twinned; whether a rate confirmation issued as
+`SRL-121494R` should occupy `121494` is an open decision.
+
 **Loads `5001` and `5002` stay as issued** and have no bearing on the next number.
 They were issued from the start the amendment first set, which the correction
 withdrew; like any issued number, theirs and their documents' are never rewritten.

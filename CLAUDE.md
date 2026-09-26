@@ -1237,7 +1237,8 @@ the ladder in §8 is unchanged by it); §21.2 document numbering as **one bare n
 **continues the existing sequence** (corrected 2026-09-26: no new series) — the last load was
 `SRL-121497`, so the next is `121498` on the load, the BOL, the rate confirmation and the CarrierPay,
 and `121498I` on the invoice, with no `SRL-` prefix. Documents already issued with `SRL-` keep their
-printed number; a new document for a legacy load prints its digits (`121494`, `121494I`). `5001` and
+printed number; a new document for a legacy load prints its digits (`121494`, `121494I`), and no two
+invoices share a number in either spelling (`SRL-121494I` is `121494I`). `5001` and
 `5002` stay as issued and do not affect the sequence. Supplementals (a letter per accessorial type,
 `121498A`) are unchanged and an open decision. The
 suffix-on-a-shared-stem scheme ratified 2026-08-16 is superseded, and is described at the end of that
