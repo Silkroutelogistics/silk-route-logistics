@@ -779,7 +779,19 @@ export function roleFieldKey(roleTitle: string, field: string): string {
 export function drawSignatureBlock(
   doc: PDFDoc,
   yTop: number,
-  options: { roles: SignatureRole[]; height?: number; prefilledValues?: Record<string, string> }
+  options: {
+    roles: SignatureRole[];
+    height?: number;
+    prefilledValues?: Record<string, string>;
+    /**
+     * Left edge and width of the block. Default to the operational margins the
+     * BOL and Rate Confirmation use. The agreement shell runs a 54pt margin, and
+     * drawing its execution block at 36pt put the signature columns 18pt left of
+     * every other line on the page.
+     */
+    x?: number;
+    width?: number;
+  }
 ): number {
   // Sprint 48.c (v3.8.abj) — added prefilledValues option. Pre-fill SRL-known
   // carrier identity fields (CARRIER LEGAL NAME / MC # / DOT #) so the carrier
@@ -788,20 +800,20 @@ export function drawSignatureBlock(
   // When a field is in prefilledValues, the value renders above the underline
   // in fg1 (primary text), otherwise underline stays bare for handwriting.
   // Local mirror — propagate to skill canonical srl_chrome.ts at next sync.
-  const { roles, height = 220, prefilledValues = {} } = options;
+  const { roles, height = 220, prefilledValues = {}, x: left = MARGIN, width = CONTENT_W } = options;
   const n = roles.length;
-  const colW = CONTENT_W / n;
+  const colW = width / n;
 
   // Vertical gold-dark rules
   doc.save().strokeColor(TOKENS.goldDark).lineWidth(0.5);
   for (let i = 1; i < n; i++) {
-    const x = MARGIN + i * colW;
+    const x = left + i * colW;
     doc.moveTo(x, yTop + 4).lineTo(x, yTop + height - 4).stroke();
   }
   doc.restore();
 
   roles.forEach((role, i) => {
-    const x = MARGIN + i * colW + 6;
+    const x = left + i * colW + 6;
     const colInnerW = colW - 12;
 
     drawLabel(doc, role.title, x, yTop, { color: TOKENS.goldDark, size: 7 });
@@ -2266,10 +2278,20 @@ export function drawShellRunningHeader(
 
   doc.font(FONT_BODY_MEDIUM, 7.5).fillColor(TOKENS.navy)
      .text(o.left, L, y, { characterSpacing: 0.06 * 7.5, lineBreak: false });
-  doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg3)
-     .text(o.right, L, y, {
-       characterSpacing: 0.04 * 7.5, width: R - L, align: "right", lineBreak: false,
-     });
+  const leftW = doc.widthOfString(o.left, { characterSpacing: 0.06 * 7.5 });
+
+  // The right-hand identity is drawn only when it clears the left. The Quick
+  // Pay Agreement's subtitle ran long enough to print over its own title on
+  // every page, so the two strings read as one garbled line. Dropping the
+  // right-hand text is the lesser loss: the cover carries it in full.
+  doc.font(FONT_BODY, 7.5);
+  const rightW = doc.widthOfString(o.right, { characterSpacing: 0.04 * 7.5 });
+  if (leftW + 18 + rightW <= R - L) {
+    doc.fillColor(TOKENS.fg3)
+       .text(o.right, L, y, {
+         characterSpacing: 0.04 * 7.5, width: R - L, align: "right", lineBreak: false,
+       });
+  }
 
   const ruleY = y + 7.5 + 5.25; // font + padding-bottom 7px
   doc.save().strokeColor(TOKENS.gold).lineWidth(0.7)

@@ -19241,6 +19241,14 @@
 // executed-copy email subject and body, and in the executed PDF filenames. All gone.
 // The version is still stamped on the signature row and the election row, and stays
 // inside the signed text and the executed PDF, where it proves which text was signed.
+// v3.8.blb — The executed agreements paginate like documents, and sit on their margins.
+//   Paragraphs flow across pages in the body face instead of jumping whole; a
+// paragraph never leaves one line alone at the top of a page and never starts
+// with one line at the foot; headings and lead-ins ending in a colon travel with
+// what they introduce; tables are sized to their content, short ones kept whole,
+// long ones split between rows under a repeated header; the execution block and
+// attestation sit on the 54pt shell margin; the cover's Term cell fits; the
+// running header drops its right text rather than overprint the left.
 export const SRL_VERSION = "3.8.blv";
 
 export function VersionFooter({ className }: { className?: string }) {

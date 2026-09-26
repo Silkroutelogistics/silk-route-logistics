@@ -14,6 +14,7 @@ import {
   MASTER_AGREEMENT_SIGNATURE_ROLES,
   MARGIN,
   CONTENT_W,
+  PAGE_W,
   PAGE_H,
   TOKENS,
   FONT_BODY,
@@ -61,14 +62,59 @@ const DOC_ID_PREFIX: Record<string, string> = {
 };
 
 /**
+ * The reference printed on the cover and in the header. From Revision 3 the
+ * version string IS the reference ("SRL-BCA-2026-R3"), so it is printed as is.
+ * Older versions ("2026-09-03-F11") carry no prefix and get one, exactly as
+ * they always did, so an archived agreement re-renders with its own reference.
+ */
+export function documentReference(agreement: LegalAgreement): string {
+  if (agreement.version.startsWith("SRL-")) return agreement.version;
+  return `${DOC_ID_PREFIX[agreement.templateName] ?? "AGR"}-${agreement.version}`;
+}
+
+/**
+ * The cover's Term cell. The Broker-Carrier Agreement runs a year and renews;
+ * the Quick Pay Agreement runs until either party ends it, and ends with the
+ * BCA. The cell used to print the BCA's term on both, which put a wrong term on
+ * the cover of every Quick Pay Agreement. The cover is not hashed text, so this
+ * corrects archived Quick Pay renders too.
+ */
+function coverTerm(agreement: LegalAgreement): string {
+  return agreement.templateName === "quick-pay" ? "Until terminated" : "Annual, auto-renewing";
+}
+
+/**
+ * Body-page geometry. Shared by the document constructor, which needs the
+ * margins before the first page exists, and by the renderer.
+ */
+function bodyGeometry(shell: boolean) {
+  const M = shell ? SHELL_MARGIN : MARGIN;
+  const CW = shell ? SHELL_CONTENT_W : CONTENT_W;
+  const CONTENT_BOTTOM = PAGE_H - M - (shell ? 34 : 40);
+  return {
+    M,
+    CW,
+    CONTENT_BOTTOM,
+    // PDFKit continues a paragraph onto a new page when a line would cross the
+    // bottom margin. Setting it to the content floor is what lets a clause flow
+    // across a page break instead of being pushed whole onto the next page.
+    margins: { top: M, bottom: PAGE_H - CONTENT_BOTTOM, left: M, right: PAGE_W - M - CW },
+  };
+}
+
+/**
  * v3.8.aqh — Reusable multi-page legal-agreement renderer on the SRL skill
- * chrome. This is the one new chrome capability the BCA/QP need beyond the
- * one-page BOL/RC: wrapping justified clauses + section headings with automatic
- * page-break + continuation headers, the MASTER_AGREEMENT (Broker + Carrier)
- * signature block, an executed e-signature attestation strip, and per-page
- * footers with correct "Page X of Y" via bufferPages. Both agreements share it
- * — as of v3.8.art the Quick Pay Agreement text has landed and calls this same
- * function through generateAgreementPdf below.
+ * chrome: justified clauses and section headings with page breaks and running
+ * headers, the MASTER_AGREEMENT (Broker + Carrier) signature block, an executed
+ * e-signature attestation strip, and per-page footers with a correct
+ * "Page X of Y" via bufferPages. Both agreements share it.
+ *
+ * PAGE FLOW. Clauses are laid out by PDFKit's own line wrapper, which continues
+ * a paragraph on a new page when it reaches the bottom margin. Until this was
+ * rewritten a paragraph that did not fit was moved whole to the next page,
+ * which left the foot of many pages empty, and the first paragraph on every
+ * continued page was drawn in the running header's 7.5pt font while being
+ * spaced as 9.5pt body text. Those two defects were the gaps in the signed copy.
  */
 function renderLegalAgreement(
   doc: PDFDoc,
@@ -78,13 +124,15 @@ function renderLegalAgreement(
   registerSkillFonts(doc);
   const { carrier, signature, countersign } = opts;
   const shell = opts.shell === true;
-  const docId = `${DOC_ID_PREFIX[agreement.templateName] ?? "AGR"}-${agreement.version}`;
-  // The shell runs a wider margin and a lighter footer than the operational
-  // chrome, so every geometry constant below is shell-aware rather than the
-  // renderer having two copies.
-  const M = shell ? SHELL_MARGIN : MARGIN;
-  const CW = shell ? SHELL_CONTENT_W : CONTENT_W;
-  const CONTENT_BOTTOM = PAGE_H - M - (shell ? 34 : 40);
+  const docId = documentReference(agreement);
+  const { M, CW, CONTENT_BOTTOM } = bodyGeometry(shell);
+  const ink = shell ? TOKENS.ink : TOKENS.fg1;
+
+  // The body text style currently in force. Drawing a running header changes
+  // the font, so every new page -- whether we asked for it or PDFKit started
+  // it mid-paragraph -- puts this style back before the next line is set.
+  const pen: { font: string; size: number; color: string } = { font: FONT_BODY, size: 9.5, color: ink };
+  const applyPen = () => doc.font(pen.font, pen.size).fillColor(pen.color);
 
   // The cover is its own page and carries no running header or footer, which
   // is why the footer loop below skips page 1 when it is drawn.
@@ -103,11 +151,10 @@ function renderLegalAgreement(
           label: "Effective Date",
           value: signature ? new Date(signature.signedAt).toISOString().slice(0, 10) : "Upon execution",
         },
-        { label: "Term", value: "One year · auto-renewing" },
+        { label: "Term", value: coverTerm(agreement) },
         { label: "Governing Law", value: "State of Michigan" },
       ],
     });
-    doc.addPage();
   }
 
   const runHead = () =>
@@ -115,18 +162,35 @@ function renderLegalAgreement(
       left: BRAND_LINE + " · " + agreement.title,
       right: agreement.subtitle,
     });
+  const continuationHead = () => (shell ? runHead() : drawContinuationHeader(doc, agreement.title, docId));
 
-  // With the shell, EVERY content page carries the same light running head --
-  // there is no heavier first-page variant. A fourteen-page signed agreement
-  // does not want an operational header repeated on all of them.
-  let y = shell
-    ? runHead()
-    : drawHeaderFirstPage(doc, {
-        docTitle: agreement.title,
-        subtitle: agreement.subtitle,
-        loadId: docId,
-        includeQr: false,
-      });
+  // Every page added from here on gets the running header, and the pen back.
+  const onPage = () => {
+    const top = continuationHead();
+    doc.x = M;
+    doc.y = top;
+    applyPen();
+  };
+
+  let y: number;
+  if (shell) {
+    doc.on("pageAdded", onPage);
+    doc.addPage();
+    y = doc.y;
+  } else {
+    y = drawHeaderFirstPage(doc, {
+      docTitle: agreement.title,
+      subtitle: agreement.subtitle,
+      loadId: docId,
+      includeQr: false,
+    });
+    doc.on("pageAdded", onPage);
+  }
+
+  const pageBreak = () => {
+    doc.addPage();
+    y = doc.y;
+  };
 
   // v3.8.awo — every drawn string below comes from assembleAgreementSegments,
   // the same assembly the content hash is computed over. A string drawn from
@@ -134,118 +198,198 @@ function renderLegalAgreement(
   const segments = assembleAgreementSegments(agreement, { carrier, signature, countersign });
   const seg = (kind: AgreementSegment["kind"]) => segments.filter((x) => x.kind === kind);
 
-  doc.font(FONT_BODY_ITALIC, 8.5).fillColor(TOKENS.fg3)
-     .text(seg("effective-note")[0]?.text ?? "", MARGIN, y, { lineBreak: false });
-  y += 20;
+  // The identity line under the first header. It was drawn at the operational
+  // margin with no width, so on the shell it started 18pt left of the body and
+  // ran off the right edge. It now wraps inside the body column.
+  const note = seg("effective-note")[0]?.text ?? "";
+  if (note) {
+    doc.font(FONT_BODY_ITALIC, 8.5).fillColor(TOKENS.fg3)
+       .text(note, M, y, { width: CW, align: "left", lineGap: 1 });
+    y = doc.y + 12;
+  }
 
-  const pageBreak = () => {
-    doc.addPage();
-    y = shell ? runHead() : drawContinuationHeader(doc, agreement.title, docId);
+  const bodyLineGap = (size: number) => (shell ? size * 0.25 : 0);
+
+  /** Height of a paragraph's first two lines, or the whole of a shorter one. */
+  const leadHeight = (text: string, font = FONT_BODY, size = 9.5, align: "left" | "justify" = "justify") => {
+    doc.font(font, size);
+    const lineGap = bodyLineGap(size);
+    const lineH = doc.currentLineHeight(true) + lineGap;
+    return Math.min(doc.heightOfString(text, { width: CW, align, lineGap }), lineH * 2);
   };
 
   const block = (
     text: string,
-    o: { font?: string; size?: number; color?: string; gap?: number; align?: "left" | "justify" } = {},
+    o: {
+      font?: string; size?: number; color?: string; gap?: number; align?: "left" | "justify";
+      /** What this paragraph introduces, when it ends in a colon. */
+      introduces?: AgreementSegment;
+    } = {},
   ) => {
-    const font = o.font ?? FONT_BODY;
-    const size = o.size ?? 9.5;
     const align = o.align ?? "justify";
-    // line-height 1.6 on the shell; TOKENS.ink rather than navy, because the
-    // shell reserves navy for headings and structure.
-    const lineGap = shell ? size * 0.6 - size * 0.35 : 0;
-    doc.font(font, size);
-    const h = doc.heightOfString(text, { width: CW, align, lineGap });
-    if (y + h > CONTENT_BOTTOM) pageBreak();
-    doc.fillColor(o.color ?? (shell ? TOKENS.ink : TOKENS.fg1))
-       .text(text, M, y, { width: CW, align, lineGap });
-    y += h + (o.gap ?? (shell ? 6.75 : 8));
+    pen.font = o.font ?? FONT_BODY;
+    pen.size = o.size ?? 9.5;
+    pen.color = o.color ?? ink;
+    const gap = o.gap ?? (shell ? 6.75 : 8);
+    // Never start a paragraph with room for less than two of its lines.
+    if (y + leadHeight(text, pen.font, pen.size, align) > CONTENT_BOTTOM) pageBreak();
+    applyPen();
+    const opts = { width: CW, align, lineGap: bodyLineGap(pen.size) };
+
+    // A LEAD-IN TRAVELS WITH WHAT IT INTRODUCES. "Minimum coverages:" sat at the
+    // foot of page 5 with its list on page 6, the same defect as a heading left
+    // behind by its clause. A short lead-in that cannot bring the first two
+    // lines of its item along starts on the next page instead.
+    if (o.introduces?.kind === "clause") {
+      const own = doc.heightOfString(text, opts);
+      if (own <= (doc.currentLineHeight(true) + opts.lineGap) * 3) {
+        const need = own + gap + leadHeight(o.introduces.text);
+        applyPen();
+        if (y + need > CONTENT_BOTTOM) pageBreak();
+      }
+    }
+
+    // NOR END ONE WITH A SINGLE LINE ALONE AT THE TOP OF THE NEXT PAGE. Pages 10
+    // and 17 of the executed Broker-Carrier Agreement opened on "load." and
+    // "binding under the ESIGN Act and UETA." by themselves. Where that would
+    // happen, this page takes one line fewer, so two carry over. PDFKit reads
+    // the line limit from the page's own bottom margin and gives a new page the
+    // document's margins, so narrowing this page for this one paragraph moves
+    // the break and nothing else.
+    const ch = doc.currentLineHeight(true);
+    const lineH = ch + opts.lineGap;
+    const linesFrom = (top: number) =>
+      top + ch > CONTENT_BOTTOM ? 0 : Math.floor((CONTENT_BOTTOM - top - ch) / lineH + 1e-6) + 1;
+    const lines = Math.round(doc.heightOfString(text, opts) / lineH);
+    const here = linesFrom(y);
+    let narrowed: { page: typeof doc.page; bottom: number } | null = null;
+    if (lines > here) {
+      const perPage = linesFrom(shell ? SHELL_MARGIN + 35.25 : MARGIN + 52);
+      const onLastPage = ((lines - here - 1) % perPage) + 1;
+      if (onLastPage === 1) {
+        if (here - 1 >= 2) {
+          narrowed = { page: doc.page, bottom: doc.page.margins.bottom };
+          doc.page.margins.bottom = doc.page.height - (y + (here - 2) * lineH + ch + 0.5);
+        } else {
+          pageBreak();
+          applyPen();
+        }
+      }
+    }
+    try {
+      doc.text(text, M, y, opts);
+    } finally {
+      if (narrowed) narrowed.page.margins.bottom = narrowed.bottom;
+    }
+    y = doc.y + gap;
   };
 
+  // ── Tables ────────────────────────────────────────────────────────────────
+  //
   // Drawn by splitting the hashed segment back apart, NOT by re-reading
-  // agreement.sections. Same rule as every other string on the page: what is
-  // drawn is what is hashed, so a table cannot be text the hash does not cover
-  // (v3.8.awo). The assembly refuses any cell containing a separator, which is
-  // what makes this split lossless.
-  const table = (packed: string) => {
+  // agreement.sections: what is drawn is what is hashed (v3.8.awo). The
+  // assembly refuses any cell containing a separator, which is what makes the
+  // split lossless.
+  const PAD_X = 4;
+  const PAD_Y = 5;
+  const GAP_Y = 6;
+
+  const measureTable = (packed: string) => {
     const rows = packed.split(ROW_SEP).map((r) => r.split(CELL_SEP));
     const cols = Math.max(...rows.map((r) => r.length));
 
-    // v3.8.aza T1 — M/CW, not MARGIN/CONTENT_W. Every other block in this
-    // renderer is shell-aware; the table was not, so on the shell path it drew
-    // 18pt left of the body and 18pt wider on each side. A second defect, found
-    // while fixing the first, and invisible on the legacy path where the two
-    // pairs happen to be equal.
-    const colW = CW / cols;
-    const PAD_X = 4;
-    const PAD_Y = 5;
-    const GAP_Y = 6;
+    // COLUMN WIDTHS FROM CONTENT. Equal columns gave the accessorial table a
+    // "Charge" column as wide as its "Terms" column, so one-word labels sat in
+    // half the page while the terms wrapped to six lines beside them. A column
+    // whose longest cell is short gets that width; the rest share what is left.
+    const natural = Array.from({ length: cols }, (_, c) =>
+      Math.max(...rows.map((r, i) => {
+        doc.font(i === 0 ? FONT_BODY_BOLD : FONT_BODY, 9);
+        return doc.widthOfString(r[c] ?? "");
+      })) + PAD_X * 2 + 6,
+    );
+    let widths: number[];
+    if (natural.reduce((a, b) => a + b, 0) <= CW) {
+      widths = natural.map(() => CW / cols);
+    } else {
+      const narrow = natural.map((n) => n <= CW * 0.3);
+      const fixed = natural.reduce((a, n, i) => a + (narrow[i] ? n : 0), 0);
+      const flex = narrow.filter((x) => !x).length;
+      widths = flex === 0
+        ? natural.map(() => CW / cols)
+        : natural.map((n, i) => (narrow[i] ? n : (CW - fixed) / flex));
+    }
+    const xs = widths.map((_, i) => M + widths.slice(0, i).reduce((a, b) => a + b, 0));
 
-    // THE DEFECT THIS REPLACES. Rows were laid at a fixed ROW_H = 18 while the
-    // paragraph 24 Terms cells run 300+ characters and wrap to five or six
-    // lines at a 262pt column. y advanced 18pt regardless, so the rows
-    // INTERLEAVED: on the executed BCA, "Layover" sat at y=505 next to
-    // Detention's fourth line at y=499.7, and TONU at 487 next to Layover's
-    // continuation at 493. Reading down the Terms column of a signed
-    // instrument gave sentences from four different charges, alternating.
-    //
-    // Height is now the tallest cell in the row at its own column width, which
-    // is the only number that can be right for a row whose cells differ in
-    // length by two orders of magnitude.
-    const rowHeight = (cells: string[], isHeader: boolean): number => {
-      doc.font(isHeader ? FONT_BODY_BOLD : FONT_BODY, 9);
+    // Row height is the tallest cell at its own column width -- the only number
+    // that can be right for rows whose cells differ in length by two orders of
+    // magnitude (the ROW_H = 18 interleaving defect).
+    const heights = rows.map((cells, i) => {
+      doc.font(i === 0 ? FONT_BODY_BOLD : FONT_BODY, 9);
       let h = 0;
-      for (const cell of cells) {
-        h = Math.max(h, doc.heightOfString(cell, { width: colW - PAD_X * 2 }));
-      }
-      return h + PAD_Y * 2;
-    };
-
-    const drawRow = (cells: string[], isHeader: boolean, h: number): void => {
-      doc.font(isHeader ? FONT_BODY_BOLD : FONT_BODY, 9)
-         .fillColor(isHeader ? TOKENS.navy : (shell ? TOKENS.ink : TOKENS.fg1));
       cells.forEach((cell, c) => {
-        // No lineBreak:false. The cell WRAPS at its column width, which is what
-        // makes the measured height above describe what is actually drawn.
-        doc.text(cell, M + c * colW + PAD_X, y + PAD_Y, { width: colW - PAD_X * 2 });
+        h = Math.max(h, doc.heightOfString(cell, { width: widths[c] - PAD_X * 2 }));
+      });
+      return h + PAD_Y * 2;
+    });
+    const total = 4 + heights.reduce((a, h, i) => a + h + (i === 0 ? 2 : GAP_Y), 0) + 8;
+    return { rows, widths, xs, heights, total };
+  };
+
+  const table = (packed: string) => {
+    const t = measureTable(packed);
+
+    const drawRow = (r: number) => {
+      const isHeader = r === 0;
+      doc.font(isHeader ? FONT_BODY_BOLD : FONT_BODY, 9)
+         .fillColor(isHeader ? TOKENS.navy : ink);
+      t.rows[r].forEach((cell, c) => {
+        doc.text(cell, t.xs[c] + PAD_X, y + PAD_Y, { width: t.widths[c] - PAD_X * 2 });
       });
       // A rule under the header only. Body rows are separated by spacing, which
       // keeps a short terms table from reading like a spreadsheet.
       if (isHeader) {
         doc.save().strokeColor(TOKENS.gold).lineWidth(0.6)
-           .moveTo(M, y + h - 2).lineTo(M + CW, y + h - 2).stroke().restore();
+           .moveTo(M, y + t.heights[0] - 2).lineTo(M + CW, y + t.heights[0] - 2).stroke().restore();
       }
-      y += h + (isHeader ? 2 : GAP_Y);
+      y += t.heights[r] + (isHeader ? 2 : GAP_Y);
     };
 
-    const header = rows[0];
-    const headerH = rowHeight(header, true);
+    // A SHORT TABLE IS KEPT WHOLE. The three-row tier table split one row onto
+    // the next page under a repeated header. A short table that does not fit
+    // starts on the next page instead. A long one is still split between rows:
+    // moving the accessorial table whole left half a page empty above it.
+    const pageRoom = CONTENT_BOTTOM - (shell ? SHELL_MARGIN + 35.25 : MARGIN + 52);
+    if (t.total <= pageRoom * 0.35 && y + t.total > CONTENT_BOTTOM) pageBreak();
 
     y += 4;
-    // Break before the header rather than orphaning it above a page boundary.
-    // The first body row is included so a header never lands alone at the foot.
-    const firstBodyH = rows.length > 1 ? rowHeight(rows[1], false) : 0;
-    if (y + headerH + 2 + firstBodyH > CONTENT_BOTTOM) pageBreak();
-    drawRow(header, true, headerH);
+    const firstBodyH = t.rows.length > 1 ? t.heights[1] : 0;
+    if (y + t.heights[0] + 2 + firstBodyH > CONTENT_BOTTOM) pageBreak();
+    drawRow(0);
 
-    for (let i = 1; i < rows.length; i++) {
-      const h = rowHeight(rows[i], false);
-      if (y + h > CONTENT_BOTTOM) {
+    for (let r = 1; r < t.rows.length; r++) {
+      if (y + t.heights[r] > CONTENT_BOTTOM) {
         pageBreak();
         // Repeat the header. A continued table whose columns are unlabelled is
         // a column of dollar figures with nothing saying what they charge for.
-        drawRow(header, true, headerH);
+        drawRow(0);
       }
-      // A row taller than a whole page would still overflow here, deliberately:
-      // one break is attempted, then it draws. Splitting a single charge's
-      // terms across a page break on a signed instrument is worse than a long
-      // row, and no row in either agreement is close to a page.
-      drawRow(rows[i], false, h);
+      drawRow(r);
     }
     y += 8;
   };
 
-  const heading = (text: string) => {
-    if (y + 26 > CONTENT_BOTTOM) pageBreak();
+  const heading = (text: string, next?: AgreementSegment) => {
+    // KEPT WITH WHAT FOLLOWS. A heading alone at the foot of a page, with its
+    // clause on the next, is the defect this closes (paragraph 22).
+    const headH = shell ? 18 + 9 + 7.5 : 6 + 16;
+    let need = headH;
+    if (next?.kind === "clause") need += leadHeight(next.text);
+    else if (next?.kind === "table") {
+      const t = measureTable(next.text);
+      need += 4 + t.heights[0] + 2 + (t.heights[1] ?? 0);
+    }
+    if (y + need > CONTENT_BOTTOM) pageBreak();
     if (shell) {
       y += 18; // h2 margin-top 24px
       drawShellHeading(doc, text, M, y);
@@ -260,11 +404,13 @@ function renderLegalAgreement(
   // Order is preserved from the assembly, so heading/clause interleaving is the
   // assembly's order rather than a second traversal of the source data.
   for (const p of seg("preamble")) block(p.text, { gap: 10 });
-  for (const s of segments) {
-    if (s.kind === "heading") heading(s.text);
-    else if (s.kind === "clause") block(s.text);
+  segments.forEach((s, i) => {
+    if (s.kind === "heading") heading(s.text, segments[i + 1]);
+    else if (s.kind === "clause") {
+      block(s.text, { introduces: /:\s*$/.test(s.text) ? segments[i + 1] : undefined });
+    }
     else if (s.kind === "table") table(s.text);
-  }
+  });
 
   // Keep the execution area together. Height must fit the taller column — the
   // CARRIER role has 8 fields (LEGAL NAME / MC # / DOT # / EIN / PRINT NAME /
@@ -329,7 +475,13 @@ function renderLegalAgreement(
       new Date(signature.signedAt).toISOString().slice(0, 10);
   }
 
-  y = drawSignatureBlock(doc, y, { roles: MASTER_AGREEMENT_SIGNATURE_ROLES, height: sigHeight, prefilledValues: prefilled });
+  y = drawSignatureBlock(doc, y, {
+    roles: MASTER_AGREEMENT_SIGNATURE_ROLES,
+    height: sigHeight,
+    prefilledValues: prefilled,
+    x: M,
+    width: CW,
+  });
 
   // The countersign line, DRAWN because it is HASHED. canonicalAgreementText
   // calls its segment list "the contract between what is shown and what is
@@ -346,19 +498,16 @@ function renderLegalAgreement(
   if (signature) {
     y += 6;
     if (y + 46 > CONTENT_BOTTOM) pageBreak();
-    // The attestation is the assembly's, not a second copy. It used to be built
-    // inline here with toLocaleString — which meant the text on the page and the
-    // text a hash would cover were two different constructions of the same
-    // sentence, free to drift. It is now one construction, and it is the hashed
-    // one. ISO-only inside the assembly; no locale formatting, because ICU
-    // builds differ between machines and the hash must not.
+    // The attestation is the assembly's, not a second copy. ISO-only inside
+    // the assembly; no locale formatting, because ICU builds differ between
+    // machines and the hash must not.
     const attest = seg("attestation")[0]?.text ?? "";
     doc.font(FONT_BODY_ITALIC, 8);
-    const ah = doc.heightOfString(attest, { width: CONTENT_W - 20 });
+    const ah = doc.heightOfString(attest, { width: CW - 20 });
     const boxH = ah + 16;
     doc.save().fillColor(TOKENS.cream2).strokeColor(TOKENS.border1).lineWidth(0.5)
-       .roundedRect(MARGIN, y, CONTENT_W, boxH, 6).fillAndStroke().restore();
-    doc.font(FONT_BODY_ITALIC, 8).fillColor(TOKENS.fg2).text(attest, MARGIN + 10, y + 8, { width: CONTENT_W - 20 });
+       .roundedRect(M, y, CW, boxH, 6).fillAndStroke().restore();
+    doc.font(FONT_BODY_ITALIC, 8).fillColor(TOKENS.fg2).text(attest, M + 10, y + 8, { width: CW - 20 });
     y += boxH + 8;
   } else {
     y += 6;
@@ -368,13 +517,18 @@ function renderLegalAgreement(
     );
   }
 
-  // Per-page footers with correct total (bufferPages must be enabled on the doc)
+  // Per-page footers with correct total (bufferPages must be enabled on the
+  // doc). The footer sits below the body floor, so each page's bottom margin
+  // is released first: otherwise PDFKit would read a footer line as text
+  // crossing the margin and start a new page for it.
+  doc.removeListener("pageAdded", onPage);
   const range = doc.bufferedPageRange();
   for (let i = 0; i < range.count; i++) {
     // Page 1 is the cover when the shell is on, and the cover carries no
     // footer -- the Design System puts only the tagline there.
     if (shell && i === 0) continue;
     doc.switchToPage(range.start + i);
+    doc.page.margins = { top: 0, bottom: 0, left: 0, right: 0 };
     if (shell) drawShellFooter(doc, { pageNum: i + 1, totalPages: range.count });
     else drawFooter(doc, { pageNum: i + 1, totalPages: range.count, docId });
   }
@@ -411,7 +565,8 @@ export function generateAgreementPdf(
   agreement: LegalAgreement,
   opts: AgreementPdfOptions = {},
 ): PDFDoc {
-  const doc = new PDFDocument({ size: "LETTER", margin: 0, bufferPages: true });
+  const { margins } = bodyGeometry(opts.shell === true);
+  const doc = new PDFDocument({ size: "LETTER", margins, bufferPages: true });
   renderLegalAgreement(doc, agreement, opts);
   doc.end();
   return doc;

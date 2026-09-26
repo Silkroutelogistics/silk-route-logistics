@@ -23,6 +23,7 @@ import { describe, it, expect } from "vitest";
 import { generateAgreementBuffer } from "../../../src/services/agreementPdfService";
 import { BROKER_CARRIER_AGREEMENT } from "../../../src/data/agreements";
 import { PIN_CARRIER, PIN_SIGNATURE } from "../../fixtures/pdfPinFixtures";
+import { MARGIN, CONTENT_W, SHELL_MARGIN, SHELL_CONTENT_W } from "../../../src/lib/srl-chrome";
 
 type Run = { x: number; y: number; w: number; s: string };
 
@@ -170,22 +171,38 @@ describe("agreement table rows do not interleave", () => {
     it(`${path}: every table cell stays inside its column`, async () => {
       const pages = await tablePages(shell);
       const offenders: string[] = [];
+      // The block's right edge, from the page geometry. The columns are sized to
+      // their content (2026-09-26), so the Terms column's right bound is the
+      // body margin -- not "start of Terms plus the width of Charge", which is
+      // what this check assumed when both columns were forced equal.
+      const blockRight = shell ? SHELL_MARGIN + SHELL_CONTENT_W : MARGIN + CONTENT_W;
 
       for (const pg of pages) {
         const { runs, cols } = tableRuns(pg.runs);
-        const colW = cols[1] - cols[0];
         for (const r of runs) {
           const inCol0 = Math.abs(r.x - cols[0]) < 1;
           const right = r.x + r.w;
           if (inCol0 && right > cols[1]) {
             offenders.push(`p${pg.page} col0 overruns into col1: "${r.s.slice(0, 46)}" right=${right.toFixed(1)} >= ${cols[1].toFixed(1)}`);
           }
-          if (!inCol0 && right > cols[1] + colW) {
-            offenders.push(`p${pg.page} col1 overruns the block: "${r.s.slice(0, 46)}" right=${right.toFixed(1)} > ${(cols[1] + colW).toFixed(1)}`);
+          if (!inCol0 && right > blockRight + 0.5) {
+            offenders.push(`p${pg.page} col1 overruns the block: "${r.s.slice(0, 46)}" right=${right.toFixed(1)} > ${blockRight.toFixed(1)}`);
           }
         }
       }
       expect(offenders, offenders.join("\n")).toEqual([]);
+    }, 30_000);
+
+    it(`${path}: the Charge column is sized to its labels, not half the block`, async () => {
+      // Equal columns gave one-word charge names half the page while their terms
+      // wrapped to six lines beside them. The label column now takes its content
+      // width and the Terms column the rest.
+      const [pg] = await tablePages(shell);
+      const { cols } = tableRuns(pg.runs);
+      const left = shell ? SHELL_MARGIN : MARGIN;
+      const blockW = shell ? SHELL_CONTENT_W : CONTENT_W;
+      expect(cols[0] - left, "the table must start at the body margin").toBeLessThan(8);
+      expect(cols[1] - left, "Charge column width").toBeLessThan(blockW * 0.3);
     }, 30_000);
 
     it(`${path}: a table that spans a page repeats its header`, async () => {
