@@ -12,10 +12,13 @@ vi.mock("../../../src/services/emailService", () => ({
   wrap: (h: string) => h,
 }));
 vi.mock("../../../src/services/invoiceService", () => ({ assessLoadBillable: vi.fn() }));
+vi.mock("../../../src/services/storageService", () => ({ uploadFileToPath: vi.fn().mockResolvedValue("invoices/x.pdf") }));
+vi.mock("../../../src/services/customerRecipientResolver", () => ({ resolveBillingRecipients: vi.fn().mockResolvedValue([{ email: "ap@example.com" }]) }));
 
 import { INVOICE_SEND_LOCKED, isInvoiceSendLocked, sendLockedMessage } from "../../../src/lib/invoiceSendLock";
-import { sendCustomerInvoiceEmail } from "../../../src/services/emailService";
+import { sendCustomerInvoiceEmail, sendEmail } from "../../../src/services/emailService";
 import { sendInvoice } from "../../../src/controllers/accountingController";
+import { generateInvoiceFromLoad } from "../../../src/controllers/invoiceController";
 
 const mockPrisma = vi.mocked(prisma, true) as any;
 const res = () => { const r: any = {}; r.status = vi.fn().mockReturnValue(r); r.json = vi.fn().mockReturnValue(r); return r; };
@@ -70,5 +73,40 @@ describe("sendInvoice refuses a locked load", () => {
     await sendInvoice({ params: { id: "inv-1" }, user: { id: "ae-1", role: "ADMIN" } } as any, r);
     expect(sendCustomerInvoiceEmail).toHaveBeenCalledTimes(1);
     expect(r.status).not.toHaveBeenCalledWith(409);
+  });
+});
+
+describe("generateInvoiceFromLoad refuses a locked load", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPrisma.$transaction.mockImplementation(async (fn: any) => fn(mockPrisma));
+    mockPrisma.invoice.findFirst.mockResolvedValue(null);
+    mockPrisma.invoice.findMany.mockResolvedValue([]);
+    mockPrisma.invoice.create.mockResolvedValue({ id: "inv-9" });
+    mockPrisma.invoiceLineItem = { createMany: vi.fn().mockResolvedValue({ count: 1 }) };
+    mockPrisma.invoice.update.mockResolvedValue({});
+    mockPrisma.load.update.mockResolvedValue({});
+  });
+  const gen = async (loadNumber: string) => {
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", customerId: "c-1", customerRate: 250, fuelSurcharge: 0, ...load(loadNumber) });
+    mockPrisma.invoice.findUnique.mockResolvedValue({ id: "inv-9", invoiceNumber: "X", srlDocNumber: "X", load: load(loadNumber), lineItems: [] });
+    const r = res();
+    await generateInvoiceFromLoad({ params: { loadId: "load-1" }, user: { id: "ae-2", role: "ACCOUNTING" } } as any, r);
+    return r;
+  };
+
+  it("409 on SRL-121492, which has no invoice yet: nothing created, nothing emailed", async () => {
+    const r = await gen("SRL-121492");
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(r.json.mock.calls[0][0]).toMatchObject({ code: INVOICE_SEND_LOCKED });
+    expect(mockPrisma.invoice.create).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("control: an unlocked load is created and emailed", async () => {
+    const r = await gen("121498");
+    expect(mockPrisma.invoice.create).toHaveBeenCalledTimes(1);
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(r.status).toHaveBeenCalledWith(201);
   });
 });

@@ -10,6 +10,7 @@ import { onInvoicePaid } from "../services/integrationService";
 import { log } from "../lib/logger";
 import { createInvoiceWithRetry } from "../lib/invoiceNumber";
 import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
+import { INVOICE_SEND_LOCKED, isInvoiceSendLocked, sendLockedMessage } from "../lib/invoiceSendLock";
 
 export async function createInvoice(req: AuthRequest, res: Response) {
   const data = createInvoiceSchema.parse(req.body);
@@ -299,6 +300,12 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
     },
   });
   if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+
+  // Delivered through Tipalti on 2026-09-25; this path would create and email a second invoice.
+  if (isInvoiceSendLocked(load.loadNumber)) {
+    res.status(409).json({ error: sendLockedMessage(load.loadNumber!), code: INVOICE_SEND_LOCKED });
+    return;
+  }
 
   // Check if invoice already exists
   const existing = await prisma.invoice.findFirst({ where: { loadId } });

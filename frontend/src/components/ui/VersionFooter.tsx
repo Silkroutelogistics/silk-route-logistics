@@ -19211,7 +19211,9 @@
 // and records no channel (O4).
 // v3.8.blc — the four BKN loads whose invoices went through Tipalti by hand cannot be
 // emailed an invoice from sendInvoice until production records those deliveries (send lock).
-export const SRL_VERSION = "3.8.blc";
+// v3.8.ble — generateInvoiceFromLoad refuses the four BKN loads whose invoices went through
+// Tipalti by hand; for SRL-121492, which has none yet, it would have created and emailed one.
+export const SRL_VERSION = "3.8.ble";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
