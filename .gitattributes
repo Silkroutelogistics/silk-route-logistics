@@ -19,3 +19,15 @@
 # which removes the trap rather than asking each session to remember the manual
 # `cp` that works around it.
 backend/scripts/probe-public-surfaces.mjs text eol=lf
+
+# MIGRATIONS: PRISMA HASHES THESE FILES, SO THEIR LINE ENDINGS ARE PART OF THE
+# RECORD. `prisma migrate deploy` stores the SHA-256 of each migration.sql as it
+# read it from disk. With autocrlf a Windows working copy is CRLF, so a migration
+# applied from a Windows shell stores a CRLF hash while every Linux checkout
+# (Render, CI) hashes the LF file git holds. That happened on 2026-09-26 to
+# 20260926140000_invoice_delivery_channel, applied through the production rail;
+# its stored checksum is the CRLF one and is deliberately left as it is. Deploy
+# and status do not compare checksums (tested), but `migrate dev` does, and the
+# record should not depend on which machine applied it. eol=lf checks these
+# files out with LF whatever autocrlf says.
+backend/prisma/migrations/** eol=lf
