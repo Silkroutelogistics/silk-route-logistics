@@ -19163,6 +19163,8 @@
 // invoice; it had no handler (invoicing audit G-8).
 // v3.8.bjr — G-14: invoice PDF dates are formatted in UTC, so the stored calendar
 // day prints on any host, not the day before on one west of UTC.
+// v3.8.bjs — D5: loads number from 50001. 5001, 5002 and SRL-1214xx keep
+// their numbers; the first draw below the floor lifts the sequence once.
 export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {

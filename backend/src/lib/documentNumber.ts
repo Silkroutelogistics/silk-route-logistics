@@ -414,22 +414,44 @@ export const DOCUMENT_FILENAME_LABEL: Record<Exclude<DocumentKind, "SUPPLEMENTAL
  * a sequence with more than one path to it is not a sequence. Every load,
  * however it is created, now gets the bare number.
  *
- * START WITH 5001 is the amended series (§21.2). IF NOT EXISTS means the clause
- * only applies where the sequence does not yet exist — a fresh CI database, a new
- * container — which is exactly the case this has to be right for. Production was
- * moved to 5001 by ALTER on 2026-09-23 and is unaffected by this line.
+ * THE SERIES IS 50001 (§21.2, ruled 2026-09-26). 5001 and 5002 were issued
+ * under the earlier start and keep their numbers, as SRL-1214xx does.
+ *
+ * START WITH only applies where the sequence does not yet exist (IF NOT EXISTS),
+ * so production — which already had one, at 5002 — is moved by the FLOOR below
+ * rather than by a separate restart: the first number drawn below the floor
+ * lifts the sequence to it once, and every later call returns straight from
+ * nextval. The setval is conditional on the sequence still being below the
+ * floor, so a second caller arriving after the lift does not reset it. The
+ * one-time switchover can in principle race two callers onto the same number;
+ * Load.loadNumber is @unique, so that throws rather than issuing a duplicate.
  *
  * nextval() is non-transactional by design, so a rolled-back create burns a
  * number. That is correct and deliberate — gaps are free, collisions are not.
  */
-export async function generateLoadNumber(client: any = prisma): Promise<string> {
-  // Idempotent; static SQL, no user input.
-  await client.$executeRaw`CREATE SEQUENCE IF NOT EXISTS load_number_seq START WITH 5001`;
+export const LOAD_NUMBER_FLOOR = 50001;
+
+async function drawLoadNumber(client: any): Promise<number> {
   const result = await client.$queryRaw<{ nextval: bigint }[]>`SELECT nextval('load_number_seq') as nextval`;
   if (!result || result.length === 0) {
     throw new Error("Failed to generate load number: sequence returned no result");
   }
-  return String(Number(result[0].nextval));
+  return Number(result[0].nextval);
+}
+
+export async function generateLoadNumber(client: any = prisma): Promise<string> {
+  // Idempotent; static SQL, no user input. The literal is LOAD_NUMBER_FLOOR —
+  // a test holds the two equal.
+  await client.$executeRaw`CREATE SEQUENCE IF NOT EXISTS load_number_seq START WITH 50001`;
+  let n = await drawLoadNumber(client);
+  if (n < LOAD_NUMBER_FLOOR) {
+    await client.$executeRaw`SELECT setval('load_number_seq', 50001, false) WHERE (SELECT last_value FROM load_number_seq) < 50001`;
+    n = await drawLoadNumber(client);
+    if (n < LOAD_NUMBER_FLOOR) {
+      throw new Error(`load_number_seq returned ${n} after the lift to ${LOAD_NUMBER_FLOOR}`);
+    }
+  }
+  return String(n);
 }
 
 // ─── Allocation ─────────────────────────────────────────────────────────────

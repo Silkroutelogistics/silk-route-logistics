@@ -28,6 +28,7 @@ import {
   generateLoadNumber,
   isBareStem,
   isLegacyStem,
+  LOAD_NUMBER_FLOOR,
   nextDocumentNumber,
   nextSupplementalNumber,
   parseDocumentRevision,
@@ -228,22 +229,70 @@ describe("allocation", () => {
   });
 });
 
-describe("the sequence issues a bare number starting at 5001", () => {
-  it("declares START WITH 5001 and returns no prefix", async () => {
-    const statements: string[] = [];
-    const client = {
-      $executeRaw: async (strings: TemplateStringsArray) => {
-        statements.push(strings.join(""));
-        return 0;
-      },
-      $queryRaw: async () => [{ nextval: BigInt(5001) }],
-    };
-    const n = await generateLoadNumber(client as any);
 
-    expect(n).toBe("5001");
-    expect(n).not.toMatch(/SRL/);
-    // A fresh CI database or a new container must start at 5001, never 121472.
-    expect(statements.join(" ")).toContain("START WITH 5001");
-    expect(statements.join(" ")).not.toContain("121472");
+/**
+ * A stand-in for load_number_seq that behaves like Postgres: CREATE ... IF NOT
+ * EXISTS only applies START WITH to a sequence that does not exist yet, nextval
+ * advances, and the conditional setval applies only while the sequence is below
+ * the floor. A mock that answered nextval with a fixed number would pass a
+ * generator that never lifts the sequence at all.
+ */
+function sequence(existing: { last: number; called: boolean } | null) {
+  let seq = existing ? { ...existing } : null;
+  const statements: string[] = [];
+  const client = {
+    $executeRaw: async (strings: TemplateStringsArray) => {
+      const sql = strings.join("");
+      statements.push(sql);
+      const create = sql.match(/CREATE SEQUENCE IF NOT EXISTS load_number_seq START WITH (\d+)/);
+      if (create && !seq) seq = { last: Number(create[1]), called: false };
+      const lift = sql.match(/setval\('load_number_seq', (\d+), false\) WHERE \(SELECT last_value FROM load_number_seq\) < (\d+)/);
+      if (lift && seq!.last < Number(lift[2])) seq = { last: Number(lift[1]), called: false };
+      return 0;
+    },
+    $queryRaw: async () => {
+      seq = seq!.called ? { last: seq!.last + 1, called: true } : { last: seq!.last, called: true };
+      return [{ nextval: BigInt(seq.last) }];
+    },
+  };
+  return { client, statements };
+}
+
+describe("the sequence issues the 50001 series (§21.2, ruled 2026-09-26)", () => {
+  it("a fresh database starts at 50001, then 50002", async () => {
+    const { client, statements } = sequence(null);
+    expect(await generateLoadNumber(client as any)).toBe("50001");
+    expect(await generateLoadNumber(client as any)).toBe("50002");
+    expect(statements[0]).toContain("START WITH 50001");
+    expect(statements.join(" ")).not.toMatch(/START WITH 5001\b/);
+  });
+
+  it("production's state (5001 and 5002 issued) moves to 50001, then 50002", async () => {
+    const { client } = sequence({ last: 5002, called: true });
+    expect(await generateLoadNumber(client as any)).toBe("50001");
+    expect(await generateLoadNumber(client as any)).toBe("50002");
+  });
+
+  it("a sequence already in the series returns the next unused number and is not reset", async () => {
+    const { client, statements } = sequence({ last: 50007, called: true });
+    expect(await generateLoadNumber(client as any)).toBe("50008");
+    expect(statements.some((s) => s.includes("setval"))).toBe(false);
+  });
+
+  it("the SQL literals are the exported floor, and the number carries no prefix", async () => {
+    const src = readFileSync(join(__dirname, "../../../src/lib/documentNumber.ts"), "utf8");
+    const body = src.slice(src.indexOf("export async function generateLoadNumber"));
+    const literals = body.slice(0, body.indexOf("\n}")).match(/\b\d{4,}\b/g) ?? [];
+    expect(LOAD_NUMBER_FLOOR).toBe(50001);
+    expect(new Set(literals)).toEqual(new Set([String(LOAD_NUMBER_FLOOR)]));
+    const { client } = sequence(null);
+    expect(await generateLoadNumber(client as any)).not.toMatch(/SRL/);
+  });
+
+  it("only an accessorial supplement takes a letter", () => {
+    for (const kind of ["BOL", "RATE_CONFIRMATION", "INVOICE", "SETTLEMENT"] as const) {
+      expect(formatDocumentNumber("50001", kind)).toBe("50001");
+    }
+    expect(formatSupplementalNumber("50001", "TONU")).toBe("50001D");
   });
 });
