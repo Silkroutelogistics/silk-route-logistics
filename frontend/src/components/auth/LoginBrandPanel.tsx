@@ -32,7 +32,7 @@ const VARIANTS: Record<LoginVariant, VariantConfig> = {
     ],
     slides: [
       { label: "COMMAND CENTER", text: "Full visibility into loads, carriers, and financials" },
-      { label: "COMPASS COMPLIANCE", text: "35-check carrier vetting built for safety first" },
+      { label: "COMPASS COMPLIANCE", text: "33-check carrier vetting built for safety first" },
       { label: "MARCO POLO AI", text: "Intelligent automation for modern freight brokerage" },
     ],
   },
@@ -137,7 +137,7 @@ export function LoginBrandPanel({ variant }: { variant: LoginVariant }) {
           {featurePills.map((f) => (
             <div
               key={f.label}
-              className="flex items-center justify-center gap-1.5 border border-white/25 text-[#FBF7F0] bg-white/10 rounded-lg px-3 py-2.5 text-xs font-medium cursor-default"
+              className="flex items-center justify-center gap-1.5 border border-[#FFFFFF] text-[#0A2540] bg-[#FFFFFF] rounded-lg px-3 py-2.5 text-xs font-medium cursor-default"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d={f.icon} />

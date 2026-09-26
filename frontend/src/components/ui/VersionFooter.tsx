@@ -19146,7 +19146,14 @@
 //   Test-only. The first case imported the rate-confirmations router inside its 5 s
 //   budget and timed out even run alone on this machine (one cold run: ~45 s). The
 //   import moved to a beforeAll with a 120 s hook budget; case budgets are unchanged.
-export const SRL_VERSION = "3.8.bks";
+// v3.8.bku — The login feature cards are one white card with navy text, on every portal and in both modes.
+//   The four brand panels (AE, carrier, shipper, and the shared forgot/reset panel) put
+// bg-white/10 on each pill: the AE copy with text-white, the others with cream text.
+// Light mode remaps both of those classes, so AE pills turned into white cards with
+// dark text while carrier and shipper pills turned into white cards with cream text.
+// All four now use literal hex classes no data-mode rule rewrites. The AE slide and
+// the shared panel said 35-check; the engine runs 33, and both joined the Compass guard.
+export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

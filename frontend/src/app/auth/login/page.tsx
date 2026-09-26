@@ -19,7 +19,7 @@ const FEATURE_PILLS = [
 
 const SLIDES = [
   { label: "COMMAND CENTER", title: "Command Center", text: "Full visibility into loads, carriers, and financials" },
-  { label: "COMPASS COMPLIANCE", title: "Compass Compliance", text: "35-check carrier vetting built for safety first" },
+  { label: "COMPASS COMPLIANCE", title: "Compass Compliance", text: "33-check carrier vetting built for safety first" },
   { label: "MARCO POLO AI", title: "Marco Polo AI", text: "Intelligent automation for modern freight brokerage" },
 ];
 
@@ -311,7 +311,7 @@ export default function EmployeeLoginPage() {
           {/* Feature pills — 2×2 grid */}
           <div className="grid grid-cols-2 gap-2 mb-8 w-full max-w-[360px]">
             {FEATURE_PILLS.map((f) => (
-              <div key={f.label} className="flex items-center justify-center gap-1.5 border border-white/25 text-white bg-white/10 rounded-lg px-3 py-2.5 text-xs font-medium cursor-default">
+              <div key={f.label} className="flex items-center justify-center gap-1.5 border border-[#FFFFFF] text-[#0A2540] bg-[#FFFFFF] rounded-lg px-3 py-2.5 text-xs font-medium cursor-default">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={f.icon} /></svg>
                 {f.label}
               </div>

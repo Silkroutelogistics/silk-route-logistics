@@ -87,6 +87,11 @@ const SURFACES: Array<{ file: string; label: string; headLines?: number }> = [
   // file finished, the count was corrected to 33, and the inverted assertion
   // fired exactly as designed to say so. It is a guarded surface again.
   { file: "frontend/src/app/onboarding/page.tsx", label: "carrier onboarding review step" },
+  // Both said "35-check" until 2026-09-26: the employee login slide and the
+  // shared panel's AE slide, which forgot/reset render. Neither was listed, so
+  // the count was stale on the first screen staff see and nothing noticed.
+  { file: "frontend/src/app/auth/login/page.tsx", label: "employee login slide" },
+  { file: "frontend/src/components/auth/LoginBrandPanel.tsx", label: "shared login panel AE slide" },
 ];
 
 /**
