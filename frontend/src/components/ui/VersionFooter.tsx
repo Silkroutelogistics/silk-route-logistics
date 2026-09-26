@@ -19169,6 +19169,9 @@
 // already went out (409 LOAD_ALREADY_INVOICED); supplementals still send.
 // v3.8.bju — a POD no longer labels a duplicate draft SENT when another
 // BASE invoice on the load already went out.
+// v3.8.bjz — loads continue from 121498, the number after the last legacy load
+// (SRL-121497); the 50001 series is withdrawn. A number below 121498 is refused,
+// never lifted: production's sequence is moved by a script, run deliberately.
 export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {

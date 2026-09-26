@@ -414,42 +414,47 @@ export const DOCUMENT_FILENAME_LABEL: Record<Exclude<DocumentKind, "SUPPLEMENTAL
  * a sequence with more than one path to it is not a sequence. Every load,
  * however it is created, now gets the bare number.
  *
- * THE SERIES IS 50001 (§21.2, ruled 2026-09-26). 5001 and 5002 were issued
- * under the earlier start and keep their numbers, as SRL-1214xx does.
+ * THE SERIES CONTINUES FROM THE LAST LEGACY LOAD (§21.2, ruled 2026-09-26).
+ * SRL-121497 was the last number issued under the prefixed scheme, so the next
+ * load is 121498 — bare, no prefix — then 121499. There is no second series.
+ * 5001 and 5002, issued in between, keep their numbers and have no bearing on
+ * what comes next.
  *
- * START WITH only applies where the sequence does not yet exist (IF NOT EXISTS),
- * so production — which already had one, at 5002 — is moved by the FLOOR below
- * rather than by a separate restart: the first number drawn below the floor
- * lifts the sequence to it once, and every later call returns straight from
- * nextval. The setval is conditional on the sequence still being below the
- * floor, so a second caller arriving after the lift does not reset it. The
- * one-time switchover can in principle race two callers onto the same number;
- * Load.loadNumber is @unique, so that throws rather than issuing a duplicate.
+ * START WITH only applies where the sequence does not exist yet (IF NOT
+ * EXISTS): a fresh CI database, a local container. Production's sequence does
+ * exist, and after 5001 and 5002 it sits at 5002, so it is moved by
+ * scripts/restart-load-number-sequence.ts — a production write, run
+ * deliberately. THIS FUNCTION NEVER MOVES THE SEQUENCE.
+ *
+ * FLOOR, NOT LIFT. A number below LOAD_NUMBER_FLOOR is refused, not issued. On a
+ * database whose sequence was never moved that number would be 5003, and a load
+ * number is printed on the BOL and the rate confirmation, where it cannot be
+ * taken back once a carrier or shipper holds it. Refusing costs one failed load
+ * creation with the fix named in the error; issuing costs a document number
+ * outside the series, permanently. The refused draw burns its value, which was
+ * below the floor and so could never be issued anyway.
  *
  * nextval() is non-transactional by design, so a rolled-back create burns a
  * number. That is correct and deliberate — gaps are free, collisions are not.
  */
-export const LOAD_NUMBER_FLOOR = 50001;
-
-async function drawLoadNumber(client: any): Promise<number> {
-  const result = await client.$queryRaw<{ nextval: bigint }[]>`SELECT nextval('load_number_seq') as nextval`;
-  if (!result || result.length === 0) {
-    throw new Error("Failed to generate load number: sequence returned no result");
-  }
-  return Number(result[0].nextval);
-}
+export const LAST_LEGACY_LOAD_NUMBER = 121497;
+export const LOAD_NUMBER_FLOOR = LAST_LEGACY_LOAD_NUMBER + 1;
 
 export async function generateLoadNumber(client: any = prisma): Promise<string> {
   // Idempotent; static SQL, no user input. The literal is LOAD_NUMBER_FLOOR —
   // a test holds the two equal.
-  await client.$executeRaw`CREATE SEQUENCE IF NOT EXISTS load_number_seq START WITH 50001`;
-  let n = await drawLoadNumber(client);
+  await client.$executeRaw`CREATE SEQUENCE IF NOT EXISTS load_number_seq START WITH 121498`;
+  const result = await client.$queryRaw<{ nextval: bigint }[]>`SELECT nextval('load_number_seq') as nextval`;
+  if (!result || result.length === 0) {
+    throw new Error("Failed to generate load number: sequence returned no result");
+  }
+  const n = Number(result[0].nextval);
   if (n < LOAD_NUMBER_FLOOR) {
-    await client.$executeRaw`SELECT setval('load_number_seq', 50001, false) WHERE (SELECT last_value FROM load_number_seq) < 50001`;
-    n = await drawLoadNumber(client);
-    if (n < LOAD_NUMBER_FLOOR) {
-      throw new Error(`load_number_seq returned ${n} after the lift to ${LOAD_NUMBER_FLOOR}`);
-    }
+    throw new Error(
+      `load_number_seq issued ${n}, below ${LOAD_NUMBER_FLOOR}. Loads continue from the last ` +
+        `legacy number (${LAST_LEGACY_LOAD_NUMBER}) and this database's sequence has not been moved: ` +
+        `run scripts/restart-load-number-sequence.ts. No load was created.`,
+    );
   }
   return String(n);
 }

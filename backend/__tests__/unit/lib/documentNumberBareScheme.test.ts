@@ -28,6 +28,7 @@ import {
   generateLoadNumber,
   isBareStem,
   isLegacyStem,
+  LAST_LEGACY_LOAD_NUMBER,
   LOAD_NUMBER_FLOOR,
   nextDocumentNumber,
   nextSupplementalNumber,
@@ -232,22 +233,22 @@ describe("allocation", () => {
 
 /**
  * A stand-in for load_number_seq that behaves like Postgres: CREATE ... IF NOT
- * EXISTS only applies START WITH to a sequence that does not exist yet, nextval
- * advances, and the conditional setval applies only while the sequence is below
- * the floor. A mock that answered nextval with a fixed number would pass a
- * generator that never lifts the sequence at all.
+ * EXISTS only applies START WITH to a sequence that does not exist yet, and
+ * nextval advances. It also honours a setval, deliberately: a generator that
+ * started lifting the sequence again would be SEEN lifting it here, instead of
+ * a fixed-answer mock hiding the move.
  */
 function sequence(existing: { last: number; called: boolean } | null) {
   let seq = existing ? { ...existing } : null;
   const statements: string[] = [];
   const client = {
-    $executeRaw: async (strings: TemplateStringsArray) => {
-      const sql = strings.join("");
+    $executeRaw: async (strings: TemplateStringsArray, ...values: unknown[]) => {
+      const sql = strings.reduce((acc, s, i) => acc + s + (i < values.length ? String(values[i]) : ""), "");
       statements.push(sql);
       const create = sql.match(/CREATE SEQUENCE IF NOT EXISTS load_number_seq START WITH (\d+)/);
       if (create && !seq) seq = { last: Number(create[1]), called: false };
-      const lift = sql.match(/setval\('load_number_seq', (\d+), false\) WHERE \(SELECT last_value FROM load_number_seq\) < (\d+)/);
-      if (lift && seq!.last < Number(lift[2])) seq = { last: Number(lift[1]), called: false };
+      const set = sql.match(/setval\('load_number_seq', (\d+)(?:, (true|false))?\)/);
+      if (set) seq = { last: Number(set[1]), called: set[2] !== "false" };
       return 0;
     },
     $queryRaw: async () => {
@@ -255,44 +256,52 @@ function sequence(existing: { last: number; called: boolean } | null) {
       return [{ nextval: BigInt(seq.last) }];
     },
   };
-  return { client, statements };
+  return { client, statements, state: () => seq };
 }
 
-describe("the sequence issues the 50001 series (§21.2, ruled 2026-09-26)", () => {
-  it("a fresh database starts at 50001, then 50002", async () => {
+describe("loads continue from the last legacy number (§21.2, corrected 2026-09-26)", () => {
+  it("a fresh database starts at 121498, then 121499", async () => {
     const { client, statements } = sequence(null);
-    expect(await generateLoadNumber(client as any)).toBe("50001");
-    expect(await generateLoadNumber(client as any)).toBe("50002");
-    expect(statements[0]).toContain("START WITH 50001");
-    expect(statements.join(" ")).not.toMatch(/START WITH 5001\b/);
+    expect(await generateLoadNumber(client as any)).toBe("121498");
+    expect(await generateLoadNumber(client as any)).toBe("121499");
+    expect(statements[0]).toContain("START WITH 121498");
+    expect(statements.join(" ")).not.toMatch(/\b5000?1\b/);
   });
 
-  it("production's state (5001 and 5002 issued) moves to 50001, then 50002", async () => {
-    const { client } = sequence({ last: 5002, called: true });
-    expect(await generateLoadNumber(client as any)).toBe("50001");
-    expect(await generateLoadNumber(client as any)).toBe("50002");
+  it("5001 and 5002 do not change the next number: a sequence left at 5002 is refused, never lifted or issued", async () => {
+    const { client, statements, state } = sequence({ last: 5002, called: true });
+    await expect(generateLoadNumber(client as any)).rejects.toThrow(/issued 5003, below 121498/);
+    await expect(generateLoadNumber(client as any)).rejects.toThrow(/restart-load-number-sequence/);
+    expect(statements.some((s) => /setval|ALTER SEQUENCE/i.test(s))).toBe(false);
+    expect(state()!.last).toBeLessThan(LOAD_NUMBER_FLOOR);
   });
 
-  it("a sequence already in the series returns the next unused number and is not reset", async () => {
-    const { client, statements } = sequence({ last: 50007, called: true });
-    expect(await generateLoadNumber(client as any)).toBe("50008");
-    expect(statements.some((s) => s.includes("setval"))).toBe(false);
+  it("once the sequence sits at 121497, the next load is 121498 and it is not moved again", async () => {
+    const { client, statements } = sequence({ last: 121497, called: true });
+    expect(await generateLoadNumber(client as any)).toBe("121498");
+    expect(await generateLoadNumber(client as any)).toBe("121499");
+    expect(statements.some((s) => /setval|ALTER SEQUENCE/i.test(s))).toBe(false);
   });
 
-  it("the SQL literals are the exported floor, and the number carries no prefix", async () => {
+  it("the floor is the last legacy number plus one, and it is the only literal the generator carries", async () => {
+    expect(LAST_LEGACY_LOAD_NUMBER).toBe(121497);
+    expect(LOAD_NUMBER_FLOOR).toBe(121498);
     const src = readFileSync(join(__dirname, "../../../src/lib/documentNumber.ts"), "utf8");
-    const body = src.slice(src.indexOf("export async function generateLoadNumber"));
-    const literals = body.slice(0, body.indexOf("\n}")).match(/\b\d{4,}\b/g) ?? [];
-    expect(LOAD_NUMBER_FLOOR).toBe(50001);
-    expect(new Set(literals)).toEqual(new Set([String(LOAD_NUMBER_FLOOR)]));
+    const at = src.indexOf("export async function generateLoadNumber");
+    expect(at, "generateLoadNumber not found").toBeGreaterThan(-1);
+    const body = src.slice(at, src.indexOf("\n}", at));
+    expect(new Set(body.match(/\b\d{4,}\b/g) ?? [])).toEqual(new Set([String(LOAD_NUMBER_FLOOR)]));
+    // SQL shapes only: the refusal message names the restart SCRIPT, and a bare
+    // /RESTART/ matched that prose rather than a statement.
+    expect(body).not.toMatch(/setval\s*\(|ALTER\s+SEQUENCE|RESTART\s+WITH/i);
     const { client } = sequence(null);
     expect(await generateLoadNumber(client as any)).not.toMatch(/SRL/);
   });
 
   it("only an accessorial supplement takes a letter", () => {
     for (const kind of ["BOL", "RATE_CONFIRMATION", "INVOICE", "SETTLEMENT"] as const) {
-      expect(formatDocumentNumber("50001", kind)).toBe("50001");
+      expect(formatDocumentNumber("121498", kind)).toBe("121498");
     }
-    expect(formatSupplementalNumber("50001", "TONU")).toBe("50001D");
+    expect(formatSupplementalNumber("121498", "TONU")).toBe("121498D");
   });
 });
