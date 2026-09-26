@@ -5,6 +5,45 @@ Nothing below is a regression introduced by the arc it sits under.
 
 ---
 
+## Tender email + magic link arc (Items 329, 330) — Phase A only, halted (2026-09-26), branch `fix/tender-link`, not pushed
+
+- Worktree `../srl-tender`, branch `fix/tender-link` off `76e4d68a`. Housekeeping `4dab7347`:
+  322 closed, the srl-cleanup line dropped, `fix/item-290` and `fix/notifications-r3` deleted.
+  **Phase B not started:** the halt condition fired, because token links beyond tenders act
+  without a click. They are banked as **Item 331**.
+
+**329, every send path to a poster.** `notifyTenderAction` is the only tender sender that
+reaches one.
+- OFFERED: the carrier's email with the poster on CC (`notificationService.ts:225`). It carries
+  the rate and both action links.
+- ACCEPTED, DECLINED, EXPIRED and COUNTERED: emails to `load.poster.email` with the carrier's
+  name and rate (`:267`, `:310`, `:342`, `:374`). ACCEPTED also CCs operations@.
+- In-app rows to the poster: ACCEPTED shows the rate (`:257`), COUNTERED the counter rate
+  (`:369`), EXPIRED the carrier's name (`:337`).
+- Carrier-only, and fine: the waterfall's own tender email (`waterfallEngineService.ts:430`),
+  bid accept and decline, and the accepted confirmation.
+- Same recipient rule, but not tender emails: the risk alert emails the poster a `Margin: N%`
+  factor (`riskEngine.ts:170`, sent `:305`), and the fall-off alert names the carrier
+  (`fallOffRecovery.ts:57`).
+
+**330, token routes.** In the backend only `GET /api/tender-action/:token` acts on GET; every
+other token action is a POST. Its token is an HS256 JWT valid 7 days, with no jti, and it is
+not single-use. A replay acts again while the tender is still OFFERED, for example after a
+compliance block; otherwise it answers "Already handled". `TokenBlacklist.tokenHash` is unique,
+so it can hold the single-use claim and the stored outcome without a migration.
+
+**Prod (`srl_readonly`, 19:45Z): the four accepts inside 60 s of the offer email.**
+- SRL-121494 (JETEX, 31 s) moved as tendered: RC signed, picked up 09-22, delivered 09-24.
+- SRL-121493 (JETEX, 20 s): cancelled 22 min later, reason "shipper freight not ready"; RC void.
+- SRL-121488 (AEROSWIFT, 30 s): cancelled and archived; RC sent, never signed.
+- SRL-121491 (AEROSWIFT, 45 s, no recorded login for 17 days): cancelled; RC never sent.
+
+**Phase B size estimate.** 330 is about 90-120 LOC in `tenderAction.ts`, likely over 100, so
+two commits: the confirm page and POST, then single-use, the stored outcome and IP and user
+agent. 329 is about 60-70 LOC across `notificationService.ts` and `emailService.ts`.
+
+---
+
 ## Notifications arc — v3.8.bkk / bkl / bkm / bks (2026-09-26), landed `f05803cc`, live inside `46f7c807`
 
 Seven commits on `9d41c997`: `954b5920` bkk (320), `02bc3f4a` bkl (321),
