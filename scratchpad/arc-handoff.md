@@ -5,11 +5,12 @@ Nothing below is a regression introduced by the arc it sits under.
 
 ---
 
-## Notifications arc — v3.8.bkk / bkl / bkm (2026-09-26), `fix/notifications-r3`, NOT pushed
+## Notifications arc — v3.8.bkk / bkl / bkm / bks (2026-09-26), `fix/notifications-r3`, NOT pushed
 
-Five commits on `9d41c997`: `954b5920` bkk (320), `02bc3f4a` bkl (321),
-`cc0c6438` bkm (322 code), `f2d921d8` (the data-step script, unversioned), and this
-docs commit. **The original build, `fix/notifications` at `61f21332`, is kept as the
+Seven commits on `9d41c997`: `954b5920` bkk (320), `02bc3f4a` bkl (321),
+`cc0c6438` bkm (322 code), `f2d921d8` (the data-step script, unversioned), `8355710b`
+docs, `85f3a5dc` bks (the `executionEvidence` warm-up), and a final docs commit
+(Item 327, the numbering rule, the 300.1 warm-up line). **The original build, `fix/notifications` at `61f21332`, is kept as the
 backup.** It was built as bjz/bka/bkb on `2434c765`.
 
 **Why it was rebuilt, twice.** origin/main moved twice before the push. First it went
@@ -62,6 +63,20 @@ test` stays in SystemLog (kept 90 days, Item 270). No column, no migration.**
 E2E runs on **3120/4120**. :3110 is still held by PID 23976 (a stale `ts-node-dev`
 from the main checkout); it was not touched.
 
+**The warm-up (`85f3a5dc`, v3.8.bks).** `executionEvidence` now imports its router in
+a `beforeAll` with a 120 s hook budget; the case budgets stay at 5 s. Alone after the
+fix: 3/3 pass. The first of those runs was cold and spent 45.5 s in the test phase —
+the import the hook now absorbs — which is why the hook budget is 120 s and not 60.
+**The injection at 5 s did not go red:** the original also passed alone on a quiet,
+warm machine. At a 1000 ms case budget (command-line flag, the file unchanged), the
+original's first case times out and the fix passes 8/8 — that is the proof. Full
+backend suite: 3196/3199, with 3 timeouts in `typographyTokens` and
+`noFrontendLoadRateReads`, both of which pass alone (17/17, 5/5).
+
+**Item numbering.** Item 327 was taken as origin HEAD's highest (325) plus one,
+skipping this branch's own unpushed 326. That skip is in the header rule too: taken
+literally, "origin highest + 1" would have given 326, which this branch already uses.
+
 ### Carried, deliberately not built
 
 1. **Item 326:** overbooking-check, ai-compliance-forecast and ofac-rescan notify
@@ -72,7 +87,7 @@ from the main checkout); it was not touched.
    long as nothing writes `read`.
 3. **The frontend contention failures** (`browserTargetHosts`, `FacilitiesTab`) match
    the Item 300.1 pattern and are recorded in its addendum, not as a new item.
-4. **Cleanup after landing:** containers `srl-e2e-290` and `srl-e2e-notif`, the
+4. **Cleanup after landing:** containers `srl-e2e-290`, `srl-e2e-notif` and `srl-e2e-notif3`, the
    worktrees `srl-290` and `srl-notif`, and the branches `fix/notifications` and
    `fix/notifications-r2`.
 5. **`/clear` and `/compact` are user commands** and were not run.
@@ -81,8 +96,8 @@ from the main checkout); it was not touched.
    adds 1, and keeps a module-level counter (`shipmentController.ts:8-17`). Rows that
    share a `createdAt`, or two accepts at once, can produce a number already taken
    — and `shipmentNumber` is unique, so the accept path 500s (`tenderController.ts:288`).
-   It surfaced in the r2 E2E. It is not banked with a number yet, because item numbers
-   collided twice today; assign one when it is banked.
+   The accept's transaction closes at `:281`, so the 500 arrives after the accept has
+   committed. It surfaced in the r2 E2E. **Banked as Item 327.**
 
 ---
 
