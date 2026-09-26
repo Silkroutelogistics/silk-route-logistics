@@ -53,10 +53,14 @@ export {
  * with no notice test, and pay the CARRIER $200 when the cancellation lands
  * same-day as pickup or after the carrier was dispatched.
  *
- * NEITHER SIDE IS BUILT. There is no customer-side TONU charge anywhere in the
- * billing path, and the carrier-side clause the Rate Confirmation prints today
- * pays on a narrower trigger than the ratified one. This constant is the AMOUNT,
- * which is settled; it is not evidence that the charge fires. See CLAUDE.md §5.
+ * BOTH LEGS ARE BUILT (v3.8.asp ledger row, v3.8.atc carrier payable, v3.8.ate
+ * customer charge). This constant is the DEFAULT, and it is what the CARRIER is
+ * paid. A customer's negotiated TONU rate lives on its rate card,
+ * Customer.defaultAccessorialRates.TONU, and prices only the customer's invoice
+ * line (customerPriceFor); it never moves carrier pay. There is deliberately no
+ * separate tonuRate column — one number, one place. Beekeepers' card carries
+ * TONU 250 (ruled 2026-09-26). The carrier-side clause the Rate Confirmation
+ * prints still pays on a narrower trigger than the ratified one. See CLAUDE.md §5.
  */
 export const TONU_AMOUNT = 200;
 
