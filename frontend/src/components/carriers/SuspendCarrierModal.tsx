@@ -47,8 +47,8 @@ export function SuspendCarrierModal({
         </div>
         <p className="text-sm text-gray-700 mb-3">
           Suspension blocks every new tender to this carrier and keeps every record. Loads already
-          in flight stay with them and are paid normally. An administrator lifts it with Lift
-          suspension, which returns the carrier to review.
+          in flight stay with them and are paid normally. It is never lifted automatically: an
+          administrator lifts it with Lift suspension, which returns the carrier to review.
         </p>
         <label htmlFor="suspend-reason" className="block text-xs font-medium text-gray-600 mb-1">Reason (required, at least 5 characters)</label>
         <textarea

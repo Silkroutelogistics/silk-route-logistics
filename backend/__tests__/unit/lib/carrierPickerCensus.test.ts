@@ -178,7 +178,7 @@ const NOT_PICKERS: Record<string, string> = {
   "services/complianceMonitorService.ts :: getOverviewMatrix #1": "ADMIN_LIST — overview matrix",
   "services/complianceMonitorService.ts :: fmcsaComplianceScan #1": "MONITOR — daily FMCSA scan",
   "services/complianceMonitorService.ts :: dailyComplianceReminders #1": "MONITOR — reminders",
-  "services/complianceMonitorService.ts :: checkAutoReversal #1": "MONITOR — auto-reversal",
+  "services/complianceMonitorService.ts :: checkAutoReversal #1": "MONITOR — auto-reversal (carries deletedAt: null; reversible causes only, Item 323)",
   "services/complianceMonitorService.ts :: processInsuranceExpiryEnforcement #1": "MONITOR — insurance expiry",
   "services/complianceMonitorService.ts :: processInsuranceExpiryEnforcement #2": "MONITOR — insurance expiry",
   "services/complianceMonitorService.ts :: processInsuranceExpiryEnforcement #3": "MONITOR — insurance expiry",

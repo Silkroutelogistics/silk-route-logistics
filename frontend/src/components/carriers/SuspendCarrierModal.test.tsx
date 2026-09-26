@@ -57,6 +57,9 @@ describe("SuspendCarrierModal", () => {
     mount();
     const dialog = screen.getByRole("dialog");
     expect(dialog.textContent).toContain("blocks every new tender");
+    // True only since checkAutoReversal stopped lifting AE_MANUAL suspensions
+    // (§13.3 Item 323); autoReversalScope.test.ts holds the backend half.
+    expect(dialog.textContent).toContain("never lifted automatically");
     expect(dialog.textContent).toContain("Loads already in flight stay with them and are paid normally");
   });
 });

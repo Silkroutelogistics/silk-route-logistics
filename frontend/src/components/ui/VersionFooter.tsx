@@ -19118,7 +19118,13 @@
 // Lift suspension… opens a modal that shows the suspension on record, says lifting
 // returns the carrier to REVIEWING without approving it, and warns when the cause was
 // automatic. The Suspend modal no longer claims a suspension is never lifted automatically.
-export const SRL_VERSION = "3.8.bkf";
+// v3.8.bkj — The weekly auto-reversal lifts only what it can prove has cleared (Item 323).
+//   It lifted every suspension FMCSA read clean, whatever the cause and even under an
+// archive. Now only FMCSA authority, out-of-service and insurance-expiry suspensions are
+// in scope (the last also needs a current expiry on SRL's record), never an archived
+// carrier, and a person's lift during the FMCSA call wins. Manual suspensions are never
+// lifted automatically, so the Suspend modal says so again.
+export const SRL_VERSION = "3.8.bkj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

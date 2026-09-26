@@ -11,6 +11,7 @@
  */
 
 import { prisma } from "../config/database";
+import type { AutoSuspendCause } from "@prisma/client";
 import { carrierArchiveReasonLabel } from "../../../shared/constants/carrierArchiveReasons";
 import { verifyCarrierWithFMCSA, calendarMonthsBetween } from "./fmcsaService";
 import { sendEmail, wrap } from "./emailService";
@@ -1677,6 +1678,33 @@ export async function dailyComplianceReminders() {
 // ────────────────────────────────────────────────────────────
 // checkAutoReversal — auto-reinstate suspended carriers
 // ────────────────────────────────────────────────────────────
+//
+// §13.3 Item 323. This used to take every SUSPENDED carrier with a
+// suspension timestamp and write APPROVED whenever FMCSA read clean. It read
+// neither the CAUSE nor the archive, so it lifted an administrator's manual
+// suspension the next Monday, flipped archived carriers to APPROVED under
+// their archive, reinstated a VETTING_CRITICAL suspension on facts that do not
+// bear on a vetting score (AEROSWIFT, 2026-09-07), and brought a carrier
+// suspended from REVIEWING back as APPROVED without anyone approving it.
+//
+// A suspension is lifted here only when the facts that CAUSED it are the facts
+// this function checks:
+//
+//   FMCSA_AUTHORITY, FMCSA_OUT_OF_SERVICE   FMCSA authority and OOS status
+//   INSURANCE_EXPIRED                       FMCSA insurance on file AND the
+//                                           expiry on SRL's own record is
+//                                           current (the sweep suspends on
+//                                           insuranceExpiry, not on FMCSA)
+//
+// Everything else stays suspended until a person lifts it (POST
+// /compliance/carrier/:id/lift-suspension, v3.8.bke): AE_MANUAL and OFAC_MATCH
+// by rule; VETTING_CRITICAL and FMCSA_RATING because nothing here reads the
+// vetting score or the safety rating; a null cause because it cannot be
+// attributed. Archived carriers are out: restore is their exit.
+//
+// Reinstating to APPROVED is a rewind, and true by construction for these
+// three causes: every sweep that writes them scans APPROVED carriers only.
+const REVERSIBLE_AUTO_SUSPEND_CAUSES: AutoSuspendCause[] = ["FMCSA_AUTHORITY", "FMCSA_OUT_OF_SERVICE", "INSURANCE_EXPIRED"];
 
 export async function checkAutoReversal() {
   const results = { checked: 0, reinstated: 0, errors: 0 };
@@ -1687,6 +1715,8 @@ export async function checkAutoReversal() {
       onboardingStatus: "SUSPENDED",
       isTestAccount: false, // v3.8.alm §13.3 Item 190
       dotNumber: { not: null },
+      deletedAt: null,
+      autoSuspendCause: { in: REVERSIBLE_AUTO_SUSPEND_CAUSES },
     },
     include: {
       user: { select: { company: true, firstName: true, lastName: true, email: true } },
@@ -1699,24 +1729,38 @@ export async function checkAutoReversal() {
       results.checked++;
 
       const fmcsaResult = await verifyCarrierWithFMCSA(carrier.dotNumber);
-
-      if (
+      const fmcsaClean =
         fmcsaResult.verified &&
         fmcsaResult.operatingStatus === "AUTHORIZED" &&
         !fmcsaResult.outOfServiceDate &&
-        fmcsaResult.insuranceOnFile
-      ) {
-        await prisma.carrierProfile.update({
-          where: { id: carrier.id },
+        fmcsaResult.insuranceOnFile;
+      const insuranceCurrent =
+        carrier.autoSuspendCause !== "INSURANCE_EXPIRED" ||
+        (!!carrier.insuranceExpiry && carrier.insuranceExpiry.getTime() > Date.now());
+
+      if (fmcsaClean && insuranceCurrent) {
+        // Conditional on the suspension just read. The FMCSA call above takes
+        // seconds; a person lifting the suspension in that window (the carrier
+        // is then REVIEWING with the columns cleared) must not be overwritten
+        // with APPROVED.
+        const moved = await prisma.carrierProfile.updateMany({
+          where: {
+            id: carrier.id,
+            onboardingStatus: "SUSPENDED",
+            deletedAt: null,
+            autoSuspendCause: carrier.autoSuspendCause,
+          },
           data: {
             onboardingStatus: "APPROVED",
             status: "APPROVED", // B2 — paired; see lib/carrierOperational
             autoSuspendedAt: null,
             autoSuspendReason: null,
+            autoSuspendCause: null,
             fmcsaAuthorityStatus: "AUTHORIZED",
             fmcsaLastChecked: new Date(),
           },
         });
+        if (moved.count === 0) continue;
 
         const carrierName = carrier.user.company || `${carrier.user.firstName} ${carrier.user.lastName}`;
         await prisma.complianceAlert.create({
