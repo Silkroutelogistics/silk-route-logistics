@@ -3019,6 +3019,9 @@ interface InvoiceData {
   dueDate?: Date | null; createdAt: Date;
   load: {
     referenceNumber: string; loadNumber?: string | null;
+    /** The load record's POs: the ONLY source of the PO an invoice prints (ruled
+     *  2026-09-26). Every caller that loads a load with `select` must fetch it. */
+    poNumbers?: string[] | null;
     originCity: string; originState: string;
     // ARC 21 — `rate` dropped: this invoice renderer never printed it, and
     // the caller no longer selects it. The invoice total comes from the

@@ -571,6 +571,8 @@ export async function sendInvoice(req: AuthRequest, res: Response) {
             // stem, and the invoice PDF falls back to deriving its number from
             // the stem when srlDocNumber is null (invoices predating the scheme).
             referenceNumber: true, loadNumber: true,
+            // The invoice prints its PO from the load record only (ruled 2026-09-26).
+            poNumbers: true,
             originCity: true, originState: true, destCity: true, destState: true,
             rate: true, pickupDate: true, deliveryDate: true, posterId: true,
             customer: {
