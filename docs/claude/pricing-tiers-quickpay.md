@@ -224,38 +224,51 @@ the source. §19 Sub-pattern 15.
 
 ### §21.2 — Document numbering: one bare number per load
 
-**Amended 2026-09-23 by Wasi, superseding the suffix-on-a-shared-stem scheme
-ratified 2026-08-16.** The retired scheme is described at the end of this section
-rather than deleted, because every number issued before this amendment was issued
-under it and is never rewritten — a reader holding one needs to know what it meant.
+**Amended 2026-09-23 by Wasi, corrected 2026-09-26.** The amendment superseded the
+suffix-on-a-shared-stem scheme ratified 2026-08-16. The correction withdrew the new
+series the amendment had started: **there is no new series.** The retired scheme is
+described at the end of this section rather than deleted, because every number issued
+under it is never rewritten — a reader holding one needs to know what it meant.
 
-**One bare number, no prefix and no suffix**, carried by the load and by every
-core document issued against it:
+**Loads continue the existing sequence.** The last load issued under the prefixed
+scheme was `SRL-121497`, so the next load is `121498`, then `121499`, and on. **One
+bare number, no prefix**, carried by the load and by every core document issued
+against it; the invoice is the same number plus `I`:
 
 | Document | Number |
 |---|---|
-| Load | `50001` |
-| Bill of lading | `50001` |
-| Rate confirmation | `50001` |
-| Invoice | `50001` |
-| Carrier settlement (`CarrierPay`) | `50001` |
+| Load | `121498` |
+| Bill of lading | `121498` |
+| Rate confirmation | `121498` |
+| Invoice | `121498I` |
+| Carrier settlement (`CarrierPay`) | `121498` |
 
 The number is the point of reference: a carrier, a shipper or an AE quoting
-`50001` names the load and every document on it without having to say which. The
-suffix scheme existed so one load's documents sorted together; one number does
-that better, because there is nothing left to sort.
+`121498` names the load and every document on it. The invoice carries an `I` so the
+number a customer's accounts-payable system keys on never reads as the load's own.
 
-**The `SRL-` prefix is retired.** It was kept so a carrier hauling for several
-brokers could tell whose paperwork they held. The letterhead, the MC number and
-the footer already do that on every page, and the prefix cost more in
-transcription — read down a phone line, typed into another broker's TMS, written
-on a dock receipt — than it bought in attribution.
+**The `SRL-` prefix is retired for everything generated from now on.** It was kept
+so a carrier hauling for several brokers could tell whose paperwork they held. The
+letterhead, the MC number and the footer already do that on every page, and the
+prefix cost more in transcription — read down a phone line, typed into another
+broker's TMS, written on a dock receipt — than it bought in attribution.
 
-**Only a supplemental document for a missed accessorial takes a letter**, and the
-letter is assigned **by accessorial type**, so the type is legible from the
-reference alone. **One constant in `lib/documentNumber.ts` is the only place a
-letter is assigned** — a second assignment site is how two accessorial types come
-to share a letter:
+**Documents already issued with `SRL-` keep their printed number.** `SRL-121494B`,
+`SRL-121494R` and `SRL-121494I` stay exactly as issued, and a regenerated copy of an
+issued page still names its load `SRL-121494`. A document generated now for a legacy
+load prints the digits — its bill of lading `121494`, its invoice `121494I` — so no
+newly generated document carries `SRL-`. The two cannot collide: a legacy load's
+digits end at `121497`, and the sequence continues at `121498`.
+
+**Loads `5001` and `5002` stay as issued** and have no bearing on the next number.
+They were issued from the start the amendment first set, which the correction
+withdrew; like any issued number, theirs and their documents' are never rewritten.
+
+**Supplemental numbering is unchanged in this arc and is an open decision.** On a
+bare number a supplemental for a missed accessorial takes a letter, assigned **by
+accessorial type**, so the type is legible from the reference alone. **One constant
+in `lib/documentNumber.ts` is the only place a letter is assigned** — a second
+assignment site is how two accessorial types come to share a letter:
 
 | Type | | Type | | Type | |
 |---|---|---|---|---|---|
@@ -265,19 +278,21 @@ to share a letter:
 | `TONU` | D | `DRIVER_ASSIST` | H | `PALLET_EXCHANGE` | M |
 
 **`I` is skipped deliberately** — it reads as a `1` in a hand-written or faxed
-reference, on the kind of document a lumper receipt gets stapled to.
+reference, on the kind of document a lumper receipt gets stapled to, and it is the
+invoice's own suffix.
 
-**A repeat supplemental of the same type takes a digit**: `50001A`, then `50001A2`,
-then `50001A3`. The first carries no digit so the common case reads clean, which is
-the one mechanic carried over from the retired scheme.
+**A repeat supplemental of the same type takes a digit**: `121498A`, then `121498A2`,
+then `121498A3`. The first carries no digit so the common case reads clean. A legacy
+load's supplementals keep the retired single `S` (`SRL-121494S`), the one place a
+newly generated number can still carry `SRL-`.
 
 **"Settlement" means `CarrierPay`, per load, and takes the bare number.** The
 `Settlement` batch is a different object — one carrier, one period, many loads —
 so it structurally cannot carry a load's number and **keeps `STL-<n>`**. It is not
 a load document and the rule does not reach it.
 
-**`INV-####` retires to a read-only mirror.** New invoices carry the bare load
-number only, and the wire-payment memo and the AR dunning emails key on that going
+**`INV-####` retires to a read-only mirror.** New invoices carry the load number plus
+`I` only, and the wire-payment memo and the AR dunning emails key on that going
 forward. Legacy invoices stay findable by their `INV-` number: retiring a sequence
 is not the same as erasing the keys customers already have in their accounts
 payable systems.
@@ -289,61 +304,56 @@ different things and must stay different.
 
 **Search resolves in three passes, in order:** exact match on the document number,
 then exact match on a legacy `SRL-` number, then substring results after. Order is
-the whole design. `SRL-121495` was self-delimiting; `50001` is not, so a plain
-substring search for `50001` also matches `150001` and `500012`, and the load the AE
-actually typed must come back first rather than ranked among its own superstrings.
+the whole design. `SRL-121495` was self-delimiting; `121498` is not, so a plain
+substring search for `121498` also matches `1214980` once the sequence gets there,
+and the load the AE actually typed must come back first rather than ranked among its
+own superstrings.
 
-**Legacy numbers are never rewritten.** Loads issued before this amendment keep
-their `SRL-1214xx` stems and their `B`/`R`/`I`/`S`/`P` suffixes, and search accepts
-both forms. A number already printed on a signed bill of lading is not a formatting
-decision. The two namespaces cannot collide: the legacy one is prefixed and the new
-one is not, so a new `50001B` and a legacy `SRL-121495B` are distinct strings.
-
-**Filenames carry the number, never a type prefix** — `50001_BOL.pdf`,
-`50001_Rate_Confirmation.pdf`, `50001_Invoice.pdf`, `50001A_Lumper.pdf`. Sorting a
-download folder by name is the same use case the numbering scheme exists for, and
+**Filenames carry the number, never a type prefix** — `121498_BOL.pdf`,
+`121498_Rate_Confirmation.pdf`, `121498I_Invoice.pdf`, `121498A_Lumper.pdf`. Sorting
+a download folder by name is the same use case the numbering scheme exists for, and
 a `TYPE-` prefix breaks it there exactly as it would anywhere else.
 
 **`SHP-YYYY-NNN` is internal only.** The load number replaces it on every customer
 and carrier surface; the shipment sequence stays for internal joins and is not
 quoted outward.
 
-**Sequence start: 50001**, from `load_number_seq`. **Ruled 2026-09-26 by Wasi**,
-replacing the start of 5001 the amendment first set. Loads `5001` and `5002` were
-issued under that start and keep their numbers, exactly as `SRL-1214xx` keeps its
-suffixes: a number already on paper is never rewritten. Production's sequence
-already existed at 5002, so `generateLoadNumber` carries a floor
-(`LOAD_NUMBER_FLOOR`) that lifts it to 50001 on the first draw below it, once;
-no separate restart is run.
+**Sequence: `load_number_seq`, continuing at 121498. Corrected 2026-09-26 by
+Wasi.** `generateLoadNumber` declares the sequence `START WITH 121498` for a database
+that has none yet, and **refuses any number below `LOAD_NUMBER_FLOOR` (121498)**
+rather than issuing it. Nothing lifts the sequence on its own. Production's sequence
+exists and sits in the withdrawn start (its next value would be 5003), so it is moved
+by `scripts/restart-load-number-sequence.ts` — `setval` to 121497, forward only, dry
+run by default, a production write taken deliberately. **Not yet run: until it is,
+creating a load in production is refused.** Its timing against the deploy is an open
+decision.
 
 **Status: the numbering and the filenames are BUILT; three consequences are not.**
-`generateLoadNumber` emits the bare number from a sequence declared `START WITH
-50001`. `lib/documentNumber.ts` carries the letter map, the supplemental allocator,
-the core re-issue separator and the filename rule, and a permanence guard fails CI
-on a number built outside that module, a `TYPE-` filename prefix, or a letter
-assigned anywhere else.
+`generateLoadNumber` emits the bare number. `lib/documentNumber.ts` carries the
+invoice `I`, the letter map, the supplemental allocator, the core re-issue separator
+and the filename rule, and a permanence guard fails CI on a number built outside that
+module, a `TYPE-` filename prefix, or a letter assigned anywhere else.
 
 **NOT yet built, named so nobody reads this section as describing them:** the
 `INV-####` retirement to a read-only mirror, the three-pass search order, and
 `SHP-YYYY-NNN` being confined to internal surfaces. Each is a change to a surface
 outside the numbering module.
 
-**A core re-issue takes a hyphen: `50001`, then `50001-2`, then `50001-3`. Ratified
-2026-09-24.** A re-issue is a new row for the same load against a `@unique` column,
-and a bare number has no suffix letter to hang a revision on the way `SRL-121485R2`
-did.
+**A core re-issue takes a hyphen: `121498`, then `121498-2`, then `121498-3`; an
+invoice `121498I`, then `121498I-2`. Ratified 2026-09-24.** A re-issue is a new row
+for the same load against a `@unique` column, and a bare number has no suffix letter
+to hang a revision on the way `SRL-121485R2` did.
 
 **A bare digit was not available, and that is the reason rather than a preference.**
-`50001` followed by `2` is `500012` — which is load 500012's own number. The document
-would read as another load's, and the allocator would inherit the same ambiguity:
-its scan for the next free revision would sweep in that load's row and skip a
-number because of freight nobody was looking at. The hyphen cannot occur in a bare
-load number, so it delimits in both directions — when a person reads a number and
-when the allocator scans for one. `CORE_REVISION_SEPARATOR` holds it.
+`121498` followed by `2` is `1214982` — which is load 1214982's own number. The
+document would read as another load's, and the allocator would inherit the same
+ambiguity: its scan for the next free revision would sweep in that load's row and
+skip a number because of freight nobody was looking at. The hyphen cannot occur in a
+bare load number, so it delimits in both directions — when a person reads a number
+and when the allocator scans for one. `CORE_REVISION_SEPARATOR` holds it.
 
-`quickPayPilotDocClaims.test.ts` holds the first paragraph against what
-`documentNumber.ts` actually emits, in both directions, so this line cannot go
-stale either way.
+`quickPayPilotDocClaims.test.ts` holds this section's status line and its letter
+table against what `documentNumber.ts` actually does, so neither can go stale.
 
 #### The retired scheme, for reading numbers issued before 2026-09-23
 
