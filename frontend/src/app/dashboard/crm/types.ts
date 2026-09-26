@@ -53,6 +53,8 @@ export interface CrmCustomer {
   totalRevenue?: number;
   totalLoads?: number;
   totalShipments?: number;
+  /** v3.8.bjx — live, non-cancelled loads (GET /customers/:id). */
+  loadCount?: number;
   _count?: { shipments?: number; loads?: number };
 }
 

@@ -9,6 +9,7 @@
 
 import { Router, Response } from "express";
 import { prisma } from "../config/database";
+import { loadCustomerLoadStats } from "../lib/customerLoadStats";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { logCustomerActivity, getCustomerActivity } from "../services/customerActivityService";
 import { markManuallyReviewed } from "../controllers/customerController";
@@ -332,63 +333,41 @@ router.get(
   "/:id/loads",
   authorize(...CRM_ROLES) as any,
   async (req: AuthRequest, res: Response) => {
-    const loads = await prisma.load.findMany({
-      where: { customerId: req.params.id, deletedAt: null },
-      orderBy: { createdAt: "desc" },
-      take: 100,
-      select: {
-        id: true,
-        loadNumber: true,
-        referenceNumber: true,
-        status: true,
-        originCity: true,
-        originState: true,
-        destCity: true,
-        destState: true,
-        equipmentType: true,
-        pickupDate: true,
-        deliveryDate: true,
-        customerRate: true,
-        carrierRate: true,
-        rate: true,
-        grossMargin: true,
-        marginPercent: true,
-      },
-    });
-
-    // Aggregate top lanes
-    const laneMap = new Map<string, { origin: string; dest: string; count: number; totalRate: number }>();
-    for (const l of loads) {
-      const key = `${l.originState}|${l.destState}`;
-      const existing = laneMap.get(key);
-      if (existing) {
-        existing.count++;
-        existing.totalRate += l.customerRate ?? 0;
-      } else {
-        laneMap.set(key, {
-          origin: `${l.originCity}, ${l.originState}`,
-          dest: `${l.destCity}, ${l.destState}`,
-          count: 1,
-          totalRate: l.customerRate ?? 0,
-        });
-      }
-    }
-    const topLanes = Array.from(laneMap.values())
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5)
-      .map((l) => ({ ...l, avgRate: Math.round(l.totalRate / l.count) }));
-
-    const totalRevenue = loads.reduce((s, l) => s + (l.customerRate ?? 0), 0);
-    const avgMargin = loads.filter((l) => l.marginPercent).length > 0
-      ? loads.reduce((s, l) => s + (l.marginPercent ?? 0), 0) / loads.length
-      : 0;
+    // v3.8.bjx — the list shows every live load (cancelled ones keep their badge);
+    // every FIGURE comes from lib/customerLoadStats, which excludes CANCELLED and
+    // counts earned revenue only. See that file for the rules.
+    const [loads, stats] = await Promise.all([
+      prisma.load.findMany({
+        where: { customerId: req.params.id, deletedAt: null },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: {
+          id: true,
+          loadNumber: true,
+          referenceNumber: true,
+          status: true,
+          originCity: true,
+          originState: true,
+          destCity: true,
+          destState: true,
+          equipmentType: true,
+          pickupDate: true,
+          deliveryDate: true,
+          customerRate: true,
+          carrierRate: true,
+          grossMargin: true,
+          marginPercent: true,
+        },
+      }),
+      loadCustomerLoadStats(prisma, req.params.id),
+    ]);
 
     res.json({
-      loads: loads.slice(0, 10),
-      total: loads.length,
-      totalRevenue,
-      avgMargin,
-      topLanes,
+      loads,
+      total: stats.totalLoads,
+      totalRevenue: stats.earnedRevenue,
+      avgMargin: stats.avgMargin,
+      topLanes: stats.topLanes,
     });
   }
 );

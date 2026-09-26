@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
+import { loadCustomerLoadStats } from "../lib/customerLoadStats";
 import { AuthRequest } from "../middleware/auth";
 import { z } from "zod";
 import { createCustomerSchema, updateCustomerSchema, customerQuerySchema, markManualReviewSchema } from "../validators/customer";
@@ -188,13 +189,12 @@ export async function getCustomerById(req: AuthRequest, res: Response) {
   if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }
 
   // Communication is linked via (entityType, entityId), not a Prisma relation,
-  // so we fetch it in parallel with the shipment rollup.
-  const [agg, communications] = await Promise.all([
-    prisma.shipment.aggregate({
-      where: { customerId: customer.id },
-      _sum: { rate: true },
-      _count: true,
-    }),
+  // so we fetch it in parallel with the load stats.
+  // v3.8.bjx — the header read Shipment.rate (the CARRIER rate) with no status
+  // filter, so cancelled loads stayed in it and the figure was cost, not revenue.
+  // It now reads the same earned-revenue rules as the Loads tab.
+  const [stats, communications] = await Promise.all([
+    loadCustomerLoadStats(prisma, customer.id),
     prisma.communication.findMany({
       where: { entityType: "SHIPPER", entityId: customer.id },
       orderBy: { createdAt: "desc" },
@@ -206,9 +206,10 @@ export async function getCustomerById(req: AuthRequest, res: Response) {
   res.json({
     ...customer,
     communications,
-    totalShipments: agg._count,
-    totalRevenue: agg._sum.rate || 0,
-    avgShipmentValue: agg._count > 0 ? (agg._sum.rate || 0) / agg._count : 0,
+    // Load count, not Shipment count: the drawer labels it Loads.
+    totalShipments: stats.totalLoads,
+    loadCount: stats.totalLoads,
+    totalRevenue: stats.earnedRevenue,
   });
 }
 

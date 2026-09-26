@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
@@ -77,6 +77,26 @@ export default function TrackTracePage() {
     setDrawerTab(tab);
     setSelectedLoadId(id);
   };
+
+  // v3.8.bjx — `?load=<id>` opens that load's detail. The CRM Loads tab linked
+  // every row to a bare /dashboard/track-trace, which this page never read, so
+  // the AE landed on the Active board — which has no tab at all for CANCELLED
+  // or TONU loads — and saw "No loads match your filters." The drawer fetches
+  // /track-trace/load/:id, which returns any load by id whatever its status, so
+  // opening it directly works where the board cannot. Read off window.location
+  // (static export: useSearchParams needs a Suspense boundary), then stripped so
+  // a refresh after closing the drawer does not reopen it. Same pattern as
+  // carrier/dashboard/my-loads.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("load");
+    if (!id) return;
+    setDrawerTab("details");
+    setSelectedLoadId(id);
+    params.delete("load");
+    const rest = params.toString();
+    window.history.replaceState(window.history.state, "", window.location.pathname + (rest ? `?${rest}` : ""));
+  }, []);
 
   const dateFilter = useMemo(() => dateRangeToFilter(dateRange), [dateRange]);
 

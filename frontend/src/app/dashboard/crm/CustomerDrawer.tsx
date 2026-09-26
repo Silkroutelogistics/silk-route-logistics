@@ -142,7 +142,7 @@ export function CustomerDrawer({
                     {customer && (
                       <div className="text-[11px] text-gray-500 mt-0.5">
                         Revenue ${Math.round(customer.totalRevenue ?? 0).toLocaleString()} ·
-                        Loads {customer._count?.loads ?? customer._count?.shipments ?? 0}
+                        Loads {customer.loadCount ?? customer.totalShipments ?? 0}
                       </div>
                     )}
                   </>

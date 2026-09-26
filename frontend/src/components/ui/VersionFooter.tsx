@@ -19092,7 +19092,15 @@
 // after the AP contact was deleted. Registration now links only when exactly one
 // unlinked, live customer lists the address on a non-Do-Not-Contact contact;
 // anything else becomes a fresh PENDING customer with no portal access.
-export const SRL_VERSION = "3.8.bjw";
+// v3.8.bjx — The CRM Loads tab counts what was earned, and every row opens its load.
+//   Revenue summed customerRate over every load including CANCELLED ones, the
+// drawer header summed the CARRIER rate with no status filter, avg margin
+// divided by loads that had no margin, and lanes grouped by state pair only. One
+// calculation (lib/customerLoadStats) now serves the tab, the header and the Order
+// Builder sidebar: cancelled loads are out; revenue is invoices, else the TONU
+// charge, else customerRate once delivered. Rows link to ?load=<id>, which Track &
+// Trace now reads to open that load directly, cancelled and TONU included.
+export const SRL_VERSION = "3.8.bjx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

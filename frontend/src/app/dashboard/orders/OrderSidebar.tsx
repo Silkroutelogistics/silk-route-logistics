@@ -80,7 +80,7 @@ export function OrderSidebar({
 
   // Lane intelligence — carrier matches contain lane history per carrier.
   // We roll up customer-level lane intel via the customer loads endpoint.
-  const customerLoadsQuery = useQuery<{ topLanes: any[]; loads: any[]; total: number; totalRevenue: number; avgMargin: number }>({
+  const customerLoadsQuery = useQuery<{ topLanes: any[]; loads: any[]; total: number; totalRevenue: number; avgMargin: number | null }>({
     queryKey: ["ob-customer-loads", customerId],
     queryFn: async () => (await api.get(`/customers/${customerId}/loads`)).data,
     enabled: !!customerId,
@@ -268,7 +268,7 @@ export function OrderSidebar({
           <Section title="Lane intelligence" Icon={BarChart3}>
             <div className="rounded-lg p-3 border border-slate-200 bg-white space-y-1.5 text-xs">
               <Row label="Your loads on this lane" value={laneHistory?.count ?? 0} />
-              {laneHistory && <Row label="Avg rate" value={`$${laneHistory.avgRate?.toLocaleString() ?? "Not set"}`} />}
+              {laneHistory && <Row label="Avg rate" value={laneHistory.avgRate != null ? `$${laneHistory.avgRate.toLocaleString()}` : "Not set"} />}
               {marketQuery.data?.loadToTruckRatio !== undefined && (
                 <Row label="Load/truck ratio" value={marketQuery.data.loadToTruckRatio.toFixed(1)} />
               )}

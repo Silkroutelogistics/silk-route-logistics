@@ -10,8 +10,9 @@ interface LoadsResponse {
   loads: any[];
   total: number;
   totalRevenue: number;
-  avgMargin: number;
-  topLanes: { origin: string; dest: string; count: number; avgRate: number }[];
+  /** Null when no delivered load carries a margin yet — rendered as a dash, never 0.0%. */
+  avgMargin: number | null;
+  topLanes: { origin: string; dest: string; count: number; avgRate: number | null }[];
 }
 
 export function LoadsTab({ customerId }: { customerId: string }) {
@@ -27,9 +28,10 @@ export function LoadsTab({ customerId }: { customerId: string }) {
   return (
     <div className="space-y-4 text-sm">
       <div className="grid grid-cols-3 gap-2">
-        <Stat label="Total loads" value={d.total} />
-        <Stat label="Revenue" value={`$${Math.round(d.totalRevenue).toLocaleString()}`} />
-        <Stat label="Avg margin" value={`${d.avgMargin.toFixed(1)}%`} tone="green" />
+        {/* v3.8.bjx — cancelled loads are out of every figure; revenue is earned only. */}
+        <Stat label="Total loads" value={d.total} hint="Excludes cancelled" />
+        <Stat label="Revenue" value={`$${Math.round(d.totalRevenue).toLocaleString()}`} hint="Delivered, invoiced and TONU" />
+        <Stat label="Avg margin" value={d.avgMargin == null ? "—" : `${d.avgMargin.toFixed(1)}%`} tone="green" hint="Delivered loads" />
       </div>
 
       <div>
@@ -40,7 +42,7 @@ export function LoadsTab({ customerId }: { customerId: string }) {
             <div key={i} className="flex items-center justify-between px-3 py-2">
               <div className="text-sm text-gray-900">{l.origin} → {l.dest}</div>
               <div className="text-xs text-gray-500">
-                {l.count} load{l.count === 1 ? "" : "s"} · avg ${l.avgRate.toLocaleString()}
+                {l.count} load{l.count === 1 ? "" : "s"} · avg {l.avgRate == null ? "—" : `$${l.avgRate.toLocaleString()}`}
               </div>
             </div>
           ))}
@@ -59,7 +61,8 @@ export function LoadsTab({ customerId }: { customerId: string }) {
           {d.loads.map((l) => (
             <Link
               key={l.id}
-              href="/dashboard/track-trace"
+              // v3.8.bjx — carry the load: Track & Trace opens its drawer from ?load=.
+              href={`/dashboard/track-trace?load=${encodeURIComponent(l.id)}`}
               className="flex items-center justify-between px-3 py-2 hover:bg-gray-50"
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -87,12 +90,13 @@ export function LoadsTab({ customerId }: { customerId: string }) {
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: string | number; tone?: "green" }) {
+function Stat({ label, value, tone, hint }: { label: string; value: string | number; tone?: "green"; hint?: string }) {
   const cls = tone === "green" ? "text-green-700" : "text-gray-900";
   return (
     <div className="border border-gray-200 rounded-lg bg-white p-3">
       <div className="text-[11px] uppercase text-gray-500">{label}</div>
       <div className={`text-xl font-semibold ${cls}`}>{value}</div>
+      {hint && <div className="text-[11px] text-gray-500 mt-0.5">{hint}</div>}
     </div>
   );
 }
