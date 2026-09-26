@@ -5,7 +5,7 @@ Nothing below is a regression introduced by the arc it sits under.
 
 ---
 
-## Notifications arc — v3.8.bkk / bkl / bkm / bks (2026-09-26), `fix/notifications-r3`, NOT pushed
+## Notifications arc — v3.8.bkk / bkl / bkm / bks (2026-09-26), landed `f05803cc`, live inside `46f7c807`
 
 Seven commits on `9d41c997`: `954b5920` bkk (320), `02bc3f4a` bkl (321),
 `cc0c6438` bkm (322 code), `f2d921d8` (the data-step script, unversioned), `8355710b`
@@ -76,6 +76,52 @@ backend suite: 3196/3199, with 3 timeouts in `typographyTokens` and
 **Item numbering.** Item 327 was taken as origin HEAD's highest (325) plus one,
 skipping this branch's own unpushed 326. That skip is in the header rule too: taken
 literally, "origin highest + 1" would have given 326, which this branch already uses.
+
+**After landing (2026-09-26).**
+- Pushed `9d41c997..f05803cc` at 15:51Z. CI on `f05803cc` (run 36253388975): backend, frontend,
+  E2E and deploy all green; the hook returned HTTP 200 at 15:58:14Z.
+- The single production check (16:01:18Z) showed `46f7c807`, booted 15:59:43Z: another
+  session's v3.8.bku, pushed directly on top. `f05803cc` is its ancestor, and the fenced scan
+  and `cleanupStaleNotifications` are both in it.
+- Post-deploy dry-run (16:01:57Z, `srl_readonly`): 353/352/0/2 against 351/350/0/2 before the
+  push, so the arc halted. The whole increase is `L9180992591`: an alert and a CRITICAL
+  notification at 14:00:00Z (old code, before the deploy), and another pair at 16:00:00.3Z,
+  17 s after the new process booted, with `notifiedAt` null. The fixed code stamps
+  `notifiedAt` on every create and update (`loadComplianceService.ts:287`, `:299`), the old
+  code never did, and no row carries the stamp. So the old process ran the 16:00 tick during
+  Render's cutover. The fix is not contradicted; the 18:00Z tick is the proof (step 3, on
+  Wasi's go). `check-1800.ts` in the session scratchpad evaluates the landed script's own SQL
+  and reproduced 353/352/0/2 at 17:48Z.
+- The cutover is banked as **Item 328** (P1), with a table of all 66 scheduled jobs.
+- Branches: `git cherry` shows commits missing upstream on both old branches
+  (`fix/notifications`: all 5; `-r2`: `9ec32e81` and `87aa0db5`), because the rebuilds changed
+  the footer hunks and one comment letter and replaced the docs commits. Both kept under the
+  rule; deleting them needs an explicit -D. Their code is identical to what landed apart from
+  the footer.
+- Removed: containers `srl-e2e-290`, `srl-e2e-notif`, `srl-e2e-notif3`; worktree `srl-290`;
+  `srl-notif` after this commit. `fix/item-290` and `fix/notifications-r3` remain, both merged.
+- Item numbers on origin: 326 and 327 each appear once. Two duplicates predate this arc: 180
+  (lines 218 and 248; the second is the drafts-surface item under the wrong number) and 182
+  (lines 244 and 266). Not renumbered: "Item 182" is cited across CLAUDE.md for the
+  authority-age epic.
+
+**Found while building the cron table, not banked; each needs a decision.**
+1. **Tender emails can reach a shipper with the carrier rate.** Accepted, declined, countered
+   and expired all go to the load poster's email (`notificationService.ts:188`; sends `:268`,
+   `:311`, `:343`, `:375`) and all carry the rate. On a shipper-portal load the poster is the
+   shipper (`shipperPortalController.ts:908`) — the v3.8.att class. Latent: production has 0
+   shipper-posted loads, ever. late-detection and risk-flagging email the poster too.
+2. **AR under-send** (agent-reported, not re-read): `ar-reminders-daily` (11:00) sets the flags
+   `ar-daily-reminders` (14:00) checks before emailing, so the DUE_TODAY, PAST_DUE_7 and
+   FINAL_NOTICE customer emails are normally never sent.
+3. **`compass-score-recalc` inserts a PENDING `CarrierBonus` on every weekly run**, even in one
+   process (insert verified at `integrationService.ts:1600`; 0 rows in production).
+4. **Waterfall ticker** (agent-reported): an exhausted fallback-only cascade is rebuilt and
+   re-notified each tick. Not observed: production holds one "Waterfall exhausted"
+   notification, ever (2026-08-22).
+5. **`ai-morning-briefing` is dead**: the gate asks for `morningBriefing` and the list holds
+   `morning_briefing` (`ai/volumeGates.ts:44`, `:105`).
+6. **`fmcsa-compliance` emails "ACCOUNT SUSPENDED" daily without suspending** — already Item 325.
 
 ### Carried, deliberately not built
 

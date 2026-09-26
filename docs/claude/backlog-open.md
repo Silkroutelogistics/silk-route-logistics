@@ -2968,3 +2968,89 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
 326. **P2 — three more notification emitters have no dedupe key (found 2026-09-26, notifications arc Phase A; numbered 326 because Items 323-325 went to the auto-reversal and suspension work landed as v3.8.bkj).** This is Item 320's shape without the flood, because each job fires rarely. (a) `overbooking-check`, every 4 hours ([`cron/index.ts:942`](../../backend/src/cron/index.ts#L942)), calls `overbookingService.ts:112` `createMany` for every active ADMIN and DISPATCH user on each CRITICAL carrier — on every run, for as long as the carrier stays CRITICAL. (b) `ai-compliance-forecast`, daily at 05:30 (`:841`), calls `complianceForecastService.ts:159` and writes one row per ADMIN/OPERATIONS user (`take: 5`) for every carrier over 0.6 risk, every day. (c) `ofac-rescan`, weekly (`:894`), calls `ofacScreeningService.ts:254` `notifyAdmins` on each match, plus `:202` to the carrier on auto-suspend. None of them checks for an open prior notice. These were spot-checked in source, not measured in production. **Fix shape:** Item 320's key (entity + type + open state) or Item 192's once-per-level cadence, one commit per job. **Size estimate (not built; ruled to stay in the backlog 2026-09-26):** three commits, one per job, 7 files in all (3 services, 3 new test files, the footer). Each commit is roughly +10-20 source lines, +50-70 test lines and a +6-8 footer marker, so about 3 files and 70-100 LOC. The OFAC commit runs larger, about +30 source, because it has two emitters. Item 320's commit landed at +140 once its test was counted, so any of these that passes 100 LOC gets split test-from-source rather than waved through. Total about 210-300 LOC. **Also unchecked:** their `link` targets (`/carriers/:id`, `/compliance/carrier/:id`). The Item 242 guard (`emailActionUrls.test.ts:36`) matches `actionUrl:` literals only, so a dead `link` passes it.
 
 327. **P2 — `nextShipmentNumber` can hand out a number already taken, and tender accept then 500s after the accept has committed (found 2026-09-26, notifications arc r2 E2E).** [`shipmentController.ts:8-17`](../../backend/src/controllers/shipmentController.ts#L8) takes the most recently *created* shipment (`orderBy: { createdAt: "desc" }`), not the highest number, parses it, adds 1, and keeps the result in a module-level counter. Rows that share a `createdAt`, or two accepts in flight at once, can therefore produce a number that already exists, and `shipmentNumber` is unique. In `acceptTender` the transaction closes at [`tenderController.ts:281`](../../backend/src/controllers/tenderController.ts#L281) and the shipment is created at `:288`, outside it. So the caller gets a 500 while the tender stays ACCEPTED, the load BOOKED and the sibling tenders withdrawn — with no shipment, and every step after `:288` skipped. **Observed once, locally:** r2's E2E, on a container reused from an earlier run, got `Unique constraint failed on the fields: (shipmentNumber)` on accept-on-behalf; the fresh-container r3 run passed. Not measured in production; at today's volume it needs a `createdAt` tie or concurrent accepts. The other caller is `createShipment` (`:21`); `carrierLoads.ts:10` imports the function but does not call it. **Fix shape:** a Postgres sequence (the `load_number_seq` precedent), or a retry on P2002. Separately, decide whether the shipment create belongs inside the accept transaction.
+
+328. **P1 — any cron in `cron/index.ts` can run twice across a Render deploy cutover, and six of them email or text outside parties with nothing to stop the second send (found 2026-09-26, notifications arc).** `withGuard` ([`cron/index.ts:84`](../../backend/src/cron/index.ts#L84), [`:133`](../../backend/src/cron/index.ts#L133)) is an in-process `Set`, there is no cross-process lock anywhere in that file, and `initCronJobs()` runs unconditionally at boot (`server.ts:303`). During a deploy the old and the new process overlap, and both have scheduled every job, so any tick inside the overlap runs twice. **Observed 2026-09-26:** the old process ran the 16:00:00Z load-compliance tick 17 s after the new process booted (the row carries `notifiedAt` null, which the pre-fix code never set and the fixed code always sets). The `schedulerService` jobs are different: `withLock` (`schedulerService.ts:354`) takes a primary-key row through `acquireLock` (`:41`), so two processes cannot run one of those jobs at the same time; only a second run after the lock is released is possible. The registry's own `cron.schedule` (`cronRegistryService.ts:38`) never runs, because `registerCronJob` has no callers.
+
+    **What "idempotent" means in the table.** Safe when two processes run the same tick at the same moment. A read-then-write dedupe — look for a prior row, then send, then record — is **not** safe: both processes read before either writes. Only an atomic mechanism is: a unique constraint, a conditional `updateMany` whose returned count gates the send, or a lock.
+
+    **Priority: P1.** Six `withGuard` crons send to outside parties with no protection against an overlap: `reapply-eligibility-reminder` (rejected applicants, email), `compliance-reminders` (carriers, email), `training-expiry-reminders` (carriers, email), `pod-reminders` (carriers, email), `fmcsa-compliance` (carriers, "ACCOUNT SUSPENDED" email) and `driver-training-expiry-sms` (drivers, SMS). One also writes money: `compass-score-recalc` inserts a PENDING `CarrierBonus` per run and that model has no unique key (0 rows in production today, so that part is latent). A double run needs a deploy to land on the tick. The half-hourly jobs are the likeliest, and today one did.
+
+    **Fix shape.** Run the `cron/index.ts` jobs under the DB lock `schedulerService` already has (one primary-key row per job): that closes concurrent runs for all 37. Then make each external send's record an atomic claim — a conditional `updateMany` whose count gates the send, or a unique dedupe row written before the send — so a run after the lock is released cannot send again. Stopping cron tasks on SIGTERM would narrow the window but not close it. Separately, the waterfall ticker's 60 s lock TTL can be outlived (`schedulerService.ts:403`).
+
+    **How the table was built.** Four read-only agents read every job and followed it into its service; the job list itself came from a grep of both files. Verified at source here: `reapply-eligibility-reminder` (`cron/index.ts:996-1033`), the `CarrierBonus` insert (`integrationService.ts:1600`, `@@index` only), chameleon risk counting duplicate rows (`chameleonDetectionService.ts:143-147`, thresholds `:126-127`) and the tender-email recipient (`notificationService.ts:188`). Every other file:line is an agent's reading and was not re-read. Paths are under `backend/src/services/` unless a directory is shown.
+
+    **In-process guard (`withGuard`) — 37 jobs, `cron/index.ts`**
+
+    | Job (schedule) | Side effect | Idempotent across an overlap? | Evidence |
+    |---|---|---|---|
+    | check-call-reminders (`0,30 * * * *`) | in-app to ADMIN/DISPATCH | **No** — duplicate in-app rows | read-then-write `cron/index.ts:221` → `createMany` `:254` |
+    | sequence-advance (`0 * * * *`) | sequence status; a DRAFT outbound email (never auto-sent) | **No** — duplicate drafts; a prospect gets two only if a human sends both | `cron/sequenceAdvance.ts:83-92` → `:111` |
+    | tender-expiry-sweep (`0,30 * * * *`) | tender EXPIRED, load TENDERED→POSTED; email + in-app to the load poster | **No** — the claim's count is discarded, so both send | `controllers/tenderController.ts:807` (claim ignored), `:791`→`:826-828`, revert `:850-866` |
+    | pod-reminders (`45 * * * *`) | **email to the carrier**; in-app carrier + poster | **No** | read-then-write `podReminderService.ts:200` → send `:244` |
+    | invoice-aging (`0 * * * *`) | invoice → OVERDUE (status only) | Yes | conditional `updateMany` `cron/index.ts:331-337` |
+    | daily-cpp-cleanup (`0 6 * * *`) | milestone/tier; deletes | Yes (a carrier meeting both gates can advance two steps in one tick) | `caravanService.ts:274`→`:327` |
+    | health-digest (`0 7 * * *`) | email to ADMINs | **No** — two digests | `healthDigestService.ts:218` → `:225` |
+    | compass-score-recalc (`0 23 * * 0`) | **money: PENDING `CarrierBonus`**; scorecard row; GUEST→SILVER + welcome | **No** — duplicate bonus and scorecard | `integrationService.ts:2048` → `:1576`, `:1600`; `tierService.ts:42`→`:54`,`:59` |
+    | weekly-report (`0 7 * * 1`) | one SystemLog row | Duplicate row only | `cron/index.ts:499` |
+    | monthly-invoice-reminders (`0 6 1 * *`) | invoice reminder flags; sends nothing | Yes | `cron/index.ts:524`, `:557-561` |
+    | monthly-qp-variance (`30 6 1 * *`) | email to whaider@ | **No** — two reports | `cron/index.ts:577` → `emailService.ts:414` |
+    | fmcsa-compliance (`0 3 * * *`) | **"ACCOUNT SUSPENDED" email to the carrier**; staff emails; SUSPENDED; scan/alert rows | **No** | list `complianceMonitorService.ts:1213`; unconditional suspend `:1389`/`:1501`; sends `:1397`/`:1421`/`:1509` |
+    | identity-validation (`0 6 * * *`) | outside lookups; upsert | Yes (twice the lookups) | `identityVerificationService.ts:403` |
+    | session-expiry-sweep (`15 * * * *`) | deletes expired sessions | Yes | `lib/sessionStore.ts:115-116` |
+    | compliance-reminders (`0 5 * * *`) | **insurance-expiry email to the carrier**; reminder row | **No** | read-then-write `complianceMonitorService.ts:1624` → send `:1653` → record `:1659` |
+    | training-expiry-reminders (`10 5 * * *`) | **refresher email to the carrier** | **No** — no dedupe state at all | `trainingService.ts:242-246` → `:252` |
+    | driver-training-expiry-sms (`20 5 * * *`) | **SMS to the driver** | **No** — no dedupe state at all | `trainingService.ts:321` → `:328` |
+    | authority-date-resolution (`0 4 * * 1`) | outside lookup; fills `authorityGrantedDate` | Yes (same value twice) | `authorityHistoryService.ts:252-257` |
+    | chameleon-scan (`30 3 * * 1`) | fraud email to ADMIN/OPERATIONS; match rows; risk level (HIGH blocks tenders) | **No** — two emails, and duplicate match rows raise the risk level, which counts rows | `chameleonDetectionService.ts:285`→`:298`, email `:445`, recompute `:143-147` |
+    | auto-reversal (`0 4 * * 1`) | SUSPENDED→APPROVED; "Account Reinstated" email | Yes | conditional `updateMany` gates the email `complianceMonitorService.ts:1746-1763` |
+    | weekly-fuel-index (`0 22 * * 1`) | outside fetch; upsert | Yes | `fuelIndexService.ts:155` |
+    | ai-rate-intelligence (`0 4 * * *`) | model upserts; learning-cycle row | Duplicate row only | `rateIntelligenceService.ts:278` |
+    | ai-carrier-intelligence (`15 4 * * *`) | same | Duplicate row only | `carrierIntelligenceService.ts:253` |
+    | ai-lane-optimizer (`30 4 * * 1`) | same | Duplicate row only | `laneOptimizerService.ts:227` |
+    | ai-customer-intelligence (`0 5 * * 1`) | same | Duplicate row only | `customerIntelligenceService.ts:234` |
+    | ai-compliance-forecast (`30 5 * * *`) | in-app to ADMIN/OPERATIONS; forecast upsert | **No** (it also re-alerts daily in one process — Item 326) | `complianceForecastService.ts:41` → `:159` |
+    | ai-system-optimizer (`0 6 * * 1`) | metric rows | Duplicate rows only | `systemOptimizerService.ts:215`, `:270` |
+    | news-fetch (`0 */4 * * *`) | outside fetch; articles | Yes (unique slug/URL) | `newsAggregatorService.ts:351`, `:369` |
+    | ai-morning-briefing (`30 6 * * *`) | none in practice | Yes — dead: the feature-gate key never matches | `cron/index.ts:880-882`; `ai/volumeGates.ts:44`, `:105` |
+    | ofac-rescan (`0 2 * * 1`) | OFAC lookup; auto-suspend; in-app to admins and carrier; alert rows | **No** — duplicate alerts and in-app | `ofacScreeningService.ts:143` → `:169`, `:202`, `:254` |
+    | eld-validation (`30 2 * * 1`) | overwrite | Yes | `eldValidationService.ts:79-137` |
+    | tin-verification (`45 2 * * 1`) | outside lookup; upsert | Yes | `tinMatchService.ts:542` |
+    | load-compliance-scan (`0 */2 * * *`) | in-app to poster + DISPATCH; alert rows | **No** — the v3.8.bkk dedupe is read-then-write: it holds between runs, not across an overlap | `loadComplianceService.ts:281`→`:290`; notify `:312`, `:324` |
+    | overbooking-check (`30 */4 * * *`) | in-app to ADMIN+DISPATCH; alert rows | **No** | `overbookingService.ts:138` → `:85`, `:112` |
+    | csa-basic-update (`30 1 * * 1`) | outside fetch; overwrite | Yes (last writer wins; a failed fetch's nulls can overwrite good scores) | `csaBasicService.ts:214` |
+    | fraud-report-permanence (`30 7 * * *`) | FraudReport PENDING→PERMANENT | Yes | conditional `updateMany` `cron/index.ts:969-975` |
+    | reapply-eligibility-reminder (`0 8 * * *`) | **email to rejected carrier applicants** | **No** | `findMany` `cron/index.ts:996-1010` → send `:1028` → update `:1031` |
+
+    **DB lock (`withLock`) — 28 jobs + the waterfall ticker, `schedulerService.ts`.** An overlap cannot run these at the same time. The column says what a second run after the lock is released would do.
+
+    | Job (schedule) | Side effect | Second run after release | Evidence |
+    |---|---|---|---|
+    | pre-tracing (`0 * * * *`) | email to the carrier; in-app | Safe | record `schedulerService.ts:158` before send `:169` |
+    | late-detection (`0,30 * * * *`) | email + in-app to the poster | Safe | `schedulerService.ts:228-238`, `:244` |
+    | password-expiry (`0 9 * * *`) | email to users of every role | Safe | `schedulerService.ts:305-313`, `:316` |
+    | otp-cleanup (`0 3 * * *`) | deletes | Safe | `schedulerService.ts:340` |
+    | check-call-automation (`0,30 * * * *`) | SMS to carrier dispatch + driver ping | Safe | `checkCallAutomation.ts:163`, `:216-219` |
+    | risk-flagging (`0,30 * * * *`) | in-app + RED email to poster; RiskLog | Duplicate row only | `riskEngine.ts:233-239`, `:243` |
+    | email-sequences (`0 * * * *`) | outreach email to prospects | Safe | `emailSequenceService.ts:256-260`, `:339-344` |
+    | shipper-transit-am (`0 14 * * *`) | email to customer contacts | Safe (6 h dedupe) | `shipperNotificationService.ts:108-116`, `:145` |
+    | shipper-transit-pm (`0 21 * * *`) | same | Safe | same |
+    | ar-reminders-daily (`0 11 * * *`) | invoice flags, OVERDUE, credit counters; sends nothing | Safe | `controllers/accountingController.ts:3975-4022` |
+    | ar-daily-reminders (`0 14 * * *`) | dunning email to customer AP; invoice flags | Safe | `arCollectionsService.ts:252-289`, `:317` |
+    | ap-aging-weekly (`0 12 * * 1`) | read-only | Safe | `schedulerService.ts:512-519` |
+    | monthly-report-gen (`0 13 1 * *`) | FinancialReport row | Duplicate row only | `schedulerService.ts:549` |
+    | ai-queue-processor (`0,30 * * * *`) | queue status | Safe | `aiLearningLoop/feedbackCollector.ts:379`, `:405-412` |
+    | ai-anomaly-scan (`15 */2 * * *`) | AnomalyLog rows | Duplicate rows only | `aiLearningLoop/anomalyDetector.ts:219` |
+    | ai-full-training (`0 7 * * *`) | in-app to ADMIN/OPERATIONS | Repeats (staff in-app) | `complianceForecastService.ts:152`, `:159` |
+    | ai-shipment-monitor (`0,30 * * * *`) | ShipmentRiskLog rows | Duplicate rows only | `shipmentMonitorService.ts:189` |
+    | geofence-scanner (`0,30 * * * *`) | stop status; detention and accessorial money | Safe | `geofenceService.ts:147`, `:248` |
+    | eld-gps-sync (`0,30 * * * *`) | ELD/tracking rows (inactive without provider keys) | Duplicate rows only | `samsaraService.ts:164`, `motiveService.ts:145` |
+    | tt-alert-engine (`0,30 * * * *`) | delay email to customer contacts; accessorial money | Safe | `trackTraceAlertEngine.ts:209-219`, `:222` |
+    | insurance-expiry-enforce (`0 11 * * *`) | warning email to carrier; SUSPENDED | Safe | `complianceMonitorService.ts:1958`, `:2008-2017` |
+    | insurance-verify-reminders (`30 11 * * *`) | **COI email to the insurance agent** (cc compliance@, carrier) | **Repeats** — nothing records a send | `insuranceVerificationService.ts:372`, `:382` → `:374` |
+    | doc-expiry-alerts (`0 12 * * *`) | in-app to carrier | Safe | `complianceMonitorService.ts:2298-2307` |
+    | fmcsa-authority-watch (`0 9 * * *`) | status; in-app to carrier; alert row | Duplicate row (a rating change other than UNSATISFACTORY re-alerts every run) | `complianceMonitorService.ts:2173`, `:2227-2228` |
+    | monthly-carrier-revet (`0 7 1 * *`) | SUSPENDED; in-app to staff and carrier; vetting rows | Repeats (staff in-app) + duplicate rows | `complianceMonitorService.ts:2065`, `:2091` |
+    | gmail-reply-checker (`0,30 * * * *`) | stops sequences; in-app | Safe | `gmailService.ts:232-238`, `:266` |
+    | shipper-eta-updates (`0 17 * * *`) | **ETA email to customer contacts** | **Repeats** — nothing records a send | `shipperLoadNotifyService.ts:105-136`, `:170-194` → `:133` |
+    | detention-tracking (`0 12 * * 0`) | upsert + SystemLog | Duplicate row only | `detentionTrackingService.ts:152` |
+    | waterfall ticker (30 s / 10 min timer) | tender email to carrier; status | Carrier tenders safe; lock TTL 60 s can be outlived | `waterfallEngineService.ts:817`, `:826-829`; TTL `schedulerService.ts:403` |
