@@ -12,6 +12,7 @@ import { summarizeTenders } from "../lib/tenderScoring";
 import { summarizeCheckCalls } from "../lib/communicationScoring";
 import { log } from "../lib/logger";
 import { resolveTonuBilling } from "../lib/tonuPolicy";
+import { priorSentBaseInvoice } from "../lib/invoiceSendGuard";
 import { raiseTonuCustomerCharge } from "./invoiceService";
 import { withdrawLiveTenders } from "./tenderTransitionService";
 import { mergeCancellationSnapshot } from "./cancelCascade";
@@ -1333,10 +1334,18 @@ export async function onPODUploaded(loadId: string) {
     where: { loadId, status: { in: ["SUBMITTED", "DRAFT"] } },
   });
   if (invoice) {
-    await prisma.invoice.update({
-      where: { id: invoice.id },
-      data: { status: "SENT", sentDate: new Date() },
-    });
+    // v3.8.bju — one BASE invoice per load leaves SRL (lib/invoiceSendGuard).
+    // If another BASE on this load is already SENT or later, this DRAFT is a
+    // duplicate and is not labelled SENT; the load is still invoiced.
+    const prior = await priorSentBaseInvoice(loadId, invoice.id, invoice.invoiceKind);
+    if (prior) {
+      log.warn({ loadId, invoiceId: invoice.id, priorInvoiceId: prior.id }, "[Integration] POD uploaded: another BASE invoice already sent; this draft is not flipped to SENT");
+    } else {
+      await prisma.invoice.update({
+        where: { id: invoice.id },
+        data: { status: "SENT", sentDate: new Date() },
+      });
+    }
 
     // Update load status
     await prisma.load.update({

@@ -19167,6 +19167,8 @@
 // their numbers; the first draw below the floor lifts the sequence once.
 // v3.8.bjt — a BASE invoice cannot be sent for a load whose first invoice
 // already went out (409 LOAD_ALREADY_INVOICED); supplementals still send.
+// v3.8.bju — a POD no longer labels a duplicate draft SENT when another
+// BASE invoice on the load already went out.
 export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {
