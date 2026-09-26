@@ -19213,7 +19213,9 @@
 // emailed an invoice from sendInvoice until production records those deliveries (send lock).
 // v3.8.ble — generateInvoiceFromLoad refuses the four BKN loads whose invoices went through
 // Tipalti by hand; for SRL-121492, which has none yet, it would have created and emailed one.
-export const SRL_VERSION = "3.8.ble";
+// v3.8.blf — a POD upload no longer marks the load's invoice SENT; it delivers nothing to
+// the customer, so the invoice stays DRAFT until an email or mark-sent records a delivery.
+export const SRL_VERSION = "3.8.blf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

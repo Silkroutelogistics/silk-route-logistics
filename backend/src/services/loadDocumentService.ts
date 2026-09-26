@@ -30,8 +30,9 @@
  *      It does not fire when the load was already DELIVERED, because the flip
  *      that got it there fired it, and `onLoadDelivered` increments CPP load
  *      counts, which is not idempotent;
- *   5. `onPODUploaded` runs on every POD (the payment clock, `docPod`, invoice
- *      advance) and `syncSettlementDocFlags` on every document.
+ *   5. `onPODUploaded` runs on every POD (the payment clock, `docPod`, the
+ *      load's move to INVOICED; it never marks an invoice SENT) and
+ *      `syncSettlementDocFlags` on every document.
  *
  * Steps 4 and 5 are AWAITED and their failures propagate. The alternative —
  * catch, log, return 200 — is the fire-and-forget-with-log-only shape the

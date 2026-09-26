@@ -12,7 +12,6 @@ import { summarizeTenders } from "../lib/tenderScoring";
 import { summarizeCheckCalls } from "../lib/communicationScoring";
 import { log } from "../lib/logger";
 import { resolveTonuBilling } from "../lib/tonuPolicy";
-import { priorSentBaseInvoice } from "../lib/invoiceSendGuard";
 import { raiseTonuCustomerCharge } from "./invoiceService";
 import { withdrawLiveTenders } from "./tenderTransitionService";
 import { mergeCancellationSnapshot } from "./cancelCascade";
@@ -1314,7 +1313,7 @@ export async function onInvoicePaid(invoiceId: string, paidAmount: number) {
 }
 
 // ──────────────────────────────────────────────────
-// POD Upload → advance load to POD_RECEIVED + invoice to INVOICED
+// POD Upload → advance load to POD_RECEIVED, then INVOICED (the invoice stays DRAFT)
 // ──────────────────────────────────────────────────
 
 export async function onPODUploaded(loadId: string) {
@@ -1329,31 +1328,22 @@ export async function onPODUploaded(loadId: string) {
     });
   }
 
-  // Advance invoice status to INVOICED (ready to send)
+  // A POD upload delivers nothing to the customer, so it never marks an invoice
+  // SENT. SENT is what the reminder ladder and aging read as "the customer has
+  // it", and recording it here dated a delivery that never happened. The invoice
+  // stays a DRAFT, ready to send, until an email path or mark-sent records the
+  // delivery. The load still moves to INVOICED, which on this path has always
+  // meant "an invoice exists and is ready", not "sent".
   const invoice = await prisma.invoice.findFirst({
     where: { loadId, status: { in: ["SUBMITTED", "DRAFT"] } },
   });
   if (invoice) {
-    // v3.8.bju — one BASE invoice per load leaves SRL (lib/invoiceSendGuard).
-    // If another BASE on this load is already SENT or later, this DRAFT is a
-    // duplicate and is not labelled SENT; the load is still invoiced.
-    const prior = await priorSentBaseInvoice(loadId, invoice.id, invoice.invoiceKind);
-    if (prior) {
-      log.warn({ loadId, invoiceId: invoice.id, priorInvoiceId: prior.id }, "[Integration] POD uploaded: another BASE invoice already sent; this draft is not flipped to SENT");
-    } else {
-      await prisma.invoice.update({
-        where: { id: invoice.id },
-        data: { status: "SENT", sentDate: new Date() },
-      });
-    }
-
-    // Update load status
     await prisma.load.update({
       where: { id: loadId },
       data: { status: "INVOICED" },
     });
 
-    log.info(`[Integration] POD uploaded → invoice ${invoice.invoiceNumber} advanced to SENT, load to INVOICED`);
+    log.info(`[Integration] POD uploaded → invoice ${invoice.invoiceNumber} ready to send (not sent), load to INVOICED`);
   }
 
   // Mark POD received on the CarrierPay if exists

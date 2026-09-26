@@ -1,42 +1,39 @@
 /**
- * The POD path is the second place an invoice becomes SENT (queue amendment,
- * item 4). onPODUploaded flips a load's DRAFT to SENT; with another BASE
- * invoice on the load already sent, that draft is a duplicate and must stay
- * DRAFT, while the load itself still advances to INVOICED.
+ * A POD upload delivers nothing to the customer, so onPODUploaded never marks an
+ * invoice SENT. It used to flip the load's DRAFT to SENT, which started the
+ * reminder ladder and dated a delivery that never happened. The load itself
+ * still advances, because that part was never a claim about the customer.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { prisma } from "../../../src/config/database";
 import { onPODUploaded } from "../../../src/services/integrationService";
 
 const mockPrisma = vi.mocked(prisma, true) as any;
-const DRAFT = { id: "inv-2", invoiceKind: "BASE", invoiceNumber: "SRL-121494I", status: "DRAFT" };
+const DRAFT = { id: "inv-2", invoiceKind: "BASE", invoiceNumber: "121494I", status: "DRAFT" };
 
-function arm(prior: unknown) {
+function arm() {
   mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", status: "DELIVERED" });
   mockPrisma.load.update.mockResolvedValue({});
-  // First findFirst: the DRAFT to advance. Second: the guard's prior-sent lookup.
-  mockPrisma.invoice.findFirst.mockResolvedValueOnce(DRAFT).mockResolvedValueOnce(prior);
+  mockPrisma.invoice.findFirst.mockResolvedValue(DRAFT);
   mockPrisma.invoice.update.mockResolvedValue({});
   mockPrisma.carrierPay.updateMany.mockResolvedValue({ count: 0 });
   mockPrisma.carrierPay.findMany.mockResolvedValue([]);
 }
 
-const flippedToSent = () =>
-  mockPrisma.invoice.update.mock.calls.some((c: any[]) => c[0]?.data?.status === "SENT");
-
-describe("onPODUploaded and the one-invoice-per-load rule", () => {
+describe("onPODUploaded never marks an invoice SENT", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("does not flip a duplicate draft to SENT when another BASE invoice was already sent", async () => {
-    arm({ id: "inv-1", invoiceNumber: "INV-9", srlDocNumber: "SRL-121494I", status: "SENT" });
+  it("leaves the only invoice on the load a DRAFT: no status, no sentDate, nothing written", async () => {
+    arm();
     await onPODUploaded("load-1");
-    expect(flippedToSent()).toBe(false);
-    expect(mockPrisma.load.update).toHaveBeenCalledWith(expect.objectContaining({ data: { status: "INVOICED" } }));
+    expect(mockPrisma.invoice.findFirst).toHaveBeenCalled(); // it did look, so the silence is a decision
+    expect(mockPrisma.invoice.update).not.toHaveBeenCalled();
   });
 
-  it("flips the draft to SENT when it is the only invoice on the load", async () => {
-    arm(null);
+  it("still moves the load to POD_RECEIVED and then INVOICED", async () => {
+    arm();
     await onPODUploaded("load-1");
-    expect(flippedToSent()).toBe(true);
+    const statuses = mockPrisma.load.update.mock.calls.map((c: any[]) => c[0].data.status);
+    expect(statuses).toEqual(["POD_RECEIVED", "INVOICED"]);
   });
 });
