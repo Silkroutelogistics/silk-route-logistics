@@ -26,11 +26,11 @@ describe("document number suffixes", () => {
     // The whole scheme: one stem, suffixed per document, so every document for a
     // load sorts together in any system that sorts a text column. A PREFIX scheme
     // (BOL-…, RC-…) destroys exactly that, which is why this is a suffix.
-    expect(formatDocumentNumber("SRL-121485", "BOL")).toBe("SRL-121485B");
-    expect(formatDocumentNumber("SRL-121485", "RATE_CONFIRMATION")).toBe("SRL-121485R");
-    expect(formatDocumentNumber("SRL-121485", "INVOICE")).toBe("SRL-121485I");
-    expect(formatDocumentNumber("SRL-121485", "SUPPLEMENTAL_INVOICE")).toBe("SRL-121485S");
-    expect(formatDocumentNumber("SRL-121485", "SETTLEMENT")).toBe("SRL-121485P");
+    expect(formatDocumentNumber("RFQ-K3X9Q", "BOL")).toBe("RFQ-K3X9QB");
+    expect(formatDocumentNumber("RFQ-K3X9Q", "RATE_CONFIRMATION")).toBe("RFQ-K3X9QR");
+    expect(formatDocumentNumber("RFQ-K3X9Q", "INVOICE")).toBe("RFQ-K3X9QI");
+    expect(formatDocumentNumber("RFQ-K3X9Q", "SUPPLEMENTAL_INVOICE")).toBe("RFQ-K3X9QS");
+    expect(formatDocumentNumber("RFQ-K3X9Q", "SETTLEMENT")).toBe("RFQ-K3X9QP");
   });
 
   it("never gives the settlement and the supplemental invoice the same letter", () => {
@@ -40,8 +40,8 @@ describe("document number suffixes", () => {
   });
 
   it("omits the digit on revision 1 and shows it from revision 2", () => {
-    expect(formatDocumentNumber("SRL-121485", "RATE_CONFIRMATION", 1)).toBe("SRL-121485R");
-    expect(formatDocumentNumber("SRL-121485", "RATE_CONFIRMATION", 2)).toBe("SRL-121485R2");
+    expect(formatDocumentNumber("RFQ-K3X9Q", "RATE_CONFIRMATION", 1)).toBe("RFQ-K3X9QR");
+    expect(formatDocumentNumber("RFQ-K3X9Q", "RATE_CONFIRMATION", 2)).toBe("RFQ-K3X9QR2");
   });
 
   it("refuses a nonsense revision rather than printing one", () => {
