@@ -134,9 +134,9 @@ literally, "origin highest + 1" would have given 326, which this branch already 
 5. **`ai-morning-briefing` is dead**: the gate asks for `morningBriefing` and the list holds
    `morning_briefing` (`ai/volumeGates.ts:44`, `:105`).
 6. **`fmcsa-compliance` emails "ACCOUNT SUSPENDED" daily without suspending** — already Item 325.
-7. **The tender magic link acts on GET** (`tenderAction.ts:69`, no confirmation step), so a mail
-   scanner that prefetches links can accept or decline a tender as the carrier. Not checked
-   against production; not banked.
+7. ~~**The tender magic link acts on GET**~~ Banked as **Item 330** (P1). Read-only check: 4 of
+   the 9 September accepts landed within 60 s of the offer email, and the audit trail shows all
+   9 came through the link, none through the portal.
 
 ### Carried, deliberately not built
 
