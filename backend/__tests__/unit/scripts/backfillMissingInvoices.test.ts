@@ -74,7 +74,7 @@ describe("backfill invoice number follows the load", () => {
   it("a legacy load keeps the legacy form", () => {
     expect(invoiceNumberFor({ loadNumber: "SRL-121492", referenceNumber: "SRL-121492" })).toBe("SRL-121492I");
   });
-  it("a 50001-series load prints the bare shared number", () => {
-    expect(invoiceNumberFor({ loadNumber: "50001", referenceNumber: "50001" })).toBe("50001");
+  it("a new load's invoice is its number plus I", () => {
+    expect(invoiceNumberFor({ loadNumber: "121498", referenceNumber: "121498" })).toBe("121498I");
   });
 });

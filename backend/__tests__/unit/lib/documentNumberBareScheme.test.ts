@@ -1,5 +1,6 @@
 /**
- * §21.2 as amended 2026-09-23: one bare number per load.
+ * §21.2 as amended 2026-09-23: one bare number per load. Corrected 2026-09-26:
+ * the invoice adds "I" (121498I), and loads continue at 121498.
  *
  * The retired scheme's own tests (documentNumber.test.ts,
  * documentNumberAllocation.test.ts) still pass UNCHANGED, and that is the point
@@ -22,6 +23,7 @@ import { join } from "path";
 import {
   ACCESSORIAL_LETTER,
   CORE_REVISION_SEPARATOR,
+  DOCUMENT_SUFFIX,
   documentNumberFor,
   formatDocumentNumber,
   formatSupplementalNumber,
@@ -56,12 +58,13 @@ function makeClient(rows: any[]) {
 }
 
 describe("the bare scheme: one number on every core document", () => {
-  it("gives the load, BOL, rate con, invoice and settlement the SAME number", () => {
+  it("gives the load, BOL, rate con and settlement the SAME number, and the invoice that number plus I", () => {
     // This is the whole amendment. Quoting 5001 names the load and every core
-    // document on it without having to say which.
+    // document on it; the invoice's I keeps it from being read as the load.
     expect(formatDocumentNumber("5001", "BOL")).toBe("5001");
     expect(formatDocumentNumber("5001", "RATE_CONFIRMATION")).toBe("5001");
-    expect(formatDocumentNumber("5001", "INVOICE")).toBe("5001");
+    expect(formatDocumentNumber("5001", "INVOICE")).toBe("5001I");
+    expect(formatDocumentNumber("5001", "INVOICE", 2)).toBe("5001I-2");
     expect(formatDocumentNumber("5001", "SETTLEMENT")).toBe("5001");
   });
 
@@ -108,27 +111,36 @@ describe("legacy stems keep the scheme they were issued under", () => {
     expect(documentNumberFor("SRL-121485R", { loadNumber: "SRL-121485" }, "RATE_CONFIRMATION")).toBe(
       "SRL-121485R",
     );
-    // and a persisted bare number is equally untouched
+    // and a persisted bare number is equally untouched: an invoice issued as
+    // 5001, before the I, keeps 5001
     expect(documentNumberFor("5001", { loadNumber: "5001" }, "INVOICE")).toBe("5001");
+    expect(documentNumberFor(null, { loadNumber: "5001" }, "INVOICE")).toBe("5001I");
   });
 });
 
 describe("parsing cannot confuse one load for another", () => {
-  it("reads 5001 as revision 1 and 5001-2 as revision 2", () => {
-    expect(parseDocumentRevision("5001", "5001", "INVOICE")).toBe(1);
-    expect(parseDocumentRevision("5001-2", "5001", "INVOICE")).toBe(2);
+  it("reads 5001 as revision 1 and 5001-2 as revision 2, and the invoice off 5001I", () => {
+    expect(parseDocumentRevision("5001", "5001", "RATE_CONFIRMATION")).toBe(1);
+    expect(parseDocumentRevision("5001-2", "5001", "RATE_CONFIRMATION")).toBe(2);
+    expect(parseDocumentRevision("5001I", "5001", "INVOICE")).toBe(1);
+    expect(parseDocumentRevision("5001I-2", "5001", "INVOICE")).toBe(2);
+    // the load's own number is not its invoice
+    expect(parseDocumentRevision("5001", "5001", "INVOICE")).toBeNull();
   });
 
   it("does NOT read load 50012's number as a revision of load 5001", () => {
     // The bleed. 50012 startsWith 5001, and under a naive rule that would make
     // another load's invoice look like this load's revision 2.
-    expect(parseDocumentRevision("50012", "5001", "INVOICE")).toBeNull();
-    expect(parseDocumentRevision("50012-2", "5001", "INVOICE")).toBeNull();
+    expect(parseDocumentRevision("50012", "5001", "RATE_CONFIRMATION")).toBeNull();
+    expect(parseDocumentRevision("50012-2", "5001", "RATE_CONFIRMATION")).toBeNull();
+    expect(parseDocumentRevision("50012I", "5001", "INVOICE")).toBeNull();
+    expect(parseDocumentRevision("50012I-2", "5001", "INVOICE")).toBeNull();
   });
 
   it("rejects 5001-1, because revision 1 is the bare number", () => {
     // Two spellings of one revision is how a duplicate gets past a @unique index.
-    expect(parseDocumentRevision("5001-1", "5001", "INVOICE")).toBeNull();
+    expect(parseDocumentRevision("5001-1", "5001", "RATE_CONFIRMATION")).toBeNull();
+    expect(parseDocumentRevision("5001I-1", "5001", "INVOICE")).toBeNull();
   });
 });
 
@@ -177,8 +189,10 @@ describe("the letter map is the only place a letter is assigned", () => {
     const letters = Object.values(ACCESSORIAL_LETTER);
     expect(letters.length).toBe(12);
     expect(new Set(letters).size, "two accessorial types share a letter").toBe(12);
-    // I reads as a 1 on a hand-written or faxed reference.
+    // I reads as a 1 on a hand-written or faxed reference, and it is the
+    // invoice's own letter: a supplemental can never spell 121498I.
     expect(letters).not.toContain("I");
+    expect(letters).not.toContain(DOCUMENT_SUFFIX.INVOICE);
   });
 });
 
@@ -220,6 +234,16 @@ describe("allocation", () => {
     // widened the WHERE, the revision must still not jump on a foreign row.
     const client = makeClient([{ rateConNumber: "50012" }, { rateConNumber: "50012-4" }]);
     expect(await nextDocumentNumber("RATE_CONFIRMATION", "5001", client as any)).toBe("5001");
+  });
+
+  it("allocates an invoice as the number plus I, and a re-issue off that", async () => {
+    const client = makeClient([]);
+    expect(await nextDocumentNumber("INVOICE", "121498", client as any)).toBe("121498I");
+    expect(client.wheres[0]).toEqual({
+      OR: [{ srlDocNumber: "121498I" }, { srlDocNumber: { startsWith: "121498I-" } }],
+    });
+    const issued = makeClient([{ srlDocNumber: "121498I" }]);
+    expect(await nextDocumentNumber("INVOICE", "121498", issued as any)).toBe("121498I-2");
   });
 
   it("allocates supplementals per type, so a lumper and a TONU do not share", async () => {
@@ -298,10 +322,11 @@ describe("loads continue from the last legacy number (§21.2, corrected 2026-09-
     expect(await generateLoadNumber(client as any)).not.toMatch(/SRL/);
   });
 
-  it("only an accessorial supplement takes a letter", () => {
-    for (const kind of ["BOL", "RATE_CONFIRMATION", "INVOICE", "SETTLEMENT"] as const) {
+  it("the invoice adds I; beyond that only an accessorial supplement takes a letter", () => {
+    for (const kind of ["BOL", "RATE_CONFIRMATION", "SETTLEMENT"] as const) {
       expect(formatDocumentNumber("121498", kind)).toBe("121498");
     }
+    expect(formatDocumentNumber("121498", "INVOICE")).toBe("121498I");
     expect(formatSupplementalNumber("121498", "TONU")).toBe("121498D");
   });
 });

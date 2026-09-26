@@ -16,15 +16,15 @@ import { prisma } from "../config/database";
  * Rate Confirmation. The last two ignore loadNumber, so one load could print two
  * different identifiers on two documents.
  *
- * ─── The scheme (§21.2, amended 2026-09-23) ────────────────────────────────
+ * ─── The scheme (§21.2, amended 2026-09-23, corrected 2026-09-26) ─────────
  *
  * ONE BARE NUMBER per load, carried by the load and by every core document
- * issued against it. No prefix, no suffix:
+ * issued against it. No prefix; the invoice alone adds "I":
  *
  *     Load          5001
  *     BOL           5001
  *     Rate con      5001
- *     Invoice       5001
+ *     Invoice       5001I     so an invoice is never read as the load it bills
  *     CarrierPay    5001      the load's settlement
  *
  * The number is the point of reference: quoting 5001 names the load and every
@@ -89,7 +89,7 @@ export type DocumentKind =
   | "SUPPLEMENTAL_INVOICE"
   | "SETTLEMENT";
 
-/** The four core kinds: every one of them renders the bare load number. */
+/** The four core kinds: each renders the load's number — the invoice with "I". */
 const CORE_KINDS: ReadonlySet<DocumentKind> = new Set<DocumentKind>([
   "BOL",
   "RATE_CONFIRMATION",
@@ -172,6 +172,32 @@ export function isLegacyStem(stem: string): boolean {
 }
 
 /**
+ * The digits a core document on this stem prints, or null for a stem that keeps
+ * the retired suffix scheme. Today that is the bare stem itself.
+ */
+export function documentDigits(stem: string | null | undefined): string | null {
+  const s = String(stem ?? "").trim();
+  return s && isBareStem(s) ? s : null;
+}
+
+/** A core document's number at revision 1: the digits, plus "I" for an invoice.
+ *  A re-issue hangs off it with the separator: 121498-2, 121498I-2. */
+function coreBase(digits: string, kind: DocumentKind): string {
+  return kind === "INVOICE" ? `${digits}${DOCUMENT_SUFFIX.INVOICE}` : digits;
+}
+
+/** Revision of `value` against a core base, or null unless it is the base
+ *  itself (revision 1) or base-separator-n with n >= 2. */
+function parseCoreRevision(value: string, base: string): number | null {
+  if (value === base) return 1;
+  if (!value.startsWith(`${base}${CORE_REVISION_SEPARATOR}`)) return null;
+  const tail = value.slice(base.length + CORE_REVISION_SEPARATOR.length);
+  if (!/^[0-9]+$/.test(tail)) return null;
+  const n = parseInt(tail, 10);
+  return n >= 2 ? n : null; // revision 1 is the base itself, never 121498-1
+}
+
+/**
  * The prefix every number carried before the scheme was amended.
  *
  * It came back. v3.8.bik removed this constant because isBareStem had
@@ -242,7 +268,8 @@ export function resolveLoadStem(load: LoadStemSource | null | undefined): string
 /**
  * What a CORE document prints.
  *
- *   bare   5001        + revision 2 -> 5001-2
+ *   bare   121498  RATE_CONFIRMATION -> 121498,  revision 2 -> 121498-2
+ *   bare   121498  INVOICE           -> 121498I, revision 2 -> 121498I-2
  *   legacy SRL-121485  + RATE_CONFIRMATION, revision 2 -> SRL-121485R2
  *
  * Revision 1 omits its marker entirely so the common case reads clean, under
@@ -257,15 +284,17 @@ export function formatDocumentNumber(stem: string, kind: DocumentKind, revision 
   if (!Number.isInteger(revision) || revision < 1) {
     throw new Error(`Invalid document revision ${revision}: must be an integer >= 1`);
   }
-  if (isLegacyStem(stem)) {
-    return `${stem}${DOCUMENT_SUFFIX[kind]}${revision === 1 ? "" : revision}`;
-  }
-  if (kind === "SUPPLEMENTAL_INVOICE") {
+  const digits = kind === "SUPPLEMENTAL_INVOICE" ? null : documentDigits(stem);
+  if (digits === null) {
+    if (isLegacyStem(stem)) {
+      return `${stem}${DOCUMENT_SUFFIX[kind]}${revision === 1 ? "" : revision}`;
+    }
     throw new Error(
       `A supplemental on bare stem ${stem} needs an accessorial type: use formatSupplementalNumber()`,
     );
   }
-  return revision === 1 ? stem : `${stem}${CORE_REVISION_SEPARATOR}${revision}`;
+  const base = coreBase(digits, kind);
+  return revision === 1 ? base : `${base}${CORE_REVISION_SEPARATOR}${revision}`;
 }
 
 /**
@@ -311,14 +340,13 @@ export function parseDocumentRevision(
 ): number | null {
   if (!value) return null;
 
-  if (!isLegacyStem(stem)) {
-    if (kind === "SUPPLEMENTAL_INVOICE") return null; // has its own parser
-    if (value === stem) return 1;
-    if (!value.startsWith(`${stem}${CORE_REVISION_SEPARATOR}`)) return null;
-    const tail = value.slice(stem.length + CORE_REVISION_SEPARATOR.length);
-    if (!/^[0-9]+$/.test(tail)) return null;
-    const n = parseInt(tail, 10);
-    return n >= 2 ? n : null; // revision 1 is the bare number, never 5001-1
+  const digits = kind === "SUPPLEMENTAL_INVOICE" ? null : documentDigits(stem);
+  if (digits !== null) {
+    const rev = parseCoreRevision(value, coreBase(digits, kind));
+    // A bare stem never had the retired form, so a miss is final for it.
+    if (rev !== null || isBareStem(stem)) return rev;
+  } else if (isBareStem(stem)) {
+    return null; // a supplemental on a bare stem has its own parser
   }
 
   const prefix = `${stem}${DOCUMENT_SUFFIX[kind]}`;
@@ -499,16 +527,21 @@ export async function nextDocumentNumber(
 ): Promise<string> {
   const { model, field } = STORAGE[kind];
 
-  if (!isLegacyStem(stem) && CORE_KINDS.has(kind)) {
+  const digits = CORE_KINDS.has(kind) ? documentDigits(stem) : null;
+  if (digits !== null) {
+    const base = coreBase(digits, kind);
     const rows = await client[model].findMany({
       where: {
-        OR: [{ [field]: stem }, { [field]: { startsWith: `${stem}${CORE_REVISION_SEPARATOR}` } }],
+        OR: [{ [field]: base }, { [field]: { startsWith: `${base}${CORE_REVISION_SEPARATOR}` } }],
       },
       select: { [field]: true },
     });
+    // Only the base's own form counts. parseDocumentRevision would also read a
+    // legacy load's retired-form numbers, which belong to a different sequence.
     let max = 0;
     for (const row of rows || []) {
-      const rev = parseDocumentRevision(row?.[field], stem, kind);
+      const v = row?.[field];
+      const rev = typeof v === "string" ? parseCoreRevision(v, base) : null;
       if (rev !== null && rev > max) max = rev;
     }
     return formatDocumentNumber(stem, kind, max + 1);

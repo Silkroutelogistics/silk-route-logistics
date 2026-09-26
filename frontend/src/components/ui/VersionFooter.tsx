@@ -19175,6 +19175,9 @@
 // v3.8.bka — health reports whether the load sequence can issue the next load:
 // continuing at 121498 and up, BELOW FLOOR in the retired 5001 series, where the
 // generator now refuses. The meaning inverted with the numbering correction.
+// v3.8.bkb — an invoice on a bare load number prints the number plus I (121498I, 5001I);
+// its re-issue hangs off that (121498I-2). Load, BOL, rate con and settlement keep the
+// bare number. Invoices already issued keep theirs.
 export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {
