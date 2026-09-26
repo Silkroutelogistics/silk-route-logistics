@@ -19113,7 +19113,12 @@
 // (ADMIN/CEO/OPERATIONS, reason required) returns the carrier to REVIEWING, never
 // APPROVED, clears the three auto-suspend columns in the same conditional write, and
 // records the lift beside the suspension on AuditTrail. The carrier is emailed.
-export const SRL_VERSION = "3.8.bke";
+// v3.8.bkf — The carrier drawer offers Lift suspension, and stops offering dead ends.
+//   On a SUSPENDED carrier, Approve and Reject (both refused server-side) are gone and
+// Lift suspension… opens a modal that shows the suspension on record, says lifting
+// returns the carrier to REVIEWING without approving it, and warns when the cause was
+// automatic. The Suspend modal no longer claims a suspension is never lifted automatically.
+export const SRL_VERSION = "3.8.bkf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

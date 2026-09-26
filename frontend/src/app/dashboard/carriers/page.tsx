@@ -22,6 +22,7 @@ import { InfoRequestModal } from "@/components/carriers/InfoRequestModal";
 import { InfoRequestThread } from "@/components/carriers/InfoRequestThread";
 import { RejectCarrierModal } from "@/components/carriers/RejectCarrierModal";
 import { SuspendCarrierModal } from "@/components/carriers/SuspendCarrierModal";
+import { LiftSuspensionModal } from "@/components/carriers/LiftSuspensionModal";
 import { ArchiveCarrierModal, type ArchiveRefusalBody, type ArchiveDoneDetails } from "@/components/carriers/ArchiveCarrierModal";
 
 // lifecycle-gaps B5b, re-cut by C3/C6 — the 409 an archive returns when a truck is under a
@@ -70,6 +71,11 @@ interface Carrier {
   deletedBy?: string | null;
   archiveReason?: string | null;
   archiveNote?: string | null;
+  // Why and when a SUSPENDED carrier was suspended (null otherwise). Read by
+  // the Lift suspension modal so the AE sees what they are lifting.
+  autoSuspendedAt?: string | null;
+  autoSuspendReason?: string | null;
+  autoSuspendCause?: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
@@ -450,6 +456,7 @@ export default function CarrierPoolPage() {
   const [selectedCarrierId, setSelectedCarrierId] = useState<string | null>(null);
   // lifecycle-gaps B5b — Suspend modal + the rendered archive refusal.
   const [showSuspend, setShowSuspend] = useState(false);
+  const [showLiftSuspension, setShowLiftSuspension] = useState(false);
   const [archiveRefusal, setArchiveRefusal] = useState<ArchiveRefusal | null>(null);
   // C6 (carrier-archive recut) — the archive modal (reason required, note optional) and the
   // one-line outcome of an archive or a restore, rendered where the refusal renders.
@@ -1412,13 +1419,17 @@ export default function CarrierPoolPage() {
                       <a href="/dashboard/loads" className="flex items-center gap-1.5 px-3 py-1.5 bg-gold/20 text-gold rounded-lg text-xs hover:bg-gold/30 transition">
                         <FileText className="w-3.5 h-3.5" /> Tender Load
                       </a>
-                      {canReviewCarrier && selectedCarrier.onboardingStatus !== "APPROVED" && (
+                      {/* Not on SUSPENDED: approveCarrier and rejectCarrier both refuse a
+                          suspended carrier server-side, so both buttons were dead ends there.
+                          Lift suspension (below) is the exit; it returns the carrier to REVIEWING,
+                          where these two come back. */}
+                      {canReviewCarrier && selectedCarrier.onboardingStatus !== "APPROVED" && selectedCarrier.onboardingStatus !== "SUSPENDED" && (
                         <button onClick={() => setConfirmAction({ id: selectedCarrier.id, status: "APPROVED", company: selectedCarrier.company })}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs hover:bg-green-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}>
                           <CheckCircle2 className="w-3.5 h-3.5" /> Approve
                         </button>
                       )}
-                      {canReviewCarrier && selectedCarrier.onboardingStatus !== "REJECTED" && (
+                      {canReviewCarrier && selectedCarrier.onboardingStatus !== "REJECTED" && selectedCarrier.onboardingStatus !== "SUSPENDED" && (
                         <button onClick={() => setRejectModalOpen(true)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}>
                           <AlertCircle className="w-3.5 h-3.5" /> Reject
@@ -1507,6 +1518,15 @@ export default function CarrierPoolPage() {
                         <button onClick={() => setShowSuspend(true)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}>
                           <Ban className="w-3.5 h-3.5" /> Suspend…
+                        </button>
+                      )}
+                      {/* Lift suspension: the exit from SUSPENDED, for the roles that can
+                          suspend. Returns the carrier to REVIEWING, never APPROVED. Disabled on
+                          an archived carrier, whose exit is Restore. */}
+                      {canSuspendCarrier && selectedCarrier.onboardingStatus === "SUSPENDED" && (
+                        <button onClick={() => { setLifecycleNotice(null); setShowLiftSuspension(true); }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs hover:bg-green-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}>
+                          <RotateCcw className="w-3.5 h-3.5" /> Lift suspension…
                         </button>
                       )}
                       {/* C6 (carrier-archive recut) — Archive… opens the reason modal. Until C6 this
@@ -2966,6 +2986,27 @@ export default function CarrierPoolPage() {
             setShowSuspend(false);
             queryClient.invalidateQueries({ queryKey: ["carriers"] });
             queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
+          }}
+        />
+      )}
+      {/* Lift suspension modal (reason required). The panel stays open: the row comes
+          back as REVIEWING, and Approve is the natural next click. */}
+      {selectedCarrier && showLiftSuspension && (
+        <LiftSuspensionModal
+          carrierId={selectedCarrier.id}
+          carrierName={selectedCarrier.company}
+          suspendedAt={selectedCarrier.autoSuspendedAt}
+          suspendReason={selectedCarrier.autoSuspendReason}
+          suspendCause={selectedCarrier.autoSuspendCause}
+          onClose={() => setShowLiftSuspension(false)}
+          onDone={() => {
+            setShowLiftSuspension(false);
+            queryClient.invalidateQueries({ queryKey: ["carriers"] });
+            queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
+            setLifecycleNotice({
+              tone: "ok",
+              text: `Suspension lifted. ${selectedCarrier.company} is back in REVIEWING and can sign in again. Approve it when you are ready.`,
+            });
           }}
         />
       )}

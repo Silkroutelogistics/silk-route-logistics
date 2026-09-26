@@ -416,3 +416,83 @@ describe("C6 — Restore…", () => {
     expect(api.put).not.toHaveBeenCalled();
   });
 });
+
+/* ------------------------------------------------------------------ */
+/*  Lift suspension — the exit from SUSPENDED.                          */
+/*                                                                      */
+/*  Approve and Reject both refuse a suspended carrier server-side, so  */
+/*  on SUSPENDED they are gone and Lift suspension… is the action. It   */
+/*  follows the suspend gate (ADMIN / CEO / OPERATIONS). The suspended  */
+/*  row gets its own list so the shared fixture's counts are untouched. */
+/* ------------------------------------------------------------------ */
+describe("Lift suspension — the exit from SUSPENDED", () => {
+  const SUSPENDED = carrier({
+    id: "cp-susp", company: "Blue Falcon Brokerage LLC", onboardingStatus: "SUSPENDED",
+    autoSuspendedAt: "2026-09-23T22:23:54.133Z",
+    autoSuspendReason: "Suspended by an administrator: Carrier not needed in the network.",
+    autoSuspendCause: "AE_MANUAL",
+  });
+
+  beforeEach(async () => {
+    const { api } = await import("@/lib/api");
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.startsWith("/carrier/all")) return Promise.resolve({ data: { carriers: [LIVE, SUSPENDED], total: 2 } });
+      if (url.startsWith("/carriers/quickpay-enrollments")) return Promise.resolve({ data: { status: "ALL", count: 0, enrollments: [] } });
+      return Promise.resolve({ data: {} });
+    });
+  });
+
+  it("on a suspended carrier: Lift suspension… replaces the dead-end Approve and Reject", async () => {
+    const user = userEvent.setup();
+    mount();
+    await screen.findByText("Blue Falcon Brokerage LLC", { selector: "p" });
+    await user.click(rowFor("Blue Falcon Brokerage LLC"));
+    const panel = await screen.findByRole("dialog");
+    expect(within(panel).getByRole("button", { name: /Lift suspension…/ })).toBeEnabled();
+    expect(within(panel).queryByRole("button", { name: /Approve/ })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: /^Reject$/ })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: /Suspend…/ })).toBeNull();
+  });
+
+  it("a live carrier has no Lift suspension…", async () => {
+    const user = userEvent.setup();
+    mount();
+    await screen.findByText("Live Freight LLC", { selector: "p" });
+    await user.click(rowFor("Live Freight LLC"));
+    const panel = await screen.findByRole("dialog");
+    expect(within(panel).queryByRole("button", { name: /Lift suspension…/ })).toBeNull();
+  });
+
+  it("lifting shows the suspension on record, posts the reason, and reports REVIEWING", async () => {
+    const user = userEvent.setup();
+    const { api } = await import("@/lib/api");
+    (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: { success: true, id: "cp-susp", carrier: { id: "cp-susp", onboardingStatus: "REVIEWING" } } });
+    mount();
+    await screen.findByText("Blue Falcon Brokerage LLC", { selector: "p" });
+    await user.click(rowFor("Blue Falcon Brokerage LLC"));
+    const panel = await screen.findByRole("dialog");
+    await user.click(within(panel).getByRole("button", { name: /Lift suspension…/ }));
+
+    const modal = await screen.findByRole("dialog", { name: /Lift suspension on Blue Falcon Brokerage LLC/ });
+    expect(modal.textContent).toContain("Carrier not needed in the network");
+    await user.type(within(modal).getByLabelText(/reason/i), "Needed for carrier portal testing");
+    await user.click(within(modal).getByRole("button", { name: /^Lift suspension$/ }));
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/compliance/carrier/cp-susp/lift-suspension", { reason: "Needed for carrier portal testing" }),
+    );
+    const status = await screen.findByRole("status");
+    expect(status.textContent).toContain("REVIEWING");
+    expect(status.textContent).toMatch(/Approve it/);
+  });
+
+  it("is hidden for a role that cannot suspend", async () => {
+    auth.role = "BROKER";
+    const user = userEvent.setup();
+    mount();
+    await screen.findByText("Blue Falcon Brokerage LLC", { selector: "p" });
+    await user.click(rowFor("Blue Falcon Brokerage LLC"));
+    const panel = await screen.findByRole("dialog");
+    expect(within(panel).queryByRole("button", { name: /Lift suspension…/ })).toBeNull();
+  });
+});

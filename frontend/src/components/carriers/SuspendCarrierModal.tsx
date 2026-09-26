@@ -47,8 +47,8 @@ export function SuspendCarrierModal({
         </div>
         <p className="text-sm text-gray-700 mb-3">
           Suspension blocks every new tender to this carrier and keeps every record. Loads already
-          in flight stay with them and are paid normally. It is not lifted automatically; an
-          administrator lifts it.
+          in flight stay with them and are paid normally. An administrator lifts it with Lift
+          suspension, which returns the carrier to review.
         </p>
         <label htmlFor="suspend-reason" className="block text-xs font-medium text-gray-600 mb-1">Reason (required, at least 5 characters)</label>
         <textarea
@@ -68,7 +68,7 @@ export function SuspendCarrierModal({
           <button
             onClick={() => suspend.mutate()}
             disabled={!valid || suspend.isPending}
-            className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-[#9B2C2C] hover:bg-[#7C2323] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#9B2C2C]/40"
+            className="px-3 py-1.5 text-xs font-medium rounded-md text-[#FBF7F0] bg-[#9B2C2C] hover:bg-[#7C2323] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#9B2C2C]/40"
           >
             {suspend.isPending ? "Suspending…" : "Suspend carrier"}
           </button>
