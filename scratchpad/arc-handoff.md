@@ -5,6 +5,53 @@ Nothing below is a regression introduced by the arc it sits under.
 
 ---
 
+## Item 290 arc — v3.8.bjy (2026-09-26), `fix/item-290`, NOT pushed
+
+Customer credits are priced from the stamped invoice's own lines keyed to the row
+(the document as issued), never the carrier amount and never today's rate card. No
+billed line → REFUSED, logged at warn, row left stamped. The carrier-amount `> 0`
+filter that made a $0-carrier billed row uncreditable went with it. Source change is
+one file (`invoiceService.ts`, +50/−9).
+
+**Phase A, as measured.** One credit writer (`creditRejectedAccessorials` →
+`creditLine`); the other negative-amount sites are carrier-pay/factoring ledger
+entries, not customer credits. Every surface that shows a credit reads the stored
+invoice lines; T&T `FinanceTab.tsx:98` sums rejected CLAIMS at carrier cost and
+labels them as claim value — unchanged, not a credit surface. Production
+(`srl_readonly`): 0 credit lines, 0 credit memos ever; 0 stamped rows without a keyed
+line; 1 customer with a rate card (0 on 09-21).
+
+**Gates (tip after rebase onto `6000ed3f`)** — see the HALT card; logs under `.logs/`
+in the worktree. E2E ran on **3120/4120** (container `srl-e2e-290`, PG 55496), not
+3110/4100: :3110 was held by PID 23976, a `ts-node-dev` backend started 07:29 from the
+MAIN checkout (186 behind). Not started by this arc; not touched. The runner's
+`reuseExistingServer` would have adopted it and tested a stale backend. Whoever owns
+it should stop it; if nobody does, it is an orphan.
+
+**Letter.** Built as bjx; a concurrent session pushed **v3.8.bjx** (`6000ed3f`, CRM
+Loads tab) mid-arc. Re-lettered to **bjy**, committed, rebased. The first conflict
+resolution corrupted the footer: `String.replace` read `$225`/`$150` in the
+REPLACEMENT text as capture-group references. Rebuilt from origin's footer with a
+function replacer, verified +8/−1, amended. §19 Sub-pattern 22, new variant: a
+replacement string is code too.
+
+### Carried, deliberately not built
+
+1. **Items 320–322 (new).** Load-compliance scan: no deleted/test fence, no dedup —
+   320 repeats on deleted `L9180992591`, 20 on SRL-121494. Notification `read`/`readAt`
+   split — carrier and shipper badges can never clear (519/619 disagree). Retention
+   exists but its read branch keys on the dead field; duplicate removal is a separate
+   gated step AFTER 320's fix. **Deviation from the brief:** it said "there is no
+   notification retention or cleanup"; `cron/index.ts:381-386` shows there is. Item 322
+   records the accurate version.
+2. **`/clear` was not run** — it is a user command. Origin's CLAUDE.md was read from
+   the worktree instead (§2.5, §2.6, §3.3, §14.1).
+3. **This checkout's `node_modules` and Prisma client were installed/generated fresh**
+   (`npm ci` ×3, `prisma generate`); a fresh worktree has neither, and 907 tsc errors
+   were the missing client, not the change.
+
+---
+
 ## followups arc — v3.8.bjc / bjf / bjg (2026-09-24), deployed `8d296be5`
 
 Shipped C1 (pre-tracing keys on Load.status), C2 (Item 317 AT_PICKUP remap), C3
