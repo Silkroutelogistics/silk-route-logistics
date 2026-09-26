@@ -87,3 +87,9 @@ backend/scripts/_*-before.json
 # not. Ignored rather than relocated because moving it means touching a gate
 # script, and a gate is the wrong thing to change in passing.
 backend/bol-out.pdf
+
+# Delivered customer invoices, kept beside a README that records their SHA-256. The PDFs
+# print SRL's full bank account number under Remit to, so they never enter git: the
+# README is the committed record of what was delivered, the bytes stay local. Scoped to
+# PDFs so the README in the same folder is still tracked.
+docs/sent-invoices/**/*.pdf
