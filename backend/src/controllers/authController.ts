@@ -151,22 +151,24 @@ export async function register(req: Request, res: Response) {
     select: { id: true, email: true, firstName: true, lastName: true, role: true, company: true },
   });
 
-  // Link a SHIPPER login to its Customer record. Prefer an existing AE-created
-  // prospect (same email, not yet linked to a login) over creating a duplicate:
+  // Link a SHIPPER login to its Customer record. Prefer an existing customer
+  // whose contact list carries this email (not yet linked to a login) over creating a duplicate:
   // a second Customer row would strand the shipper because the login approval
   // gate + portal load-visibility both key off the userId-linked Customer, while
   // the AE may have run credit / approved / attached loads on the prospect row
   // (go-live audit — dual Customer-record trap).
   if (user.role === "SHIPPER") {
-    let prospect: { id: string } | null = await prisma.customer.findFirst({
-      where: { email: { equals: user.email, mode: "insensitive" }, userId: null },
-    });
-    // v3.8.bhb — the portal invite now goes to a CONTACT, whose email need not
-    // equal Customer.email. Without this the invited contact would register
-    // into a duplicate PENDING customer. Link only when exactly ONE unlinked,
-    // live customer lists this address on a contact that is not Do Not
-    // Contact; an ambiguous match falls through rather than guessing.
-    if (!prospect) {
+    // v3.8.bjw — portal identity comes from the CONTACT LIST, and only from it.
+    // Customer.email is no longer matched: it is also the AP / billing fallback
+    // (§13.3 Item 8.3) and nothing keeps it in step with the contact list, so a
+    // contact the AE deleted could still register straight into an APPROVED
+    // customer through it (the Beekeepers accountspayable@ invite, 2026-09-26).
+    // Link only when exactly ONE unlinked, live customer lists this address on a
+    // contact that is not Do Not Contact; an ambiguous or absent match falls
+    // through to a fresh PENDING customer, which has no portal access until an
+    // AE approves it.
+    let prospect: { id: string } | null = null;
+    {
       const viaContact =
         (await prisma.customer.findMany({
           where: {

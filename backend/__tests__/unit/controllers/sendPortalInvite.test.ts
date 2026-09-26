@@ -1,5 +1,5 @@
 // v3.8.aqs — AE "send portal invite" for an approved customer with no login.
-// v3.8.bhb — the recipient is a CONTACT the AE picked from the live contact
+// v3.8.bjv — the recipient is a CONTACT the AE picked from the live contact
 // list, never Customer.email. The incident: Beekeepers' Customer.email held the
 // AP address; the AP contact was deleted from the list, and the invite still
 // went to AP because this endpoint read the customer column. Every case below

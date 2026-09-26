@@ -1,4 +1,4 @@
-// v3.8.bhb — the portal invite now goes to a CONTACT whose email need not equal
+// v3.8.bjv — the portal invite now goes to a CONTACT whose email need not equal
 // Customer.email. Registration must attach that contact's login to the existing
 // customer rather than forking a duplicate PENDING customer — but only on an
 // unambiguous match, and never through a Do Not Contact contact.
@@ -38,7 +38,7 @@ describe("register — SHIPPER links to the customer whose contact list carries 
     mockPrisma.user.create.mockResolvedValue({
       id: "user-new", email: "jane.ops@bee.test", firstName: "Jane", lastName: "Ops", role: "SHIPPER", company: "Beekeepers",
     });
-    mockPrisma.customer.findFirst.mockResolvedValue(null); // no Customer.email match
+    mockPrisma.customer.findFirst.mockResolvedValue(null); // v3.8.bjw: registration no longer calls it
     mockPrisma.customer.update.mockResolvedValue({});
     mockPrisma.customer.create.mockResolvedValue({});
   });
@@ -64,11 +64,18 @@ describe("register — SHIPPER links to the customer whose contact list carries 
     expect(mockPrisma.customer.create.mock.calls[0][0].data.onboardingStatus).toBe("PENDING");
   });
 
-  it("a Customer.email match still wins and the contact lookup is not consulted", async () => {
-    mockPrisma.customer.findFirst.mockResolvedValue({ id: "cust-direct" });
+  it("THE AP CASE: Customer.email alone does NOT link — the address must be on the contact list", async () => {
+    // Beekeepers: Customer.email is accountspayable@ and the AP contact was
+    // deleted. AP registering from the old invite must not become the login of
+    // an APPROVED customer. findFirst answers as the old Customer.email match
+    // would have, so a regression that consults it again links and fails here.
+    mockPrisma.customer.findFirst.mockResolvedValue({ id: "cust-bee" });
+    mockPrisma.customer.findMany.mockResolvedValue([]); // not on any contact list
     const { req, res } = reqRes();
     await register(req, res);
-    expect(mockPrisma.customer.findMany).not.toHaveBeenCalled();
-    expect(mockPrisma.customer.update).toHaveBeenCalledWith({ where: { id: "cust-direct" }, data: { userId: "user-new" } });
+    expect(mockPrisma.customer.update).not.toHaveBeenCalled();
+    expect(mockPrisma.customer.create).toHaveBeenCalledOnce();
+    expect(mockPrisma.customer.create.mock.calls[0][0].data.onboardingStatus).toBe("PENDING");
+    expect(mockPrisma.customer.findMany, "vacuity: the contact-list lookup is what ran").toHaveBeenCalledOnce();
   });
 });

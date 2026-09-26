@@ -487,7 +487,7 @@ export async function sendPortalInvite(req: AuthRequest, res: Response) {
     return;
   }
 
-  // v3.8.bhb — the recipient is a CONTACT the AE picked, and nothing else. The
+  // v3.8.bjv — the recipient is a CONTACT the AE picked, and nothing else. The
   // prior version read Customer.email, a column that is also the AP / billing
   // address (§13.3 Item 8.3) and that deleting a contact never touches — so a
   // contact removed from the list kept receiving portal invites. There is no

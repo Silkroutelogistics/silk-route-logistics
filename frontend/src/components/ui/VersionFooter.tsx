@@ -19086,7 +19086,13 @@
 // has no fallback to Customer.email. Registration links the invited contact to
 // the customer when exactly one unlinked customer lists that address on a
 // contact, so the invite no longer forks a duplicate PENDING customer.
-export const SRL_VERSION = "3.8.bjv";
+// v3.8.bjw — A portal login attaches to a customer only through its contact list.
+//   Shipper sign-up matched Customer.email first, so the two invites already sent
+// to Beekeepers AP could still have made AP the login of an APPROVED customer
+// after the AP contact was deleted. Registration now links only when exactly one
+// unlinked, live customer lists the address on a non-Do-Not-Contact contact;
+// anything else becomes a fresh PENDING customer with no portal access.
+export const SRL_VERSION = "3.8.bjw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

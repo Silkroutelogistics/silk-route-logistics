@@ -80,7 +80,7 @@ export function OnboardingActionBar({ customer, onChange }: Props) {
   });
 
   const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  // v3.8.bhb — the invite goes to a contact the AE picks from the live contact
+  // v3.8.bjv — the invite goes to a contact the AE picks from the live contact
   // list. Nothing is inferred from the customer record: a contact deleted from
   // the list cannot be offered, and the server refuses any id not on the list.
   const [pickerOpen, setPickerOpen] = useState(false);

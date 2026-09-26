@@ -67,7 +67,7 @@ describe("the Neon-SQL stub cannot come back (source guard)", () => {
   });
 });
 
-// v3.8.bhb — the portal invite goes to a contact picked from the LIVE contact
+// v3.8.bjv — the portal invite goes to a contact picked from the LIVE contact
 // list. The incident: a contact deleted from the list still received the invite
 // because the button posted nothing and the server read Customer.email.
 describe("Send portal invite — recipient comes from the contact list only", () => {
