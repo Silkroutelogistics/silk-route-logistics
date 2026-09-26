@@ -19201,7 +19201,11 @@
 // Beekeepers invoices went by upload to their Tipalti portal and the schema could
 // only say SENT. Additive, no backfill. On hold/invoice-delivery-channel: the
 // production migration is an open decision, and merging is the release act.
-export const SRL_VERSION = "3.8.bkw";
+// v3.8.bkz — MARK-SENT RECORDS A DELIVERY MADE ELSEWHERE, AND NEVER EMAILS (RECONCILE 2026-09-26). HELD.
+// POST /accounting/invoices/:id/mark-sent (ADMIN/CEO/ACCOUNTING) flips SENT and records
+// channel, deliveredAt and who, in one transaction with an audit row. Channel defaults
+// to the customer's; a future date is refused; the one-BASE-per-load guard applies.
+export const SRL_VERSION = "3.8.bkz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

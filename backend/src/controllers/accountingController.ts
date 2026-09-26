@@ -640,6 +640,67 @@ export async function sendInvoice(req: AuthRequest, res: Response) {
   }
 }
 
+/**
+ * Record a delivery SRL did not send (RECONCILE 2026-09-26): a Tipalti upload,
+ * another portal, a hand delivery. Flips SENT and records channel, when and who.
+ * It NEVER emails; sendInvoice is the path that sends. The one-BASE-per-load
+ * guard applies as it does to a send. Channel defaults to the customer's;
+ * deliveredAt may be earlier than now (recorded after the upload), never later.
+ */
+export async function markInvoiceSent(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { channel, deliveredAt } = req.body as { channel?: "EMAIL" | "TIPALTI" | "MANUAL"; deliveredAt?: string };
+    const at = deliveredAt ? new Date(deliveredAt) : new Date();
+    if (Number.isNaN(at.getTime()) || at.getTime() > Date.now() + 60_000) {
+      res.status(400).json({ error: "The delivery date must be one that has already happened.", code: "DELIVERED_AT_INVALID" });
+      return;
+    }
+    const existing = await prisma.invoice.findUnique({
+      where: { id },
+      select: { id: true, loadId: true, status: true, invoiceKind: true, deletedAt: true, load: { select: { customer: { select: { defaultInvoiceChannel: true } } } } },
+    });
+    if (!existing || existing.deletedAt) {
+      res.status(404).json({ error: "Invoice not found" });
+      return;
+    }
+    if (!["DRAFT", "SUBMITTED"].includes(existing.status)) {
+      res.status(400).json({ error: `Cannot mark an invoice in status ${existing.status} as sent` });
+      return;
+    }
+    const used = channel ?? existing.load?.customer?.defaultInvoiceChannel ?? "EMAIL";
+    const actor = req.user!.id;
+    const out = await prisma.$transaction(async (tx: any) => {
+      const prior = await priorSentBaseInvoice(existing.loadId, id, existing.invoiceKind, tx);
+      if (prior) return { prior };
+      const moved = await tx.invoice.updateMany({
+        where: { id, status: { in: ["DRAFT", "SUBMITTED"] } },
+        data: { status: "SENT", sentDate: at, deliveryChannel: used, deliveredAt: at, deliveredById: actor },
+      });
+      if (moved.count !== 1) return { changed: true };
+      await tx.auditTrail.create({
+        data: {
+          entityType: "Invoice", entityId: id, action: "STATUS_CHANGE", performedById: actor, ipAddress: req.ip || "unknown",
+          changedFields: { status: { from: existing.status, to: "SENT" }, deliveryChannel: used, deliveredAt: at.toISOString(), actionDetail: "INVOICE_MARKED_SENT" },
+        },
+      });
+      return { invoice: await tx.invoice.findUnique({ where: { id } }) };
+    });
+    if (out.prior) {
+      res.status(409).json({ error: priorSentMessage(out.prior), code: "LOAD_ALREADY_INVOICED", priorInvoiceId: out.prior.id });
+      return;
+    }
+    if (out.changed) {
+      res.status(409).json({ error: "The invoice changed while this was being recorded. Reload and try again.", code: "INVOICE_STATUS_CHANGED" });
+      return;
+    }
+    res.json(out.invoice);
+  } catch (error: any) {
+    log.error({ err: error }, "markInvoiceSent error:");
+    res.status(500).json({ error: "Failed to record the delivery" });
+  }
+}
+
 export async function markInvoicePaid(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;

@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../middleware/auth";
+import { z } from "zod";
+import { validateBody } from "../middleware/validate";
 import {
   getAccountingSummary,
   getDashboard,
@@ -8,6 +10,7 @@ import {
   createInvoice,
   updateInvoice,
   sendInvoice,
+  markInvoiceSent,
   markInvoicePaid,
   voidInvoice,
   getInvoiceAging,
@@ -76,6 +79,12 @@ router.get("/invoices/:id", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), g
 router.post("/invoices", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), createInvoice);
 router.put("/invoices/:id", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), updateInvoice);
 router.post("/invoices/:id/send", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), sendInvoice);
+// Records a delivery made outside SRL (Tipalti, a portal, by hand). Never emails.
+const markInvoiceSentSchema = z.object({
+  channel: z.enum(["EMAIL", "TIPALTI", "MANUAL"]).optional(),
+  deliveredAt: z.string().datetime({ offset: true }).optional(),
+});
+router.post("/invoices/:id/mark-sent", authorize("ADMIN", "CEO", "ACCOUNTING"), validateBody(markInvoiceSentSchema), markInvoiceSent);
 router.put("/invoices/:id/mark-paid", authorize("ADMIN", "CEO", "ACCOUNTING"), markInvoicePaid);
 router.post("/invoices/:id/void", authorize("ADMIN", "CEO"), voidInvoice);
 
