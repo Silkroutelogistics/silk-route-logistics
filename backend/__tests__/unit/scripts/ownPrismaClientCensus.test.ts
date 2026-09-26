@@ -125,6 +125,8 @@ const OWN_CLIENT_INVENTORY: Record<string, Reason> = {
   "_arc-c1-foreign-client-proof.ts": "PROOF",
   // Reaches production to write; the singleton resolves to the local container.
   "repair-load-121495-cancel-residue.ts": "PRODUCTION_WRITE",
+  // Items 320-322: dry-run as srl_readonly; --commit only to an operator-named URL.
+  "cleanup-notification-dupes.ts": "PRODUCTION_WRITE",
   "_arc-a2-counter-proof.ts": "PROOF",
   "_arc-inforequest-concurrent-proof.ts": "PROOF",
   "_b11-countersign-proof.ts": "PROOF",
