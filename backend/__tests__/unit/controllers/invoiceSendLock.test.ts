@@ -1,6 +1,9 @@
 /**
- * Send lock: the four BKN loads whose invoices SRL delivered through Tipalti on
- * 2026-09-25 cannot be emailed an invoice from the platform. It would bill twice.
+ * RECONCILE step 3e (ruled 2026-09-26): the four BKN invoices SRL delivered through
+ * Tipalti on 2026-09-25 are recorded SENT via TIPALTI (step 3c), so the send lock is
+ * lifted and the duplicate guard refuses a second email: sendInvoice refuses a
+ * non-DRAFT, generateInvoiceFromLoad returns the invoice a load already has. The
+ * lock module and its own cases below go in the next commit.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { prisma } from "../../../src/config/database";
@@ -48,35 +51,40 @@ describe("which loads are locked", () => {
   });
 });
 
-describe("sendInvoice refuses a locked load", () => {
+const FOUR = ["SRL-121492", "SRL-121494", "SRL-121495", "SRL-121496"];
+
+describe("sendInvoice: a reconciled invoice is refused by the duplicate guard, not a lock", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockPrisma.invoice.findFirst.mockResolvedValue(null);
     mockPrisma.invoice.findMany.mockResolvedValue([]);
     mockPrisma.invoice.update.mockResolvedValue({ id: "inv-1", status: "SENT" });
   });
-
-  it("409 INVOICE_SEND_LOCKED, no email, no status change", async () => {
-    mockPrisma.invoice.findUnique.mockResolvedValue(draft("SRL-121495"));
+  const send = async (inv: object) => {
+    mockPrisma.invoice.findUnique.mockResolvedValue(inv);
     const r = res();
     await sendInvoice({ params: { id: "inv-1" }, user: { id: "ae-1", role: "ADMIN" } } as any, r);
-    expect(r.status).toHaveBeenCalledWith(409);
-    expect(r.json.mock.calls[0][0]).toMatchObject({ code: INVOICE_SEND_LOCKED });
-    expect(r.json.mock.calls[0][0].error).toContain("SRL-121495");
+    return r;
+  };
+
+  it("each of the four, SENT via TIPALTI: 400 not-DRAFT, no email, no status change", async () => {
+    for (const n of FOUR) {
+      const r = await send({ ...draft(n), status: "SENT", deliveryChannel: "TIPALTI" });
+      expect(r.status).toHaveBeenCalledWith(400);
+      expect(r.json.mock.calls[0][0].error).toContain("SENT");
+    }
     expect(sendCustomerInvoiceEmail).not.toHaveBeenCalled();
     expect(mockPrisma.invoice.update).not.toHaveBeenCalled();
   });
 
-  it("control: an unlocked load is emailed, so the refusal above is the lock and not the harness", async () => {
-    mockPrisma.invoice.findUnique.mockResolvedValue(draft("121498"));
-    const r = res();
-    await sendInvoice({ params: { id: "inv-1" }, user: { id: "ae-1", role: "ADMIN" } } as any, r);
+  it("control: a DRAFT on SRL-121495 is emailed, so no lock stands in the way", async () => {
+    const r = await send(draft("SRL-121495"));
     expect(sendCustomerInvoiceEmail).toHaveBeenCalledTimes(1);
     expect(r.status).not.toHaveBeenCalledWith(409);
   });
 });
 
-describe("generateInvoiceFromLoad refuses a locked load", () => {
+describe("generateInvoiceFromLoad: a reconciled load returns the invoice it has", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockPrisma.$transaction.mockImplementation(async (fn: any) => fn(mockPrisma));
@@ -95,16 +103,18 @@ describe("generateInvoiceFromLoad refuses a locked load", () => {
     return r;
   };
 
-  it("409 on SRL-121492, which has no invoice yet: nothing created, nothing emailed", async () => {
-    const r = await gen("SRL-121492");
-    expect(r.status).toHaveBeenCalledWith(409);
-    expect(r.json.mock.calls[0][0]).toMatchObject({ code: INVOICE_SEND_LOCKED });
+  it("each of the four already holds its invoice: 'Invoice already exists', nothing created, nothing emailed", async () => {
+    for (const n of FOUR) {
+      mockPrisma.invoice.findFirst.mockResolvedValue({ id: "inv-sent", status: "SENT", deliveryChannel: "TIPALTI" });
+      const r = await gen(n);
+      expect(r.json.mock.calls[0][0]).toMatchObject({ message: "Invoice already exists" });
+    }
     expect(mockPrisma.invoice.create).not.toHaveBeenCalled();
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
-  it("control: an unlocked load is created and emailed", async () => {
-    const r = await gen("121498");
+  it("control: with no invoice on it, SRL-121492 is created and emailed, so no lock stands in the way", async () => {
+    const r = await gen("SRL-121492");
     expect(mockPrisma.invoice.create).toHaveBeenCalledTimes(1);
     expect(sendEmail).toHaveBeenCalledTimes(1);
     expect(r.status).toHaveBeenCalledWith(201);

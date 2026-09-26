@@ -19227,7 +19227,9 @@
 // Both doors: the global error handler and accounting's createInvoice.
 // v3.8.blp — no emailed AR reminder for a customer billed through Tipalti (RECONCILE step 4).
 // Aging and OVERDUE still show; nothing is recorded as sent.
-export const SRL_VERSION = "3.8.blp";
+// v3.8.blq — the send lock on the four BKN loads is lifted (RECONCILE step 3e).
+// They are SENT via Tipalti in production; the duplicate guard refuses a second email.
+export const SRL_VERSION = "3.8.blq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

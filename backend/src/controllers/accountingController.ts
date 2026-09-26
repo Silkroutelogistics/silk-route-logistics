@@ -28,7 +28,6 @@ import { atCostReimbursementsForLoad, carrierAccessorialsForLoad } from "../serv
 import { BILLED_STATUSES, invoiceValue } from "../lib/invoiceTotals";
 import { assertInvoiceOnFileOrOverride, invoiceOnFile } from "../lib/carrierPayInvoiceGate";
 import { priorSentBaseInvoice, priorSentMessage } from "../lib/invoiceSendGuard";
-import { INVOICE_SEND_LOCKED, isInvoiceSendLocked, sendLockedMessage } from "../lib/invoiceSendLock";
 
 // ============================================================
 // HELPERS
@@ -589,11 +588,6 @@ export async function sendInvoice(req: AuthRequest, res: Response) {
     });
     if (!existing) {
       res.status(404).json({ error: "Invoice not found" });
-      return;
-    }
-    // Delivered through Tipalti on 2026-09-25; emailing would bill the customer twice.
-    if (isInvoiceSendLocked(existing.load?.loadNumber)) {
-      res.status(409).json({ error: sendLockedMessage(existing.load!.loadNumber!), code: INVOICE_SEND_LOCKED });
       return;
     }
     if (!["DRAFT", "SUBMITTED"].includes(existing.status)) {
