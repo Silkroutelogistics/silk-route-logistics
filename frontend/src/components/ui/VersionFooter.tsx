@@ -19077,7 +19077,16 @@
 //   The observer keeps its log line and stops counting, with a header saying it
 // is explicitly NOT the source of truth — it still cannot see a foreign client,
 // which is exactly why the counting left.
-export const SRL_VERSION = "3.8.bjj";
+// v3.8.bjv — The portal invite goes to a contact on the list, or to nobody.
+//   Send portal invite read Customer.email, a column that is also the AP
+// address (Item 8.3) and that deleting a contact never touches, so a contact
+// removed from the list kept receiving the invite. The AE now picks the
+// recipient from the live contact list; the server refuses any contactId not
+// on THIS customer, a Do Not Contact contact, and a contact with no email, and
+// has no fallback to Customer.email. Registration links the invited contact to
+// the customer when exactly one unlinked customer lists that address on a
+// contact, so the invite no longer forks a duplicate PENDING customer.
+export const SRL_VERSION = "3.8.bjv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

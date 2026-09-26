@@ -486,9 +486,44 @@ export async function sendPortalInvite(req: AuthRequest, res: Response) {
     res.status(409).json({ error: "This customer already has a portal login linked." });
     return;
   }
-  const email = customer.email?.trim();
+
+  // v3.8.bhb — the recipient is a CONTACT the AE picked, and nothing else. The
+  // prior version read Customer.email, a column that is also the AP / billing
+  // address (§13.3 Item 8.3) and that deleting a contact never touches — so a
+  // contact removed from the list kept receiving portal invites. There is no
+  // fallback to Customer.email by design: no contact on the list, no invite.
+  const contactId = typeof req.body?.contactId === "string" ? req.body.contactId.trim() : "";
+  if (!contactId) {
+    res.status(400).json({
+      error: "Choose a contact from this customer's contact list to receive the invite.",
+      code: "CONTACT_REQUIRED",
+    });
+    return;
+  }
+  const contact = await prisma.customerContact.findFirst({
+    where: { id: contactId, customerId: customer.id },
+    select: { id: true, name: true, email: true, doNotContact: true },
+  });
+  if (!contact) {
+    res.status(404).json({
+      error: "That contact is not on this customer's contact list. No invite was sent.",
+      code: "CONTACT_NOT_ON_LIST",
+    });
+    return;
+  }
+  if (contact.doNotContact) {
+    res.status(409).json({
+      error: `${contact.name} is marked Do Not Contact. No invite was sent.`,
+      code: "CONTACT_DO_NOT_CONTACT",
+    });
+    return;
+  }
+  const email = contact.email?.trim();
   if (!email) {
-    res.status(400).json({ error: "Add a contact email to this customer before sending a portal invite." });
+    res.status(400).json({
+      error: `${contact.name} has no email on file. Add one on the Contacts tab first.`,
+      code: "CONTACT_NO_EMAIL",
+    });
     return;
   }
   // If a login already exists for this email, self-registration would collide.
@@ -503,7 +538,7 @@ export async function sendPortalInvite(req: AuthRequest, res: Response) {
 
   const registerUrl = `https://silkroutelogistics.ai/shipper/register?email=${encodeURIComponent(email)}`;
   try {
-    await sendPortalInviteEmail(email, customer.contactName || customer.name || "there", registerUrl);
+    await sendPortalInviteEmail(email, contact.name || customer.name || "there", registerUrl);
   } catch (e: any) {
     log.error({ err: e, customerId: customer.id }, "[Customer] Portal invite email failed");
     res.status(502).json({ error: "Could not send the invite email — please try again." });
@@ -513,7 +548,7 @@ export async function sendPortalInvite(req: AuthRequest, res: Response) {
   await logCustomerActivity({
     customerId: customer.id,
     eventType: "portal_invite_sent",
-    description: `Portal setup invite sent to ${email}`,
+    description: `Portal setup invite sent to ${contact.name} <${email}>`,
     actorType: "USER",
     actorId: req.user?.id ?? null,
     actorName: req.user?.email ?? null,

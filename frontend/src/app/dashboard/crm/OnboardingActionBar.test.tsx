@@ -66,3 +66,50 @@ describe("the Neon-SQL stub cannot come back (source guard)", () => {
     expect((code.match(/<InactivateModal/g) ?? []).length, "one mount per active branch").toBeGreaterThanOrEqual(2);
   });
 });
+
+// v3.8.bhb — the portal invite goes to a contact picked from the LIVE contact
+// list. The incident: a contact deleted from the list still received the invite
+// because the button posted nothing and the server read Customer.email.
+describe("Send portal invite — recipient comes from the contact list only", () => {
+  it("offers only contacts with an email that are not Do Not Contact, and posts the chosen contactId", async () => {
+    const { api } = await import("@/lib/api");
+    (api.get as any).mockResolvedValue({
+      data: {
+        contacts: [
+          { id: "ct-ops", name: "Jane Ops", email: "jane@bee.test", doNotContact: false },
+          { id: "ct-dnc", name: "No Mail", email: "nomail@bee.test", doNotContact: true },
+          { id: "ct-noemail", name: "Phone Only", email: null, doNotContact: false },
+        ],
+      },
+    });
+    (api.post as any).mockResolvedValue({ data: { ok: true, sentTo: "jane@bee.test" } });
+
+    mount({ id: "c9", name: "Beekeepers", onboardingStatus: "APPROVED", isActive: true, userId: null, email: "accountspayable@bee.test" });
+    await userEvent.click(screen.getByRole("button", { name: /send portal invite/i }));
+
+    const select = (await screen.findByRole("combobox", { name: /invite recipient/i })) as HTMLSelectElement;
+    const offered = Array.from(select.options).map((o) => o.value).filter(Boolean);
+    expect(offered).toEqual(["ct-ops"]);
+    // The customer record's own email is never offered as a recipient.
+    expect(select.textContent).not.toContain("accountspayable@bee.test");
+
+    const send = screen.getByRole("button", { name: /^send invite$/i }) as HTMLButtonElement;
+    expect(send.disabled, "nothing is sent until a contact is chosen").toBe(true);
+
+    await userEvent.selectOptions(select, "ct-ops");
+    await userEvent.click(send);
+    expect(api.post).toHaveBeenCalledWith("/customers/c9/send-portal-invite", { contactId: "ct-ops" });
+  });
+
+  it("with no eligible contact, says so and offers no send button", async () => {
+    const { api } = await import("@/lib/api");
+    (api.get as any).mockResolvedValue({ data: { contacts: [] } });
+    (api.post as any).mockClear();
+
+    mount({ id: "c10", name: "Beekeepers", onboardingStatus: "APPROVED", isActive: true, userId: null, email: "accountspayable@bee.test" });
+    await userEvent.click(screen.getByRole("button", { name: /send portal invite/i }));
+    expect(await screen.findByText(/no invite was sent/i)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^send invite$/i })).toBeNull();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+});

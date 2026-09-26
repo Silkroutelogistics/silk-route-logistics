@@ -158,9 +158,27 @@ export async function register(req: Request, res: Response) {
   // the AE may have run credit / approved / attached loads on the prospect row
   // (go-live audit — dual Customer-record trap).
   if (user.role === "SHIPPER") {
-    const prospect = await prisma.customer.findFirst({
+    let prospect: { id: string } | null = await prisma.customer.findFirst({
       where: { email: { equals: user.email, mode: "insensitive" }, userId: null },
     });
+    // v3.8.bhb — the portal invite now goes to a CONTACT, whose email need not
+    // equal Customer.email. Without this the invited contact would register
+    // into a duplicate PENDING customer. Link only when exactly ONE unlinked,
+    // live customer lists this address on a contact that is not Do Not
+    // Contact; an ambiguous match falls through rather than guessing.
+    if (!prospect) {
+      const viaContact =
+        (await prisma.customer.findMany({
+          where: {
+            userId: null,
+            deletedAt: null,
+            contacts: { some: { email: { equals: user.email, mode: "insensitive" }, doNotContact: false } },
+          },
+          select: { id: true },
+          take: 2,
+        })) ?? [];
+      if (viaContact.length === 1) prospect = viaContact[0];
+    }
     if (prospect) {
       await prisma.customer
         .update({ where: { id: prospect.id }, data: { userId: user.id } })

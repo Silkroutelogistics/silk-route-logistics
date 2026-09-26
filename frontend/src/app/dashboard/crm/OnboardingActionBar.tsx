@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { CheckCircle2, XCircle, AlertTriangle, X, Ban, RotateCcw, Mail } from "lucide-react";
 import { api } from "@/lib/api";
 import type { CrmCustomer } from "./types";
@@ -42,6 +42,14 @@ interface ApproveError {
   missing?: MissingCheck[];
 }
 
+interface InviteContact {
+  id: string;
+  name: string;
+  title?: string | null;
+  email?: string | null;
+  doNotContact?: boolean;
+}
+
 interface Props {
   customer: CrmCustomer;
   onChange: () => void;
@@ -72,9 +80,26 @@ export function OnboardingActionBar({ customer, onChange }: Props) {
   });
 
   const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // v3.8.bhb — the invite goes to a contact the AE picks from the live contact
+  // list. Nothing is inferred from the customer record: a contact deleted from
+  // the list cannot be offered, and the server refuses any id not on the list.
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [contactId, setContactId] = useState<string>("");
+  const contactsQ = useQuery<{ contacts: InviteContact[] }>({
+    queryKey: ["customer-contacts", customer.id],
+    queryFn: async () => (await api.get(`/customers/${customer.id}/contacts`)).data,
+    enabled: pickerOpen,
+  });
+  const eligible = (contactsQ.data?.contacts ?? []).filter((c) => !!c.email?.trim() && !c.doNotContact);
   const portalInvite = useMutation({
-    mutationFn: async () => (await api.post(`/customers/${customer.id}/send-portal-invite`)).data,
-    onSuccess: (d: any) => setInviteMsg({ ok: true, text: `Portal invite sent to ${d?.sentTo ?? "the customer"}.` }),
+    mutationFn: async (cid: string) =>
+      (await api.post(`/customers/${customer.id}/send-portal-invite`, { contactId: cid })).data,
+    onSuccess: (d: any) => {
+      setPickerOpen(false);
+      setContactId("");
+      setInviteMsg({ ok: true, text: `Portal invite sent to ${d?.sentTo ?? "the contact"}.` });
+      onChange();
+    },
     onError: (err: any) =>
       setInviteMsg({ ok: false, text: err?.response?.data?.error ?? err?.message ?? "Could not send the invite." }),
   });
@@ -141,7 +166,7 @@ export function OnboardingActionBar({ customer, onChange }: Props) {
             {/* v3.8.aqs — no linked portal login yet: offer to invite them to set one up. */}
             {!customer.userId && (
               <button
-                onClick={() => { setInviteMsg(null); portalInvite.mutate(); }}
+                onClick={() => { setInviteMsg(null); setContactId(""); setPickerOpen((o) => !o); }}
                 disabled={portalInvite.isPending}
                 className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-[#BA7517] hover:bg-[#8f5a11] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#BA7517]/40 inline-flex items-center gap-1.5"
               >
@@ -158,6 +183,50 @@ export function OnboardingActionBar({ customer, onChange }: Props) {
             </button>
           </div>
         </div>
+        {pickerOpen && !customer.userId && (
+          <div className="mt-3 rounded-md border border-gray-200 bg-white p-3">
+            <div className="text-xs font-medium text-gray-700 mb-2">Send the portal invite to which contact?</div>
+            {contactsQ.isLoading ? (
+              <div className="text-xs text-gray-500">Loading contacts…</div>
+            ) : contactsQ.isError ? (
+              <div className="text-xs text-[#9B2C2C]">Could not load the contact list. No invite was sent.</div>
+            ) : eligible.length === 0 ? (
+              <div className="text-xs text-[#9B2C2C]">
+                No contact on this customer&apos;s list has an email and is cleared to contact. Add one on the
+                Contacts tab first. No invite was sent.
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                <select
+                  value={contactId}
+                  onChange={(e) => setContactId(e.target.value)}
+                  className="text-xs border border-gray-300 rounded-md px-2 py-1.5 min-w-[260px] bg-white text-gray-800"
+                  aria-label="Invite recipient"
+                >
+                  <option value="">Choose a contact…</option>
+                  {eligible.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}{c.title ? ` (${c.title})` : ""} · {c.email}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => contactId && portalInvite.mutate(contactId)}
+                  disabled={!contactId || portalInvite.isPending}
+                  className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-[#BA7517] hover:bg-[#8f5a11] disabled:opacity-50"
+                >
+                  {portalInvite.isPending ? "Sending…" : "Send invite"}
+                </button>
+                <button
+                  onClick={() => setPickerOpen(false)}
+                  className="px-3 py-1.5 text-xs font-medium rounded-md text-gray-600 border border-gray-300 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         {inviteMsg && (
           <div className={`mt-2 text-xs ${inviteMsg.ok ? "text-[#2F7A4F]" : "text-[#9B2C2C]"}`}>{inviteMsg.text}</div>
         )}
