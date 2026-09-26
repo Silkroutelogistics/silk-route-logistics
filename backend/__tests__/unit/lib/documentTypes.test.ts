@@ -273,3 +273,29 @@ describe("POST /documents/upload", () => {
     expect(mockPrisma.document.create.mock.calls[0][0].data.docType).toBeNull();
   });
 });
+
+/**
+ * v3.8.bkr — the CRM Docs tab offered a customer W-9 that this list refused,
+ * so every customer W-9 upload failed. The tab keeps its own category list, so
+ * the guard reads it: every code it offers must be one the server accepts for
+ * a CUSTOMER, or the next category added there fails the same silent way.
+ */
+describe("customer documents — the CRM Docs tab offers only what the server accepts", () => {
+  it("a W-9 is a customer document", () => {
+    expect(isAllowedDocType("W9", "CUSTOMER")).toBe(true);
+  });
+
+  it("every category in the CRM Docs tab is allowed for a CUSTOMER", () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, "../../../../frontend/src/app/dashboard/crm/tabs/DocsTab.tsx"),
+      "utf8",
+    );
+    const block = src.slice(src.indexOf("const CATEGORIES"), src.indexOf("];", src.indexOf("const CATEGORIES")));
+    const codes = [...block.matchAll(/code:\s*"([A-Z0-9_]+)"/g)].map((m) => m[1]);
+    // Vacuity tripwire: the tab has always offered more than a handful.
+    expect(codes.length).toBeGreaterThanOrEqual(6);
+    expect(codes).toContain("W9");
+    const refused = codes.filter((c) => !isAllowedDocType(c, "CUSTOMER"));
+    expect(refused).toEqual([]);
+  });
+});

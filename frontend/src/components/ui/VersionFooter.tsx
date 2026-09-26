@@ -19371,6 +19371,11 @@
 // refuses (it must be positive), so every edit on a customer without a limit
 // failed, and the form showed nothing. Blank now leaves the limit alone, a
 // non-positive one is caught before sending, and a server refusal names the field.
+// v3.8.bkr — A customer W-9 can be uploaded, and a refused upload says so.
+//   The CRM Docs tab has always offered a W-9, and CUSTOMER_DOC_TYPES never allowed
+// it, so every customer W-9 was refused while the tab just cleared its spinner.
+// W9 joins the list, a test holds the tab's categories to it, and a failed upload
+// names the document and the server's reason.
 export const SRL_VERSION = "3.8.bme";
 
 export function VersionFooter({ className }: { className?: string }) {

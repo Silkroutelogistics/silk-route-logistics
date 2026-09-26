@@ -40,9 +40,16 @@ export function DocsTab({ customerId, onChange }: { customerId: string; onChange
         headers: { "Content-Type": "multipart/form-data" },
       })).data;
     },
-    onSuccess: () => { setUploadingCode(null); q.refetch(); onChange(); },
-    onError: () => setUploadingCode(null),
+    onSuccess: () => { setUploadingCode(null); setUploadError(null); q.refetch(); onChange(); },
+    // v3.8.bkr — a refused upload only cleared the spinner; the row went back
+    // to "Missing" as though nothing had been tried. Say which and why.
+    onError: (err: any, vars) => {
+      setUploadingCode(null);
+      const label = CATEGORIES.find((c) => c.code === vars.code)?.label ?? vars.code;
+      setUploadError(`${label} was not uploaded: ${err?.response?.data?.error ?? "the upload failed. Try again."}`);
+    },
   });
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const patchStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) =>
@@ -86,6 +93,9 @@ export function DocsTab({ customerId, onChange }: { customerId: string; onChange
 
   return (
     <div className="space-y-2 text-sm">
+      {uploadError && (
+        <p role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">{uploadError}</p>
+      )}
       {CATEGORIES.map((cat) => {
         const doc = findDoc(cat.code);
         return (
@@ -116,7 +126,7 @@ export function DocsTab({ customerId, onChange }: { customerId: string; onChange
                   type="file" className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
-                    if (f) { setUploadingCode(cat.code); upload.mutate({ file: f, code: cat.code }); }
+                    if (f) { setUploadingCode(cat.code); setUploadError(null); upload.mutate({ file: f, code: cat.code }); }
                   }}
                 />
               </label>

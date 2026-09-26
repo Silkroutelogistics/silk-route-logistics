@@ -56,6 +56,11 @@ export const CARRIER_DOC_TYPES = [
 ] as const;
 
 export const CUSTOMER_DOC_TYPES = [
+  // v3.8.bkr — the CRM Docs tab has always offered a customer W-9 (credit
+  // and 1099 files need one), and this list never allowed it, so every
+  // customer W-9 upload was refused. A test now holds the tab's categories
+  // to this list.
+  "W9",
   "CREDIT_APP",
   "RATE_AGREEMENT",
   "CUSTOMER_CONTRACT",
