@@ -2,11 +2,12 @@
  * Move load_number_seq so the next load is 121498 (§21.2, corrected 2026-09-26).
  *
  * There is no new series: loads continue from the last legacy load, SRL-121497.
- * Production's sequence sits in the withdrawn start (loads 5001 and 5002 came
- * from it and keep their numbers; next would be 5003), and generateLoadNumber
- * refuses anything below LOAD_NUMBER_FLOOR, so until this runs production
- * refuses to create a load. That is deliberate: a production sequence moves by a
- * write somebody chose to take, here, never by code on deploy.
+ * Production's sequence sits in the withdrawn start (loads 5001-5003 came from
+ * it and keep their numbers). NOT REQUIRED since the fail-safe (ruled
+ * 2026-09-26): generateLoadNumber issues max(sequence, highest load held,
+ * 121497) + 1 and moves the sequence itself on the first creation, under an
+ * advisory lock. This remains the deliberate way to move it ahead of that first
+ * load, and refuses once the generator has moved it or a load holds 121498.
  *
  * The write is setval('load_number_seq', 121497, true), so nextval() returns
  * 121498. It moves FORWARD only, and refuses:

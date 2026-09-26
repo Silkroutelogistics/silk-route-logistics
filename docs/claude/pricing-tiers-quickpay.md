@@ -331,14 +331,17 @@ and carrier surface; the shipment sequence stays for internal joins and is not
 quoted outward.
 
 **Sequence: `load_number_seq`, continuing at 121498. Corrected 2026-09-26 by
-Wasi.** `generateLoadNumber` declares the sequence `START WITH 121498` for a database
-that has none yet, and **refuses any number below `LOAD_NUMBER_FLOOR` (121498)**
-rather than issuing it. Nothing lifts the sequence on its own. Production's sequence
-exists and sits in the withdrawn start (its next value would be 5003), so it is moved
-by `scripts/restart-load-number-sequence.ts` — `setval` to 121497, forward only, dry
-run by default, a production write taken deliberately. **Not yet run: until it is,
-creating a load in production is refused.** Its timing against the deploy is an open
-decision.
+Wasi; made fail-safe the same day.** `generateLoadNumber` issues
+`max(sequence, highest load number held at or above 121498, 121497) + 1`, so it
+**never issues a number below the floor and never refuses a load**. 5001, 5002 and
+5003 (production issued 5003 before this shipped) sit below the floor
+and do not enter the max. When the sequence is behind, the first creation moves it
+once, under an advisory lock, and a creator who waited on the lock takes the next
+number. Production's first new load after the deploy is therefore 121498 with no
+script run. `scripts/restart-load-number-sequence.ts` remains a deliberate write
+(`setval` to 121497, forward only, dry run by default) and is **not required**; it
+refuses once the generator has moved the sequence or a load holds 121498. Health's
+`load_number_seq` reports `next` 121498 and `LIFT PENDING` until that first load.
 
 **Status: the numbering and the filenames are BUILT; three consequences are not.**
 `generateLoadNumber` emits the bare number. `lib/documentNumber.ts` carries the
