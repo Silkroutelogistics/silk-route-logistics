@@ -19221,7 +19221,9 @@
 // Migration 20260926140000 amended before release: deliveredFileHash + archivedDocumentId (UNIQUE, RESTRICT).
 // v3.8.blm — an invoice with an archived delivered file downloads as that file, hash-checked, never a re-render.
 // A failed read or a hash mismatch is a refusal (503/500) that says so.
-export const SRL_VERSION = "3.8.blm";
+// v3.8.bln — generating an invoice marks it SENT only when an email was accepted.
+// A throw, an unconfigured provider or no recipient leaves it DRAFT, recorded, with the AE told.
+export const SRL_VERSION = "3.8.bln";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

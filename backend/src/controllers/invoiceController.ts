@@ -381,6 +381,12 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
   const invoiceRecipients = load.customerId
     ? await resolveBillingRecipients(load.customerId)
     : [];
+  // SENT only when the email provider accepted at least one message (ruled
+  // 2026-09-26). A throw, an unconfigured provider or no recipient leaves the
+  // invoice a DRAFT, recorded and put in front of the AE: a DRAFT is true, and a
+  // SENT nobody received starts the reminder ladder on a bill never delivered.
+  const emailDelivery = { accepted: 0, failures: [] as string[] };
+  if (invoiceRecipients.length === 0 || !load.customer) emailDelivery.failures.push("no billing recipient on file");
   if (invoiceRecipients.length > 0 && load.customer) {
     const shipperName = load.customer.contactName || load.customer.name;
     const body = `
@@ -400,9 +406,18 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
       <p style="color:#94a3b8;font-size:12px">If you have questions, contact us at info@silkroutelogistics.ai</p>
     `;
     for (const r of invoiceRecipients) {
-      await sendEmail(r.email, `Invoice ${docNumber} — ${load.referenceNumber}`, wrap(body)).catch((e: any) => log.error({ err: e }, "[Invoice] Email error:"));
+      try {
+        const id = await sendEmail(r.email, `Invoice ${docNumber} — ${load.referenceNumber}`, wrap(body));
+        if (id) emailDelivery.accepted++;
+        else emailDelivery.failures.push(`${r.email}: the email provider is not configured`);
+      } catch (e: any) {
+        log.error({ err: e }, "[Invoice] Email error:");
+        emailDelivery.failures.push(`${r.email}: ${e?.message ?? String(e)}`);
+      }
     }
+  }
 
+  if (emailDelivery.accepted > 0) {
     const sentAt = new Date();
     await prisma.invoice.update({
       where: { id: invoice!.id },
@@ -420,9 +435,26 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
     await prisma.load
       .update({ where: { id: load.id }, data: { customerInvoiced: true } })
       .catch((e: any) => log.error({ err: e, loadId: load.id }, "[Invoice] customerInvoiced flag not set (non-fatal)"));
+  } else {
+    await reportInvoiceNotEmailed(invoice!.id, docNumber, load, req.user!.id, emailDelivery.failures);
   }
 
-  res.status(201).json(invoice);
+  res.status(201).json({ ...invoice, emailDelivery });
+}
+
+/** The invoice stays DRAFT: record why, and tell the load's poster and the actor. Never throws. */
+async function reportInvoiceNotEmailed(
+  invoiceId: string, docNumber: string, load: { id: string; referenceNumber: string; posterId: string | null }, actorId: string, failures: string[],
+) {
+  const message = `Invoice ${docNumber} for load ${load.referenceNumber} was created but not emailed, so it stays a DRAFT: ${failures.join("; ")}. Fix the recipient and send it from Invoices.`;
+  try {
+    await prisma.systemLog.create({ data: { logType: "ERROR", severity: "ERROR", source: "invoice-email", userId: actorId, message, details: { invoiceId, loadId: load.id, failures } } });
+  } catch (e: any) { log.error({ err: e, invoiceId }, "[Invoice] could not record the unsent invoice"); }
+  for (const userId of [...new Set([load.posterId, actorId].filter(Boolean))] as string[]) {
+    try {
+      await prisma.notification.create({ data: { userId, type: "INVOICE", title: `Invoice ${docNumber} was not emailed`, message, actionUrl: "/dashboard/invoices" } });
+    } catch (e: any) { log.error({ err: e, invoiceId, userId }, "[Invoice] could not notify about the unsent invoice"); }
+  }
 }
 
 /** Mark invoice as paid */
