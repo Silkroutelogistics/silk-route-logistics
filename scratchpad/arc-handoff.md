@@ -92,25 +92,37 @@ literally, "origin highest + 1" would have given 326, which this branch already 
   Render's cutover. The fix is not contradicted; the 18:00Z tick is the proof (step 3, on
   Wasi's go). `check-1800.ts` in the session scratchpad evaluates the landed script's own SQL
   and reproduced 353/352/0/2 at 17:48Z.
+- **18:00Z proof (checked 18:33:48Z as `srl_readonly`, with the landed script's own SQL): the
+  counts held at 353/352/0/2, `L9180992591` got 0 alerts and 0 notifications after 17:59Z, and
+  no row carries `notifiedAt`.** The old code wrote a duplicate pair on every tick; the fixed
+  scan writes nothing when nothing changed, so the proof is that absence. The dry-run from
+  `../srl-cleanup` at 18:36:30Z matched exactly. The `--commit` run is Wasi's.
 - The cutover is banked as **Item 328** (P1), with a table of all 66 scheduled jobs.
-- Branches: `git cherry` shows commits missing upstream on both old branches
-  (`fix/notifications`: all 5; `-r2`: `9ec32e81` and `87aa0db5`), because the rebuilds changed
-  the footer hunks and one comment letter and replaced the docs commits. Both kept under the
-  rule; deleting them needs an explicit -D. Their code is identical to what landed apart from
-  the footer.
+- Branches: `fix/notifications` and `fix/notifications-r2` deleted 2026-09-26 on Wasi's
+  instruction, after the 18:00Z proof. `git cherry` listed 7 commits not upstream; each is a
+  pre-rebuild copy of something that landed, so nothing was lost. The objects stay reachable
+  by hash until git prunes them.
+  - `e8e19a33` v3.8.bjz (320): code identical to landed `954b5920`; footer letter differs.
+  - `ec8cfde2` v3.8.bka (321): code identical to landed `02bc3f4a`; footer letter differs.
+  - `913dcdff` v3.8.bkb (322): code identical to landed `cc0c6438`; footer letter differs.
+  - `1ad615c7` script: identical to landed `f2d921d8` but one header-comment letter (bjz, not bkk).
+  - `61f21332` docs: 320-323 and the handoff at the old letters; re-landed as `8355710b`/`f05803cc`.
+  - `9ec32e81` v3.8.bkk: code identical to landed `954b5920`; footer bumped from bkf, not bkj.
+  - `87aa0db5` docs: re-landed as `8355710b`; only a "324-325 claimed" note differs.
 - Removed: containers `srl-e2e-290`, `srl-e2e-notif`, `srl-e2e-notif3`; worktree `srl-290`;
   `srl-notif` after this commit. `fix/item-290` and `fix/notifications-r3` remain, both merged.
+- Created: worktree `../srl-cleanup` (detached at `4e3c19e8`, backend deps only) for Wasi's
+  `--commit` run. Remove it once that output is verified.
 - Item numbers on origin: 326 and 327 each appear once. Two duplicates predate this arc: 180
   (lines 218 and 248; the second is the drafts-surface item under the wrong number) and 182
   (lines 244 and 266). Not renumbered: "Item 182" is cited across CLAUDE.md for the
-  authority-age epic.
+  authority-age epic. Each duplicate heading now carries a "Cite as" label, and the file's
+  header lists both.
 
 **Found while building the cron table, not banked; each needs a decision.**
-1. **Tender emails can reach a shipper with the carrier rate.** Accepted, declined, countered
-   and expired all go to the load poster's email (`notificationService.ts:188`; sends `:268`,
-   `:311`, `:343`, `:375`) and all carry the rate. On a shipper-portal load the poster is the
-   shipper (`shipperPortalController.ts:908`) — the v3.8.att class. Latent: production has 0
-   shipper-posted loads, ever. late-detection and risk-flagging email the poster too.
+1. ~~**Tender emails can reach a shipper with the carrier rate.**~~ Banked as **Item 329** (P1),
+   with what this note missed: the OFFERED email CCs the poster and carries the carrier's
+   one-click accept link, so the AE half is live today.
 2. **AR under-send** (agent-reported, not re-read): `ar-reminders-daily` (11:00) sets the flags
    `ar-daily-reminders` (14:00) checks before emailing, so the DUE_TODAY, PAST_DUE_7 and
    FINAL_NOTICE customer emails are normally never sent.
@@ -122,6 +134,9 @@ literally, "origin highest + 1" would have given 326, which this branch already 
 5. **`ai-morning-briefing` is dead**: the gate asks for `morningBriefing` and the list holds
    `morning_briefing` (`ai/volumeGates.ts:44`, `:105`).
 6. **`fmcsa-compliance` emails "ACCOUNT SUSPENDED" daily without suspending** — already Item 325.
+7. **The tender magic link acts on GET** (`tenderAction.ts:69`, no confirmation step), so a mail
+   scanner that prefetches links can accept or decline a tender as the carrier. Not checked
+   against production; not banked.
 
 ### Carried, deliberately not built
 
