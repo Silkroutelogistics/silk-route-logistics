@@ -4030,7 +4030,7 @@ export async function processARReminders() {
       load: {
         select: {
           referenceNumber: true,
-          customer: { select: { id: true, name: true, email: true, contactName: true } },
+          customer: { select: { id: true, name: true, email: true, contactName: true, defaultInvoiceChannel: true } },
         },
       },
     },
@@ -4038,8 +4038,17 @@ export async function processARReminders() {
   });
 
   let sent = 0;
+  let skippedTipalti = 0;
   for (const inv of invoices) {
     if (!inv.dueDate || !inv.load?.customer?.email) continue;
+    // D-1 (ruled 2026-09-26): nothing from this job for a customer billed through
+    // Tipalti: no reminder flags, no early OVERDUE, no late-payment count, no
+    // credit auto-block. Aging still shows: the hourly aging job and the 14:00
+    // collections run turn the invoice OVERDUE once it is past due.
+    if (inv.load.customer.defaultInvoiceChannel === "TIPALTI") {
+      skippedTipalti++;
+      continue;
+    }
 
     const daysToDue = daysBetween(now, inv.dueDate); // positive = before due, negative = overdue
     const daysOverdue = -daysToDue;
@@ -4108,7 +4117,7 @@ export async function processARReminders() {
     }
   }
 
-  return { processed: invoices.length, remindersSent: sent };
+  return { processed: invoices.length, remindersSent: sent, skippedTipalti };
 }
 
 // ============================================================

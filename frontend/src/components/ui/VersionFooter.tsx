@@ -19229,7 +19229,9 @@
 // Aging and OVERDUE still show; nothing is recorded as sent.
 // v3.8.blq — the send lock on the four BKN loads is lifted (RECONCILE step 3e).
 // They are SENT via Tipalti in production; the duplicate guard refuses a second email.
-export const SRL_VERSION = "3.8.blq";
+// v3.8.blu — the 11:00 reminder job (processARReminders) skips customers billed through Tipalti (D-1).
+// No flags, no early OVERDUE, no late-payment count, no credit auto-block; aging still shows.
+export const SRL_VERSION = "3.8.blu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
