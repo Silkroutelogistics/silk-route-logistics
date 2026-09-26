@@ -89,6 +89,16 @@ export function etStartOfMonth(now: Date): Date {
 }
 
 /** 00:00:00 ET on the most recent Sunday, in the current ET week. */
+/**
+ * v3.8.bkc — midnight Jan 1, Eastern, of the ET year `now` falls in. What "YTD"
+ * means on the CRM list and the Order Builder customer panel, which labelled an
+ * all-time figure YTD until this existed.
+ */
+export function etStartOfYear(now: Date): Date {
+  const { year } = etParts(now);
+  return etMidnightInstant(year, 1, 1);
+}
+
 export function etStartOfWeek(now: Date): Date {
   const { year, month, day, weekday } = etParts(now);
   const sunday = etMidnightInstant(year, month, day - weekday);

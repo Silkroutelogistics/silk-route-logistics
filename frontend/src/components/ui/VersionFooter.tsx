@@ -19336,6 +19336,12 @@
 //   The risk alert quotes the load's margin and the fall-off alert names the carrier.
 // Both went to the load's poster, who is the shipper when the shipper posted it. Both
 // now use the same staff recipient as the tender emails.
+// v3.8.bkc — The CRM list and the Order Builder panel say what YTD means.
+//   The list added every load's customerRate (cancelled loads and TONU linehaul
+// included) to the Shipment table's rate, the CARRIER rate, and called the
+// all-time sum "Revenue YTD": Beekeepers read $43,450 / 9 loads against $3,700 / 4
+// earned. Both now read lib/customerLoadStats, the drawer's calculation, batched
+// for the list, with YTD from Jan 1 Eastern (financePeriods.etStartOfYear).
 export const SRL_VERSION = "3.8.bme";
 
 export function VersionFooter({ className }: { className?: string }) {

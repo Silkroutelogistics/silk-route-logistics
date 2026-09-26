@@ -39,8 +39,12 @@ interface CustomersResponse {
   total: number;
 }
 
+// v3.8.bkc — the cards and rows are labelled YTD, so they read the YTD pair
+// from lib/customerLoadStats (cancelled loads out, earned revenue only, pickup on
+// or after Jan 1 ET). They used to read an all-time figure that added carrier
+// rates to customer rates.
 function loadCountOf(c: CrmCustomer): number {
-  return c.totalLoads ?? c._count?.loads ?? c._count?.shipments ?? 0;
+  return c.ytdLoads ?? 0;
 }
 
 function companyInitials(name: string): string {
@@ -80,7 +84,7 @@ export default function CrmPage() {
   const pendingCount = pendingCountQuery.data?.total ?? 0;
 
   const customers = customersQuery.data?.customers ?? [];
-  const totalRevenue = customers.reduce((s, c) => s + (c.totalRevenue ?? 0), 0);
+  const totalRevenue = customers.reduce((s, c) => s + (c.ytdRevenue ?? 0), 0);
   const totalLoads = customers.reduce((s, c) => s + loadCountOf(c), 0);
 
   return (
@@ -193,10 +197,10 @@ export default function CrmPage() {
                 </div>
                 <div className="text-right shrink-0">
                   <div className="text-sm font-bold text-gray-900">
-                    ${Math.round(c.totalRevenue ?? 0).toLocaleString()}
+                    ${Math.round(c.ytdRevenue ?? 0).toLocaleString()}
                   </div>
                   <div className="text-[11px] text-gray-500">
-                    {loadCountOf(c)} loads
+                    {loadCountOf(c)} loads YTD
                   </div>
                 </div>
               </button>

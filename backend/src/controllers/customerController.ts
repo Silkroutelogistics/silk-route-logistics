@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
-import { loadCustomerLoadStats } from "../lib/customerLoadStats";
+import { loadCustomerLoadStats, loadCustomerLoadStatsMany } from "../lib/customerLoadStats";
+import { etStartOfYear } from "../lib/financePeriods";
 import { AuthRequest } from "../middleware/auth";
 import { z } from "zod";
 import { createCustomerSchema, updateCustomerSchema, customerQuerySchema, markManualReviewSchema } from "../validators/customer";
@@ -146,30 +147,30 @@ export async function getCustomers(req: AuthRequest, res: Response) {
     prisma.customer.count({ where }),
   ]);
 
-  // v3.5.c — Compute revenue and load count from the loads table. The
-  // legacy shipments table is almost always empty (loads is the canonical
-  // freight record). Prefer customerRate; fall back to rate.
-  const enriched = await Promise.all(
-    customers.map(async (c) => {
-      const loadAgg = await prisma.load.aggregate({
-        where: { customerId: c.id, deletedAt: null },
-        _sum: { customerRate: true },
-        _count: true,
-      });
-      const loadRevenue = loadAgg._sum.customerRate ?? 0;
-      const shipmentAgg = await prisma.shipment.aggregate({
-        where: { customerId: c.id },
-        _sum: { rate: true },
-      });
-      const totalRevenue = loadRevenue + (shipmentAgg._sum.rate ?? 0);
-      return {
-        ...c,
-        totalShipments: c._count.shipments,
-        totalLoads: loadAgg._count ?? c._count.loads ?? 0,
-        totalRevenue,
-      };
-    })
+  // v3.8.bkc — the same figures the customer drawer shows, from
+  // lib/customerLoadStats, in one query for the whole page. This used to add
+  // every load's customerRate (cancelled loads and TONU linehaul included) to
+  // the Shipment table's rate, which is the CARRIER rate written on every tender
+  // accept — the comment above it said that table was "almost always empty",
+  // which stopped being true long ago. Beekeepers read $43,450 against $3,700
+  // earned. The page labels its figures YTD, so the ytd pair is returned beside
+  // the all-time pair and the page reads the one it names.
+  const stats = await loadCustomerLoadStatsMany(
+    prisma,
+    customers.map((c) => c.id),
+    { ytdSince: etStartOfYear(new Date()) },
   );
+  const enriched = customers.map((c) => {
+    const s = stats.get(c.id);
+    return {
+      ...c,
+      totalShipments: c._count.shipments,
+      totalLoads: s?.totalLoads ?? 0,
+      totalRevenue: s?.earnedRevenue ?? 0,
+      ytdLoads: s?.ytdLoads ?? 0,
+      ytdRevenue: s?.ytdRevenue ?? 0,
+    };
+  });
 
   res.json({ customers: enriched, total, page: query.page, totalPages: Math.ceil(total / query.limit) });
 }
@@ -194,7 +195,7 @@ export async function getCustomerById(req: AuthRequest, res: Response) {
   // filter, so cancelled loads stayed in it and the figure was cost, not revenue.
   // It now reads the same earned-revenue rules as the Loads tab.
   const [stats, communications] = await Promise.all([
-    loadCustomerLoadStats(prisma, customer.id),
+    loadCustomerLoadStats(prisma, customer.id, { ytdSince: etStartOfYear(new Date()) }),
     prisma.communication.findMany({
       where: { entityType: "SHIPPER", entityId: customer.id },
       orderBy: { createdAt: "desc" },
@@ -210,6 +211,8 @@ export async function getCustomerById(req: AuthRequest, res: Response) {
     totalShipments: stats.totalLoads,
     loadCount: stats.totalLoads,
     totalRevenue: stats.earnedRevenue,
+    ytdLoads: stats.ytdLoads ?? 0,
+    ytdRevenue: stats.ytdRevenue ?? 0,
   });
 }
 

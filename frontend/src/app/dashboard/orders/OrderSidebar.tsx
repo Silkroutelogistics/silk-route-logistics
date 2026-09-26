@@ -30,8 +30,8 @@ interface Props {
     paymentTerms: string | null;
     creditLimit: number | null;
     creditStatus: string | null;
-    totalRevenue?: number;
-    totalShipments?: number;
+    ytdRevenue?: number;
+    ytdLoads?: number;
     // v3.8.ako §13.3 Item 180.7 — per-customer margin floor override.
     // Null falls back to the global 10% default.
     minMarginPercent?: number | null;
@@ -354,11 +354,11 @@ export function OrderSidebar({
               <Row label="Pay terms" value={customerSnapshot.paymentTerms ?? "Not set"} />
               <Row label="Credit limit" value={customerSnapshot.creditLimit ? `$${customerSnapshot.creditLimit.toLocaleString()}` : "—"} />
               <Row label="Credit status" value={customerSnapshot.creditStatus ?? "Not set"} />
-              {customerSnapshot.totalRevenue !== undefined && (
-                <Row label="Revenue YTD" value={`$${Math.round(customerSnapshot.totalRevenue).toLocaleString()}`} />
+              {customerSnapshot.ytdRevenue !== undefined && (
+                <Row label="Revenue YTD" value={`$${Math.round(customerSnapshot.ytdRevenue).toLocaleString()}`} />
               )}
-              {customerSnapshot.totalShipments !== undefined && (
-                <Row label="Loads YTD" value={customerSnapshot.totalShipments} />
+              {customerSnapshot.ytdLoads !== undefined && (
+                <Row label="Loads YTD" value={customerSnapshot.ytdLoads} />
               )}
             </div>
           </Section>

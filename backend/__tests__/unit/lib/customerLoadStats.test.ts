@@ -123,7 +123,9 @@ describe("both surfaces read the one calculation (source guard)", () => {
 
   it("the Loads tab endpoint and the drawer header both call loadCustomerLoadStats", () => {
     expect(read("routes/crmCustomer.ts")).toMatch(/loadCustomerLoadStats\(prisma, req\.params\.id\)/);
-    expect(read("controllers/customerController.ts")).toMatch(/loadCustomerLoadStats\(prisma, customer\.id\)/);
+    expect(read("controllers/customerController.ts")).toMatch(/loadCustomerLoadStats\(prisma, customer\.id[,)]/);
+    // v3.8.bkc — the CRM list reads the same calculation, batched.
+    expect(read("controllers/customerController.ts")).toMatch(/loadCustomerLoadStatsMany\(\s*prisma,/);
   });
 
   it("the drawer header no longer sums Shipment.rate (the carrier rate)", () => {
@@ -131,5 +133,30 @@ describe("both surfaces read the one calculation (source guard)", () => {
     const fn = src.slice(src.indexOf("export async function getCustomerById"), src.indexOf("export async function", src.indexOf("export async function getCustomerById") + 10));
     expect(fn.length, "vacuity: found getCustomerById").toBeGreaterThan(200);
     expect(fn).not.toMatch(/shipment\.aggregate/);
+  });
+});
+
+describe("YTD window (v3.8.bkc)", () => {
+  it("counts only loads dated on or after the window, by pickup date, else creation date", () => {
+    const since = new Date("2026-01-01T05:00:00Z");
+    const s = summarizeCustomerLoads(
+      [
+        load({ status: "DELIVERED", customerRate: 100, pickupDate: new Date("2026-02-01T00:00:00Z") } as any),
+        load({ status: "DELIVERED", customerRate: 200, pickupDate: new Date("2025-12-31T23:00:00Z") } as any), // Dec 31 ET
+        load({ status: "DELIVERED", customerRate: 400, pickupDate: null, createdAt: new Date("2026-03-01T00:00:00Z") } as any),
+        load({ status: "DELIVERED", customerRate: 800, pickupDate: null, createdAt: null } as any), // undatable -> not YTD
+      ],
+      null,
+      { ytdSince: since },
+    );
+    expect(s.earnedRevenue).toBe(1500);
+    expect(s.ytdRevenue).toBe(500);
+    expect(s.ytdLoads).toBe(2);
+  });
+
+  it("no window asked for -> the YTD pair is null, never a silent all-time figure", () => {
+    const s = summarizeCustomerLoads([load({ status: "DELIVERED", customerRate: 100 })], null);
+    expect(s.ytdRevenue).toBeNull();
+    expect(s.ytdLoads).toBeNull();
   });
 });

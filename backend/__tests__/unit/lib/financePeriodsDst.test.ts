@@ -150,3 +150,13 @@ describe("weekIsInsideMonth stays coherent through the transitions", () => {
     expect(results).toContain(false);
   });
 });
+
+describe("etStartOfYear (v3.8.bkc)", async () => {
+  const { etStartOfYear } = await import("../../../src/lib/financePeriods");
+  it("is midnight Jan 1 Eastern (05:00 UTC in winter)", () => {
+    expect(etStartOfYear(new Date("2026-09-26T15:00:00Z")).toISOString()).toBe("2026-01-01T05:00:00.000Z");
+  });
+  it("on the evening of Dec 31 ET (already Jan 1 UTC) the year is still the old one", () => {
+    expect(etStartOfYear(new Date("2027-01-01T03:00:00Z")).toISOString()).toBe("2026-01-01T05:00:00.000Z");
+  });
+});

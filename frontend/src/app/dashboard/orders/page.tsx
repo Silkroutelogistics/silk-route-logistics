@@ -55,6 +55,9 @@ interface Customer {
   paymentTerms: string | null;
   totalRevenue?: number;
   totalShipments?: number;
+  // v3.8.bkc — what the panel labels YTD (both customer endpoints return it).
+  ytdRevenue?: number;
+  ytdLoads?: number;
   _count?: { shipments?: number; loads?: number };
   // v3.8.ako §13.3 Items 180.6 + 180.7 — revenue-protect fields.
   // defaultAccessorialRates: map of negotiated rates the Order Builder
@@ -1549,8 +1552,10 @@ export default function OrderBuilderPage() {
             paymentTerms: selectedCustomer.paymentTerms,
             creditLimit: selectedCustomer.creditLimit,
             creditStatus: selectedCustomer.creditStatus,
-            totalRevenue: selectedCustomer.totalRevenue,
-            totalShipments: selectedCustomer.totalShipments ?? selectedCustomer._count?.loads ?? selectedCustomer._count?.shipments,
+            // v3.8.bkc — YTD from lib/customerLoadStats. totalShipments counted
+            // Shipment rows (carrier-side), and totalRevenue here was all-time.
+            ytdRevenue: selectedCustomer.ytdRevenue,
+            ytdLoads: selectedCustomer.ytdLoads,
             // v3.8.ako §13.3 Item 180.7 — per-customer margin floor.
             minMarginPercent: selectedCustomer.minMarginPercent ?? null,
           } : null}

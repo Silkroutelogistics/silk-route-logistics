@@ -55,6 +55,9 @@ export interface CrmCustomer {
   totalShipments?: number;
   /** v3.8.bjx — live, non-cancelled loads (GET /customers/:id). */
   loadCount?: number;
+  /** v3.8.bkc — earned revenue and live loads with pickup on or after Jan 1 ET. */
+  ytdLoads?: number;
+  ytdRevenue?: number;
   _count?: { shipments?: number; loads?: number };
 }
 

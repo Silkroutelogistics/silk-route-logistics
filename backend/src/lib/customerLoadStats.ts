@@ -58,6 +58,10 @@ export interface StatsLoad {
   destState: string | null;
   invoices: StatsInvoice[];
   loadAccessorials: StatsAccessorial[];
+  /** The date YTD is judged on; createdAt stands in when a load has no pickup date. */
+  pickupDate?: Date | null;
+  createdAt?: Date | null;
+  customerId?: string | null;
 }
 
 export interface TopLane {
@@ -73,6 +77,19 @@ export interface CustomerLoadStats {
   earnedRevenue: number;
   avgMargin: number | null;
   topLanes: TopLane[];
+  /**
+   * v3.8.bkc — the same two rules restricted to loads whose pickup date (or,
+   * with none, creation date) is on or after `ytdSince`. Null when the caller
+   * asked for no YTD window. The CRM list and the Order Builder panel label
+   * their figures "YTD" and read these, not the all-time pair above.
+   */
+  ytdLoads: number | null;
+  ytdRevenue: number | null;
+}
+
+/** The instant a load is judged by for YTD. */
+export function loadPeriodDate(load: Pick<StatsLoad, "pickupDate" | "createdAt">): Date | null {
+  return load.pickupDate ?? load.createdAt ?? null;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -111,8 +128,23 @@ export function earnedRevenueFor(load: StatsLoad, negotiated: Record<string, num
 export function summarizeCustomerLoads(
   loads: StatsLoad[],
   negotiated: Record<string, number> | null | undefined,
+  opts: { ytdSince?: Date } = {},
 ): CustomerLoadStats {
   const live = loads.filter(countsTowardStats);
+
+  let ytdLoads: number | null = null;
+  let ytdRevenue: number | null = null;
+  if (opts.ytdSince) {
+    const since = opts.ytdSince.getTime();
+    // A load with no date at all cannot be placed in a year, so it is left out
+    // of YTD rather than assumed to be this year's.
+    const ytd = live.filter((l) => {
+      const d = loadPeriodDate(l);
+      return d != null && new Date(d).getTime() >= since;
+    });
+    ytdLoads = ytd.length;
+    ytdRevenue = round2(ytd.reduce((s, l) => s + earnedRevenueFor(l, negotiated), 0));
+  }
 
   const earnedRevenue = round2(live.reduce((s, l) => s + earnedRevenueFor(l, negotiated), 0));
 
@@ -141,7 +173,7 @@ export function summarizeCustomerLoads(
     .slice(0, 5)
     .map((l) => ({ origin: l.origin, dest: l.dest, count: l.count, avgRate: l.rateN ? Math.round(l.rateSum / l.rateN) : null }));
 
-  return { totalLoads: live.length, earnedRevenue, avgMargin, topLanes };
+  return { totalLoads: live.length, earnedRevenue, avgMargin, topLanes, ytdLoads, ytdRevenue };
 }
 
 /** The select every caller uses, so the query and the rules cannot drift apart. */
@@ -154,6 +186,8 @@ export const CUSTOMER_STATS_LOAD_SELECT = {
   originState: true,
   destCity: true,
   destState: true,
+  pickupDate: true,
+  createdAt: true,
   invoices: { select: { status: true, totalAmount: true, amount: true, deletedAt: true } },
   loadAccessorials: {
     where: { type: "TONU" as const },
@@ -161,7 +195,11 @@ export const CUSTOMER_STATS_LOAD_SELECT = {
   },
 } as const;
 
-export async function loadCustomerLoadStats(db: any, customerId: string): Promise<CustomerLoadStats> {
+export async function loadCustomerLoadStats(
+  db: any,
+  customerId: string,
+  opts: { ytdSince?: Date } = {},
+): Promise<CustomerLoadStats> {
   const [customer, loads] = await Promise.all([
     db.customer.findUnique({ where: { id: customerId }, select: { defaultAccessorialRates: true } }),
     db.load.findMany({
@@ -170,5 +208,38 @@ export async function loadCustomerLoadStats(db: any, customerId: string): Promis
     }),
   ]);
   const negotiated = (customer?.defaultAccessorialRates ?? null) as Record<string, number> | null;
-  return summarizeCustomerLoads(loads ?? [], negotiated);
+  return summarizeCustomerLoads(loads ?? [], negotiated, opts);
+}
+
+/**
+ * v3.8.bkc — the CRM list's figures, for a page of customers in ONE load
+ * query rather than two aggregates per customer. The list used to add every
+ * load's customerRate (cancelled ones included) to the Shipment table's rate —
+ * the CARRIER rate — which is how Beekeepers read $43,450 ($24,450 + $19,000)
+ * against $3,700 earned. It now reads exactly what the drawer reads.
+ */
+export async function loadCustomerLoadStatsMany(
+  db: any,
+  customerIds: string[],
+  opts: { ytdSince?: Date } = {},
+): Promise<Map<string, CustomerLoadStats>> {
+  const out = new Map<string, CustomerLoadStats>();
+  if (customerIds.length === 0) return out;
+  const [customers, loads] = await Promise.all([
+    db.customer.findMany({ where: { id: { in: customerIds } }, select: { id: true, defaultAccessorialRates: true } }),
+    db.load.findMany({
+      where: { customerId: { in: customerIds }, deletedAt: null, status: { not: "CANCELLED" } },
+      select: { ...CUSTOMER_STATS_LOAD_SELECT, customerId: true },
+    }),
+  ]);
+  const rates = new Map<string, Record<string, number> | null>();
+  for (const c of customers ?? []) rates.set(c.id, (c.defaultAccessorialRates ?? null) as Record<string, number> | null);
+  const byCustomer = new Map<string, StatsLoad[]>();
+  for (const l of loads ?? []) {
+    const list = byCustomer.get(l.customerId) ?? [];
+    list.push(l);
+    byCustomer.set(l.customerId, list);
+  }
+  for (const id of customerIds) out.set(id, summarizeCustomerLoads(byCustomer.get(id) ?? [], rates.get(id) ?? null, opts));
+  return out;
 }
