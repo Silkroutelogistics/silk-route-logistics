@@ -19209,7 +19209,9 @@
 // sendInvoice and generateInvoiceFromLoad now write deliveryChannel EMAIL, deliveredAt
 // equal to sentDate, and the actor when they flip SENT. onPODUploaded delivers nothing
 // and records no channel (O4).
-export const SRL_VERSION = "3.8.bla";
+// v3.8.blc — the four BKN loads whose invoices went through Tipalti by hand cannot be
+// emailed an invoice from sendInvoice until production records those deliveries (send lock).
+export const SRL_VERSION = "3.8.blc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
