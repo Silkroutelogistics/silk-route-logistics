@@ -162,11 +162,12 @@ router.get("/health", async (_req, res) => {
       ...(await sinceBootStatusMachineCounters(prisma as any, new Date(buildInfo().bootedAt))),
       ...(await cumulativeStatusMachineCounters(prisma as any)),
     },
-    // Which range is the load number series issuing from? `CREATE SEQUENCE IF
-    // NOT EXISTS ... START WITH 5001` is inert where the sequence already
-    // exists, so the code and the database can disagree about this silently --
-    // and on 2026-09-24 they were read as agreeing from start_value, which
-    // RESTART does not change. See lib/loadNumberSeqInfo.
+    // Is the load number series positioned to issue the next load? `CREATE
+    // SEQUENCE IF NOT EXISTS ... START WITH 121498` is inert where the sequence
+    // already exists, so the code and the database can disagree about this
+    // silently -- and on 2026-09-24 they were read as agreeing from start_value,
+    // which RESTART does not change. BELOW FLOOR means the generator will refuse
+    // to issue a load until the sequence is moved. See lib/loadNumberSeqInfo.
     load_number_seq: await loadNumberSeqInfo(prisma as any),
   });
 });

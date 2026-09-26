@@ -19172,6 +19172,9 @@
 // v3.8.bjz — loads continue from 121498, the number after the last legacy load
 // (SRL-121497); the 50001 series is withdrawn. A number below 121498 is refused,
 // never lifted: production's sequence is moved by a script, run deliberately.
+// v3.8.bka — health reports whether the load sequence can issue the next load:
+// continuing at 121498 and up, BELOW FLOOR in the retired 5001 series, where the
+// generator now refuses. The meaning inverted with the numbering correction.
 export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {
