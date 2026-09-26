@@ -224,6 +224,17 @@ enum TenderFanout {
 
 // Base invoice vs the supplemental accessorial invoice billed against the same
 // load. See the Invoice model for why this is a separate row and not a flag.
+// How an invoice reached the customer (RECONCILE 2026-09-26). EMAIL: SRL's own
+// send (sendInvoice), or the document emailed by hand. TIPALTI: uploaded to the
+// customer's Tipalti AP portal; there is no email recipient. MANUAL: any other
+// delivery. Recorded when the document leaves SRL, never inferred afterwards, so
+// an invoice sent before the column existed stays null.
+enum InvoiceDeliveryChannel {
+  EMAIL
+  TIPALTI
+  MANUAL
+}
+
 enum InvoiceKind {
   BASE
   SUPPLEMENTAL
@@ -2475,6 +2486,15 @@ model Invoice {
   paymentMethod        PaymentMethod?
   pdfUrl               String?
 
+  // Delivery record (RECONCILE 2026-09-26). Written when the invoice leaves SRL:
+  // by sendInvoice (EMAIL), or by mark-sent, which records a delivery made
+  // elsewhere and never emails. deliveredAt is when the customer received it,
+  // which for a portal upload can be earlier than when it was recorded.
+  // deliveredById names who recorded it; no FK, matching Customer.approvedById.
+  deliveryChannel InvoiceDeliveryChannel?
+  deliveredAt     DateTime?
+  deliveredById   String?
+
   // Reminder tracking
   reminderSent31   Boolean   @default(false)
   reminderSent45   Boolean   @default(false)
@@ -2926,6 +2946,9 @@ model Customer {
   billingState        String?
   billingZip          String?
   billingEmail        String?
+  // How this customer receives invoices unless a delivery says otherwise
+  // (RECONCILE 2026-09-26). Mark-sent uses it when no channel is given.
+  defaultInvoiceChannel InvoiceDeliveryChannel @default(EMAIL)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

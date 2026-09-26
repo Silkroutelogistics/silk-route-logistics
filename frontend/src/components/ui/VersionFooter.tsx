@@ -19195,7 +19195,13 @@
 // now checks both columns for the number and its retired twin before any
 // create writes, refusing with DUPLICATE_INVOICE_NUMBER; excludeId lets a row be
 // relabelled to a spelling of its own number. Numbers already delivered are final.
-export const SRL_VERSION = "3.8.bku";
+// v3.8.bkw — AN INVOICE RECORDS HOW IT REACHED THE CUSTOMER (RECONCILE 2026-09-26). HELD.
+// InvoiceDeliveryChannel { EMAIL TIPALTI MANUAL }; Invoice.deliveryChannel,
+// deliveredAt, deliveredById; Customer.defaultInvoiceChannel @default(EMAIL). The
+// Beekeepers invoices went by upload to their Tipalti portal and the schema could
+// only say SENT. Additive, no backfill. On hold/invoice-delivery-channel: the
+// production migration is an open decision, and merging is the release act.
+export const SRL_VERSION = "3.8.bkw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
