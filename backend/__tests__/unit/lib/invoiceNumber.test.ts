@@ -14,9 +14,10 @@
 // go on guarding the retry behaviour that the fire-and-forget auto-invoice
 // callers depend on (§13.3 Item 244.2 — a superseded test is re-aimed, because
 // deleting it destroys the only evidence that the surviving path still works).
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { prisma } from "../../../src/config/database";
-import { nextSequentialInvoiceNumber, createInvoiceWithRetry } from "../../../src/lib/invoiceNumber";
+import { nextSequentialInvoiceNumber, createInvoiceWithRetry, assertInvoiceNumberFree } from "../../../src/lib/invoiceNumber";
+import { nextDocumentNumber } from "../../../src/lib/documentNumber";
 
 const mockPrisma = vi.mocked(prisma, true);
 
@@ -131,5 +132,39 @@ describe("createInvoiceWithRetry — a load-BACKED invoice mirrors the load's nu
     const build = vi.fn().mockResolvedValue({ id: "inv-7" });
     await createInvoiceWithRetry("", build);
     expect(build).toHaveBeenCalledWith("INV-1043");
+  });
+});
+
+describe("no two invoices share a number, in either spelling (RECONCILE 2026-09-26)", () => {
+  // findFirst answers only when a column the query names holds one of the twins it
+  // asks for, so a refusal proves both the twins and the columns were asked for.
+  const held = (row: any) =>
+    (mockPrisma.invoice.findFirst as any).mockImplementation(async ({ where }: any) => {
+      const hit = where.OR.some((c: any) => Object.entries(c).some(([col, cond]: any) => cond.in.includes(row[col])));
+      return hit && row.id !== where.id?.not ? row : null;
+    });
+  afterEach(() => (mockPrisma.invoice.findFirst as any).mockReset());
+
+  it("a legacy load: 121494I is refused while SRL-121494I is issued, and nothing is built", async () => {
+    held({ id: "inv-1003", srlDocNumber: "SRL-121494I", invoiceNumber: "INV-1003" });
+    const build = vi.fn();
+    await expect(createInvoiceWithRetry("121494I", build)).rejects.toMatchObject({ code: "DUPLICATE_INVOICE_NUMBER" });
+    expect(build).not.toHaveBeenCalled();
+  });
+
+  it("a 121498 load: a number held in the other column is refused too", async () => {
+    held({ id: "inv-9", srlDocNumber: null, invoiceNumber: "121498I" });
+    await expect(createInvoiceWithRetry("121498I", vi.fn())).rejects.toMatchObject({ code: "DUPLICATE_INVOICE_NUMBER" });
+  });
+
+  it("the legacy load's next invoice is 121494I-2, carries no SRL-, and builds", async () => {
+    held({ id: "inv-1003", srlDocNumber: "SRL-121494I", invoiceNumber: "INV-1003" });
+    (mockPrisma.invoice.findMany as any).mockResolvedValue([{ srlDocNumber: "SRL-121494I" }]);
+    const n = await nextDocumentNumber("INVOICE", "SRL-121494");
+    const build = vi.fn().mockResolvedValue({ id: "inv-10" });
+    await createInvoiceWithRetry(n, build);
+    expect(build).toHaveBeenCalledWith("121494I-2");
+    expect(n.includes("SRL-")).toBe(false);
+    await expect(assertInvoiceNumberFree("121494I", { excludeId: "inv-1003" })).resolves.toBeUndefined();
   });
 });

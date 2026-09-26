@@ -19188,6 +19188,13 @@
 // v3.8.bkp — an invoice number and its retired twin are one number: SRL-121494I is
 // 121494I. The allocator counts the twin, so after SRL-121494I the next invoice on
 // that load is 121494I-2, never a second 121494I (RECONCILE 2026-09-26).
+// v3.8.bkt — NO TWO INVOICES SHARE A NUMBER, IN EITHER SPELLING (RECONCILE 2026-09-26).
+// Each number column's @unique holds exact strings against themselves only. The
+// allocator (bkp) counts SRL-121494I as occupying 121494I, but a create given
+// an explicit number never went through the allocator. assertInvoiceNumberFree
+// now checks both columns for the number and its retired twin before any
+// create writes, refusing with DUPLICATE_INVOICE_NUMBER; excludeId lets a row be
+// relabelled to a spelling of its own number. Numbers already delivered are final.
 export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {

@@ -1,4 +1,38 @@
 import { prisma } from "../config/database";
+import { invoiceNumberTwins } from "./documentNumber";
+
+/** A create or relabel that would give a second invoice a number already
+ *  carried, in either spelling, by another. */
+export class DuplicateInvoiceNumberError extends Error {
+  readonly code = "DUPLICATE_INVOICE_NUMBER";
+  constructor(readonly number: string, readonly heldBy: string) {
+    super(`Invoice number ${number} is already carried by invoice ${heldBy}`);
+  }
+}
+
+/**
+ * No two invoices share a number (§21.2, RECONCILE 2026-09-26). Each column's
+ * @unique index holds exact strings against themselves; this holds the two
+ * columns against each other, and SRL-121494I against 121494I. excludeId lets a
+ * row be relabelled to a spelling of its own number. The match is read back off
+ * the returned row rather than assumed from the query.
+ */
+export async function assertInvoiceNumberFree(
+  number: string,
+  opts: { excludeId?: string; client?: any } = {},
+): Promise<void> {
+  const twins = invoiceNumberTwins(number);
+  const hit = await (opts.client ?? prisma).invoice.findFirst({
+    where: {
+      OR: [{ srlDocNumber: { in: twins } }, { invoiceNumber: { in: twins } }],
+      ...(opts.excludeId ? { id: { not: opts.excludeId } } : {}),
+    },
+    select: { id: true, srlDocNumber: true, invoiceNumber: true },
+  });
+  if (hit && hit.id !== opts.excludeId && (twins.includes(hit.srlDocNumber) || twins.includes(hit.invoiceNumber))) {
+    throw new DuplicateInvoiceNumberError(number, hit.srlDocNumber ?? hit.invoiceNumber);
+  }
+}
 
 /**
  * Next invoice number in the RETIRED INV-<n> sequential format.
@@ -66,7 +100,10 @@ export async function createInvoiceWithRetry<T>(
   //
   // The revision case is already handled upstream by withDocumentNumber, which
   // is what hands this function 5001-2 when 5001 is taken.
-  if (srlDocNumber) return build(srlDocNumber);
+  if (srlDocNumber) {
+    await assertInvoiceNumberFree(srlDocNumber);
+    return build(srlDocNumber);
+  }
 
   let lastErr: unknown;
   for (let i = 0; i < attempts; i++) {
