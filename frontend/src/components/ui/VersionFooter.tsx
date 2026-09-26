@@ -19161,6 +19161,8 @@
 // carrier was sent, not a re-render with today's template (invoicing audit G-4).
 // v3.8.bjq — B6: the Accounting invoice PDF button downloads the generated
 // invoice; it had no handler (invoicing audit G-8).
+// v3.8.bjr — G-14: invoice PDF dates are formatted in UTC, so the stored calendar
+// day prints on any host, not the day before on one west of UTC.
 export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {

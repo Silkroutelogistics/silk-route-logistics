@@ -3031,7 +3031,8 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
   registerSkillFonts(doc);
 
   const fmtDate = (d?: Date | null) =>
-    d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : null;
+    // G-14: stored dates are midnight UTC; format in UTC so a non-UTC host does not print the day before.
+    d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" }) : null;
   const titleCase = (s: string) =>
     (s || "").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   const cust = invoice.load.customer;
