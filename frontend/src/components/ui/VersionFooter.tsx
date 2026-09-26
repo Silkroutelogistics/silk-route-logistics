@@ -19107,7 +19107,13 @@
 // row (282a) — the document as issued, not today's card — and REFUSES, logged and
 // left stamped, when no billed line exists rather than falling back to cost. The
 // rejected-row query also stopped dropping $0-carrier rows the customer was billed for.
-export const SRL_VERSION = "3.8.bjy";
+// v3.8.bke — A suspended carrier can be lifted out of suspension.
+//   Approve and Reject both refused a SUSPENDED carrier and named "lift suspension"
+// as the remedy; nothing provided it. POST /compliance/carrier/:id/lift-suspension
+// (ADMIN/CEO/OPERATIONS, reason required) returns the carrier to REVIEWING, never
+// APPROVED, clears the three auto-suspend columns in the same conditional write, and
+// records the lift beside the suspension on AuditTrail. The carrier is emailed.
+export const SRL_VERSION = "3.8.bke";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

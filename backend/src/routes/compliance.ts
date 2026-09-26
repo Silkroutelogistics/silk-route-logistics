@@ -14,6 +14,7 @@ import {
   overrideBlock,
   getOverrideStatus,
   suspendCarrier,
+  liftSuspension,
   addNote,
   getNotes,
   exportCSV,
@@ -74,6 +75,9 @@ router.post("/carrier/:carrierId/override-block", authorize("ADMIN", "CEO"), ove
 router.get("/carrier/:carrierId/override-status", authorize("ADMIN", "CEO"), getOverrideStatus);
 // B5b (decision 5): carrier suspend is ADMIN, CEO, OPERATIONS — the same scope as customer inactivate.
 router.post("/carrier/:carrierId/suspend", authorize("ADMIN", "CEO", "OPERATIONS"), suspendCarrier);
+// The way back out, for the same roles that can put a carrier in. Returns the
+// carrier to REVIEWING, never APPROVED; approving it is a separate act.
+router.post("/carrier/:carrierId/lift-suspension", authorize("ADMIN", "CEO", "OPERATIONS"), auditLog("UPDATE", "Carrier"), liftSuspension);
 router.post("/carrier/:carrierId/notes", authorize("ADMIN", "OPERATIONS", "BROKER"), addNote);
 router.post("/carrier/:carrierId/check", authorize("ADMIN", "OPERATIONS", "CEO", "BROKER", "DISPATCH"), checkCarrier);
 

@@ -15,7 +15,8 @@
  *     route count is frozen.
  *
  * DELIBERATELY OUTSIDE THIS GUARD — carrier SUSPENSION and reinstatement.
- * Those rows are written by complianceController.suspendCarrier today and by
+ * Those rows are written by complianceController.suspendCarrier and
+ * .liftSuspension today (a matched pair on AuditTrail) and by
  * lib/carrierStatusAudit (the concurrent arc's single writer, USER → AuditTrail,
  * CRON → SystemLog) once it lands. A second writer there would be the
  * dual-convention class §13.3 keeps unpicking, so this guard does not scan for

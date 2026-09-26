@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import * as complianceMonitorService from "../services/complianceMonitorService";
-import { sendEmail } from "../services/emailService";
+import { sendEmail, wrap } from "../services/emailService";
 import { calendarMonthsBetween } from "../services/fmcsaService";
 import { log } from "../lib/logger";
 import {
@@ -753,6 +753,172 @@ export async function suspendCarrier(req: AuthRequest, res: Response) {
   } catch (err) {
     log.error({ err: err }, "[Compliance] Suspend error:");
     res.status(500).json({ error: "Failed to suspend carrier" });
+  }
+}
+
+// POST /compliance/carrier/:carrierId/lift-suspension
+//
+// The exit from SUSPENDED, which did not exist. approveCarrier refuses a
+// suspended carrier ("must have suspension lifted before approval") and
+// rejectCarrier refuses one ("lift suspension first"), and both named an action
+// no route or button provided. The only way out was the weekly auto-reversal,
+// which keys on FMCSA facts rather than on why the carrier was suspended.
+//
+// Lifting RETURNS THE CARRIER TO REVIEWING, never to APPROVED, whatever it was
+// before the suspension. Same reasoning as restore (B6c): the carrier's
+// standing aged while it was suspended, and whether it may haul again is a
+// separate decision taken through Approve. Lifting restores the portal sign-in
+// (login is blocked only while SUSPENDED) and nothing else.
+//
+// The three auto-suspend columns are cleared in the same write. They describe a
+// state the row is no longer in, and leaving them set is not inert:
+// loadComplianceService flags any load assigned to a carrier with
+// autoSuspendedAt as CRITICAL, and waterfall scoring excludes it. Before this,
+// only checkAutoReversal cleared them. The audit row keeps what they said.
+//
+// Absolutes are unaffected: an OFAC match, revoked authority or expired
+// insurance is read from its own column at the tender gate, not from
+// onboardingStatus, so lifting a suspension cannot release any of them. An
+// automatic suspension whose condition still holds recurs once the carrier is
+// approved, because the sweeps that wrote it scan APPROVED carriers.
+export async function liftSuspension(req: AuthRequest, res: Response) {
+  try {
+    const rawReason = typeof req.body?.reason === "string" ? req.body.reason.trim().slice(0, 500) : "";
+    if (rawReason.length < 5) {
+      res.status(400).json({ error: "A reason of at least 5 characters is required to lift a suspension." });
+      return;
+    }
+    const carrier = await prisma.carrierProfile.findUnique({
+      where: { id: req.params.carrierId },
+      select: {
+        id: true,
+        companyName: true,
+        onboardingStatus: true,
+        deletedAt: true,
+        autoSuspendedAt: true,
+        autoSuspendReason: true,
+        autoSuspendCause: true,
+        userId: true,
+        user: { select: { email: true, firstName: true, lastName: true, company: true } },
+      },
+    });
+    if (!carrier) {
+      res.status(404).json({ error: "Carrier not found" });
+      return;
+    }
+    // An archived carrier's login is off and its record is out of the
+    // operation. Restore is the exit from that, and restore already returns the
+    // carrier to REVIEWING, so the two acts must not both be in play at once.
+    if (carrier.deletedAt) {
+      res.status(409).json({
+        code: "CARRIER_ARCHIVED",
+        error: "This carrier is archived. Restore it first; restoring returns it to REVIEWING.",
+      });
+      return;
+    }
+    if (carrier.onboardingStatus !== "SUSPENDED") {
+      res.status(409).json({
+        code: "NOT_SUSPENDED",
+        error: `This carrier is ${carrier.onboardingStatus}, not suspended. Nothing to lift.`,
+      });
+      return;
+    }
+
+    // Conditional on the state just read, so a suspension changed underneath
+    // this request (a second admin, the weekly auto-reversal, an archive) is
+    // reported rather than overwritten.
+    const moved = await prisma.carrierProfile.updateMany({
+      where: { id: carrier.id, onboardingStatus: "SUSPENDED", deletedAt: null },
+      data: {
+        onboardingStatus: "REVIEWING",
+        status: "REVIEW", // paired; see lib/carrierOperational
+        autoSuspendedAt: null,
+        autoSuspendReason: null,
+        autoSuspendCause: null,
+      },
+    });
+    if (moved.count === 0) {
+      res.status(409).json({
+        code: "SUSPENSION_CHANGED",
+        error: "This carrier's status changed while you were lifting the suspension. Reload and check it.",
+      });
+      return;
+    }
+
+    const carrierName = carrier.companyName || carrier.user.company || `${carrier.user.firstName} ${carrier.user.lastName}`;
+
+    // After the commit, and never fatal: a history write must not fail the act
+    // it describes (Item 235.5). Same table, action and field names as the
+    // CARRIER_SUSPENDED row suspendCarrier writes, so the two read as a pair.
+    try {
+      await prisma.auditTrail.create({
+        data: {
+          action: "STATUS_CHANGE",
+          entityType: "CarrierProfile",
+          entityId: carrier.id,
+          performedById: req.user!.id,
+          changedFields: {
+            actionDetail: "CARRIER_SUSPENSION_LIFTED",
+            carrierName,
+            previousStatus: "SUSPENDED",
+            newStatus: "REVIEWING",
+            reason: rawReason,
+            previousCause: carrier.autoSuspendCause,
+            previousReason: carrier.autoSuspendReason,
+            previousSuspendedAt: carrier.autoSuspendedAt?.toISOString() ?? null,
+          } as any,
+        },
+      });
+    } catch (err) {
+      log.error({ err, carrierId: carrier.id }, "[Compliance] Lift-suspension audit row failed");
+    }
+
+    // The carrier could not sign in while suspended, so they are told they can
+    // again. The admin's reason is internal and is not sent.
+    prisma.notification
+      .create({
+        data: {
+          userId: carrier.userId,
+          type: "ONBOARDING",
+          title: "Suspension lifted",
+          message: "Your account is no longer suspended and is back with our review team.",
+          actionUrl: "/carrier/dashboard/application-status",
+        },
+      })
+      .catch((err) => log.error({ err, carrierId: carrier.id }, "[Compliance] Lift-suspension notification failed"));
+    if (carrier.user.email) {
+      sendEmail(
+        carrier.user.email,
+        "Your Silk Route Logistics account is no longer suspended",
+        wrap(`
+          <h2 style="color:#0A2540;margin-bottom:4px">Your suspension has been lifted</h2>
+          <p style="color:#3A4A5F;margin-bottom:24px">Hi ${carrier.user.firstName || "there"},</p>
+          <p style="color:#3A4A5F">Our team has lifted the suspension on ${carrierName}. You can sign in to the carrier portal again.</p>
+          <p style="color:#3A4A5F">Your account is back with our review team. We will email you when it is cleared to haul, and no loads are offered to you before then.</p>
+          <div style="text-align:center;margin:32px 0">
+            <a href="https://silkroutelogistics.ai/carrier/login" style="display:inline-block;background:#BA7517;color:#FBF7F0;padding:14px 36px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px">Sign in</a>
+          </div>
+        `),
+        undefined,
+        { replyTo: "compliance@silkroutelogistics.ai" },
+      ).catch((err) => log.error({ err, carrierId: carrier.id }, "[Compliance] Lift-suspension email failed"));
+    }
+
+    res.json({
+      success: true,
+      // Top-level id: the route's auditLog middleware reads req.params.id, which
+      // this route does not have (its param is :carrierId), then data.id.
+      id: carrier.id,
+      carrier: { id: carrier.id, onboardingStatus: "REVIEWING" },
+      previous: {
+        cause: carrier.autoSuspendCause,
+        reason: carrier.autoSuspendReason,
+        suspendedAt: carrier.autoSuspendedAt,
+      },
+    });
+  } catch (err) {
+    log.error({ err: err }, "[Compliance] Lift-suspension error:");
+    res.status(500).json({ error: "Failed to lift the suspension" });
   }
 }
 

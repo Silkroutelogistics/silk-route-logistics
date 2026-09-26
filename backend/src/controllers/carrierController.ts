@@ -1758,6 +1758,12 @@ export async function getAllCarriers(req: AuthRequest, res: Response) {
         deletedBy: c.deletedBy,
         archiveReason: c.archiveReason,
         archiveNote: c.archiveNote,
+        // Why and when a SUSPENDED carrier was suspended, so the Lift
+        // suspension modal can show the AE what they are lifting. Null on any
+        // carrier that is not suspended (the lift clears all three).
+        autoSuspendedAt: c.autoSuspendedAt,
+        autoSuspendReason: c.autoSuspendReason,
+        autoSuspendCause: c.autoSuspendCause,
         company: c.user.company || `${c.user.firstName} ${c.user.lastName}`,
         contactName: `${c.user.firstName} ${c.user.lastName}`,
         email: c.user.email,
