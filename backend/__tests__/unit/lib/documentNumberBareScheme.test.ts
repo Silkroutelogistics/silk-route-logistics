@@ -30,6 +30,8 @@ import {
   formatSupplementalNumber,
   invoiceNumberTwins,
   generateLoadNumber,
+  HIGHEST_LOAD_NUMBER_SQL,
+  highestLoadNumberAtOrAboveFloor,
   isBareStem,
   isLegacyStem,
   LAST_LEGACY_LOAD_NUMBER,
@@ -324,19 +326,21 @@ describe("allocation", () => {
  * A stand-in for load_number_seq that behaves like Postgres: CREATE ... IF NOT
  * EXISTS only applies START WITH to a sequence that does not exist yet, and
  * nextval advances. It also honours a setval, deliberately: a generator that
- * started lifting the sequence again would be SEEN lifting it here, instead of
- * a fixed-answer mock hiding the move.
+ * lifts the sequence is SEEN lifting it here, instead of a fixed-answer mock
+ * hiding the move. `loads` are the number-column values HIGHEST_LOAD_NUMBER_SQL
+ * reads, and transactions run one at a time, the way the advisory lock makes them.
  */
-function sequence(existing: { last: number; called: boolean } | null) {
+function sequence(existing: { last: number; called: boolean } | null, loads: string[] = []) {
   let seq = existing ? { ...existing } : null;
   const statements: string[] = [];
-  const client = {
+  let held: Promise<void> = Promise.resolve();
+  const client: any = {
     $executeRaw: async (strings: TemplateStringsArray, ...values: unknown[]) => {
       const sql = strings.reduce((acc, s, i) => acc + s + (i < values.length ? String(values[i]) : ""), "");
       statements.push(sql);
       const create = sql.match(/CREATE SEQUENCE IF NOT EXISTS load_number_seq START WITH (\d+)/);
       if (create && !seq) seq = { last: Number(create[1]), called: false };
-      const set = sql.match(/setval\('load_number_seq', (\d+)(?:, (true|false))?\)/);
+      const set = sql.match(/setval\('load_number_seq', (\d+)(?:::bigint)?(?:, (true|false))?\)/);
       if (set) seq = { last: Number(set[1]), called: set[2] !== "false" };
       return 0;
     },
@@ -344,9 +348,41 @@ function sequence(existing: { last: number; called: boolean } | null) {
       seq = seq!.called ? { last: seq!.last + 1, called: true } : { last: seq!.last, called: true };
       return [{ nextval: BigInt(seq.last) }];
     },
+    $queryRawUnsafe: async (sql: string) => {
+      statements.push(sql);
+      const taken = loads.map((v) => v.replace(/^SRL-/, "")).filter((v) => /^[0-9]{1,15}$/.test(v)).map(Number).filter((n) => n >= LOAD_NUMBER_FLOOR);
+      return [{ max: taken.length ? BigInt(Math.max(...taken)) : null }];
+    },
+    $transaction: async (fn: (tx: any) => Promise<unknown>) => {
+      const before = held;
+      let release!: () => void;
+      held = new Promise<void>((r) => (release = r));
+      await before;
+      try { return await fn(client); } finally { release(); }
+    },
   };
-  return { client, statements, state: () => seq };
+  return { client, statements, loads, state: () => seq };
 }
+
+describe("the highest load number already taken (read by the generator and by health)", () => {
+  it("takes the highest at or above the floor, bare or SRL-, and ignores 5003 and L- numbers", async () => {
+    const { client } = sequence(null, ["5001", "5003", "SRL-121497", "L2228322560", "121499", "SRL-121500"]);
+    expect(await highestLoadNumberAtOrAboveFloor(client)).toBe(121500);
+  });
+
+  it("is 0 when nothing is taken, whether the answer is NULL or empty", async () => {
+    expect(await highestLoadNumberAtOrAboveFloor({ $queryRawUnsafe: async () => [{ max: null }] })).toBe(0);
+    expect(await highestLoadNumberAtOrAboveFloor({ $queryRawUnsafe: async () => [] })).toBe(0);
+  });
+
+  it("reads both number columns, accepts the SRL- twin, guards the cast, and filters at the floor", () => {
+    expect(HIGHEST_LOAD_NUMBER_SQL).toContain('"loadNumber"');
+    expect(HIGHEST_LOAD_NUMBER_SQL).toContain('"referenceNumber"');
+    expect(HIGHEST_LOAD_NUMBER_SQL).toContain("'^(SRL-)?[0-9]{1,15}$'");
+    expect(HIGHEST_LOAD_NUMBER_SQL).toMatch(/CASE WHEN .* THEN .*::bigint END/);
+    expect(HIGHEST_LOAD_NUMBER_SQL).toMatch(new RegExp(`WHERE n >= ${LOAD_NUMBER_FLOOR}$`));
+  });
+});
 
 describe("loads continue from the last legacy number (§21.2, corrected 2026-09-26)", () => {
   it("a fresh database starts at 121498, then 121499", async () => {

@@ -505,15 +505,42 @@ export const DOCUMENT_FILENAME_LABEL: Record<Exclude<DocumentKind, "SUPPLEMENTAL
 export const LAST_LEGACY_LOAD_NUMBER = 121497;
 export const LOAD_NUMBER_FLOOR = LAST_LEGACY_LOAD_NUMBER + 1;
 
-export async function generateLoadNumber(client: any = prisma): Promise<string> {
-  // Idempotent; static SQL, no user input. The literal is LOAD_NUMBER_FLOOR —
-  // a test holds the two equal.
-  await client.$executeRaw`CREATE SEQUENCE IF NOT EXISTS load_number_seq START WITH 121498`;
+/**
+ * The highest load number at or above the floor, in either number column, bare or
+ * with the retired SRL- prefix (121498 and SRL-121498 are one number, §21.2).
+ * Static SQL: the floor is a constant, not input. The CASE guards the cast:
+ * Postgres may push the outer filter into the subquery and does not promise to
+ * test the pattern first, and one non-numeric value would then fail every load
+ * creation. Shared with lib/loadNumberSeqInfo, so health and the generator
+ * cannot disagree about which numbers are taken.
+ */
+export const HIGHEST_LOAD_NUMBER_SQL =
+  `SELECT MAX(n) AS max FROM (` +
+  `SELECT CASE WHEN v ~ '^(SRL-)?[0-9]{1,15}$' THEN regexp_replace(v, '^SRL-', '')::bigint END AS n ` +
+  `FROM (SELECT "loadNumber" AS v FROM loads UNION ALL SELECT "referenceNumber" FROM loads) cols` +
+  `) numbered WHERE n >= ${LOAD_NUMBER_FLOOR}`;
+
+/** HIGHEST_LOAD_NUMBER_SQL's answer, or 0 when no load holds a number at or above the floor. */
+export async function highestLoadNumberAtOrAboveFloor(
+  client: { $queryRawUnsafe(sql: string): Promise<unknown> },
+): Promise<number> {
+  const rows = (await client.$queryRawUnsafe(HIGHEST_LOAD_NUMBER_SQL)) as Array<{ max: bigint | number | null }> | null;
+  return Number(rows?.[0]?.max ?? 0);
+}
+
+async function drawLoadNumber(client: any): Promise<number> {
   const result = await client.$queryRaw<{ nextval: bigint }[]>`SELECT nextval('load_number_seq') as nextval`;
   if (!result || result.length === 0) {
     throw new Error("Failed to generate load number: sequence returned no result");
   }
-  const n = Number(result[0].nextval);
+  return Number(result[0].nextval);
+}
+
+export async function generateLoadNumber(client: any = prisma): Promise<string> {
+  // Idempotent; static SQL, no user input. The literal is LOAD_NUMBER_FLOOR —
+  // a test holds the two equal.
+  await client.$executeRaw`CREATE SEQUENCE IF NOT EXISTS load_number_seq START WITH 121498`;
+  const n = await drawLoadNumber(client);
   if (n < LOAD_NUMBER_FLOOR) {
     throw new Error(
       `load_number_seq issued ${n}, below ${LOAD_NUMBER_FLOOR}. Loads continue from the last ` +
