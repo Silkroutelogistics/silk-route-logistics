@@ -19205,7 +19205,11 @@
 // POST /accounting/invoices/:id/mark-sent (ADMIN/CEO/ACCOUNTING) flips SENT and records
 // channel, deliveredAt and who, in one transaction with an audit row. Channel defaults
 // to the customer's; a future date is refused; the one-BASE-per-load guard applies.
-export const SRL_VERSION = "3.8.bkz";
+// v3.8.bla — THE TWO PATHS THAT EMAIL AN INVOICE RECORD EMAIL AS ITS CHANNEL (RECONCILE 2026-09-26). HELD.
+// sendInvoice and generateInvoiceFromLoad now write deliveryChannel EMAIL, deliveredAt
+// equal to sentDate, and the actor when they flip SENT. onPODUploaded delivers nothing
+// and records no channel (O4).
+export const SRL_VERSION = "3.8.bla";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

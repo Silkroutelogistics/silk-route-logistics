@@ -396,7 +396,11 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
       await sendEmail(r.email, `Invoice ${docNumber} — ${load.referenceNumber}`, wrap(body)).catch((e: any) => log.error({ err: e }, "[Invoice] Email error:"));
     }
 
-    await prisma.invoice.update({ where: { id: invoice!.id }, data: { status: "SENT", sentDate: new Date() } });
+    const sentAt = new Date();
+    await prisma.invoice.update({
+      where: { id: invoice!.id },
+      data: { status: "SENT", sentDate: sentAt, deliveryChannel: "EMAIL", deliveredAt: sentAt, deliveredById: req.user!.id },
+    });
 
     // v3.8.ati — the load is now invoiced, and the board is told.
     //

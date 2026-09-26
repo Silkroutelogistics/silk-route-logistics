@@ -628,9 +628,11 @@ export async function sendInvoice(req: AuthRequest, res: Response) {
       pdf,
     });
 
+    // The send is the delivery: record its channel, when and who (RECONCILE step 2).
+    const sentAt = new Date();
     const invoice = await prisma.invoice.update({
       where: { id },
-      data: { status: "SENT", sentDate: new Date() },
+      data: { status: "SENT", sentDate: sentAt, deliveryChannel: "EMAIL", deliveredAt: sentAt, deliveredById: req.user?.id ?? null },
     });
 
     res.json(invoice);
