@@ -96,7 +96,7 @@ literally, "origin highest + 1" would have given 326, which this branch already 
   counts held at 353/352/0/2, `L9180992591` got 0 alerts and 0 notifications after 17:59Z, and
   no row carries `notifiedAt`.** The old code wrote a duplicate pair on every tick; the fixed
   scan writes nothing when nothing changed, so the proof is that absence. The dry-run from
-  `../srl-cleanup` at 18:36:30Z matched exactly. The `--commit` run is Wasi's.
+  `../srl-cleanup` at 18:36:30Z matched exactly. Wasi's `--commit` ran at 19:23Z (Item 322).
 - The cutover is banked as **Item 328** (P1), with a table of all 66 scheduled jobs.
 - Branches: `fix/notifications` and `fix/notifications-r2` deleted 2026-09-26 on Wasi's
   instruction, after the 18:00Z proof. `git cherry` listed 7 commits not upstream; each is a
@@ -110,9 +110,7 @@ literally, "origin highest + 1" would have given 326, which this branch already 
   - `9ec32e81` v3.8.bkk: code identical to landed `954b5920`; footer bumped from bkf, not bkj.
   - `87aa0db5` docs: re-landed as `8355710b`; only a "324-325 claimed" note differs.
 - Removed: containers `srl-e2e-290`, `srl-e2e-notif`, `srl-e2e-notif3`; worktree `srl-290`;
-  `srl-notif` after this commit. `fix/item-290` and `fix/notifications-r3` remain, both merged.
-- Created: worktree `../srl-cleanup` (detached at `4e3c19e8`, backend deps only) for Wasi's
-  `--commit` run. Remove it once that output is verified.
+  `srl-notif` after this commit. `fix/item-290` and `fix/notifications-r3` deleted 2026-09-26, both merged.
 - Item numbers on origin: 326 and 327 each appear once. Two duplicates predate this arc: 180
   (lines 218 and 248; the second is the drafts-surface item under the wrong number) and 182
   (lines 244 and 266). Not renumbered: "Item 182" is cited across CLAUDE.md for the
