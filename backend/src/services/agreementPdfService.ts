@@ -27,7 +27,7 @@ import {
   type AgreementSegment, type CanonicalCountersign,
 } from "../lib/canonicalAgreementText";
 import { SIGNATORY_NAME, SIGNATORY_TITLE } from "../config/authority";
-import { roleFieldKey, type SignatureMark } from "../lib/srl-chrome";
+import { roleFieldKey, type SignatureMark, type SignatureRole } from "../lib/srl-chrome";
 import fs from "fs";
 import path from "path";
 
@@ -114,6 +114,20 @@ function coverTerm(agreement: LegalAgreement): string {
  * the subtitle, which is hashed, so the header can never name a different
  * edition from the one the document is. Any other subtitle prints as it is.
  */
+/**
+ * The master-agreement signature roles for one render. The carrier's EIN field
+ * is present only when there is an EIN to print (v3.8.blr). Returns the shared
+ * constant itself when nothing is removed, so the full-width case is the exact
+ * object every other caller sees.
+ */
+export function signatureRoles(ein: string | null | undefined): SignatureRole[] {
+  if (ein) return MASTER_AGREEMENT_SIGNATURE_ROLES;
+  return MASTER_AGREEMENT_SIGNATURE_ROLES.map((r) => ({
+    ...r,
+    fields: r.fields.filter((field) => field !== "EIN"),
+  }));
+}
+
 export function runningEdition(subtitle: string): string {
   const m = /^REVISION\s+(\d+)\s*·\s*([A-Z]+)\s+(\d{4})$/.exec(subtitle.trim());
   if (!m) return subtitle;
@@ -480,7 +494,14 @@ function renderLegalAgreement(
   // TITLE / SIGNATURE / DATE) at 26pt, with the SIGNATURE row SIGNATURE_ROW_H
   // tall, so ~260pt, or its last fields overflow the block and collide with the
   // attestation strip below.
-  const sigHeight = 262;
+  //
+  // v3.8.blr — the EIN field is drawn only when an EIN is on file (owner,
+  // 2026-09-26: "if we are not able to automatically populate then we need to
+  // remove it"). A blank line on an electronically executed agreement is a
+  // field nobody will ever fill, and reads as information the carrier withheld.
+  // One field fewer is one 26pt row fewer.
+  const roles = signatureRoles(carrier?.ein);
+  const sigHeight = roles === MASTER_AGREEMENT_SIGNATURE_ROLES ? 262 : 236;
   if (y + sigHeight + 56 > CONTENT_BOTTOM) pageBreak();
   else y += 14;
   block(seg("witness")[0]?.text ?? WITNESS_LINE, { font: FONT_BODY_ITALIC, size: 9, gap: 14, align: "left" });
@@ -560,7 +581,7 @@ function renderLegalAgreement(
   }
 
   y = drawSignatureBlock(doc, y, {
-    roles: MASTER_AGREEMENT_SIGNATURE_ROLES,
+    roles,
     height: sigHeight,
     prefilledValues: prefilled,
     x: M,

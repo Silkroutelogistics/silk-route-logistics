@@ -19272,6 +19272,13 @@
 // The RC validator read a typed 50; it reads the constant now. The drift guard's
 // retired list moved with the policy, and a negation elsewhere on a line no
 // longer excuses a rate on it.
+// v3.8.blr — The EIN the carrier gives at onboarding prints on their agreements; with none on file the line is gone.
+//   An optional field at Step 3 beside the W-9, stored encrypted (the schema
+// always said it was; nothing did it, and an upsert slipped past the extension
+// entirely), read into the executed Broker-Carrier and Quick Pay agreements.
+// Without one, the carrier column drops the EIN field rather than printing an
+// empty line. The AE identity route no longer returns the full number, and the
+// W-9 card stops claiming a parser that does not exist.
 export const SRL_VERSION = "3.8.blv";
 
 export function VersionFooter({ className }: { className?: string }) {

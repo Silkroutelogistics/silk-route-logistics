@@ -185,7 +185,11 @@ export async function getIdentityStatus(req: AuthRequest, res: Response) {
     return;
   }
 
-  res.json(idv);
+  // The full EIN is for the IRS match and the carrier's own agreement. The
+  // last four identify it on screen; the whole number never leaves the server
+  // through this route.
+  const { w9TinFull: _tin, ...shown } = idv;
+  res.json({ ...shown, w9TinOnFile: !!_tin });
 }
 
 /**

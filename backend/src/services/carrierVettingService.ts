@@ -12,7 +12,7 @@
  * authoritative-looking statement of it in the codebase. It is now on the list.
  */
 
-import { prisma } from "../config/database";
+import { prisma, decryptStoredValue } from "../config/database";
 import { getAgreementState } from "../lib/agreementState";
 import { INSURANCE_MINIMUMS } from "../lib/insurancePolicy";
 import { verifyCarrierWithFMCSA } from "./fmcsaService";
@@ -524,7 +524,8 @@ export async function vetCarrier(
   let tinResult: EnhancedTinResult | null = null;
   if (idv && idv.w9TinFull && idv.w9CompanyName) {
     try {
-      tinResult = await verifyTinWithIRS(idv.w9TinFull, idv.w9CompanyName);
+      // Reached through `include`, so the extension has not decrypted it.
+      tinResult = await verifyTinWithIRS(decryptStoredValue(idv.w9TinFull) as string, idv.w9CompanyName);
     } catch (err) {
       log.warn({ data: err }, "[Vetting] Enhanced TIN check failed, falling back to stored status:");
     }

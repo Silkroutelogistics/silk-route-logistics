@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Check, ChevronRight, ChevronLeft, Upload, CheckCircle2, X, FileText, Image as ImageIcon, MapPin, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AgreementBody, type AgreementBodyContent } from "@/components/carrier/AgreementBody";
+import { einDigits, formatEinInput } from "@shared/constants/ein";
 
 const steps = ["Company Info", "Equipment & Regions", "Documents", "Terms", "Review"];
 
@@ -712,6 +713,9 @@ export default function OnboardingPage() {
       if (!hasDoc("authority")) return false;
       if (!hasDoc("wc")) return false;
       if (hasCanadianOps && !hasDoc("safety")) return false;
+      // v3.8.blr — the EIN is optional, but a partly typed one is a typo the
+      // carrier should fix now rather than find missing from their agreement.
+      if (form.ein && !einDigits(form.ein)) return false;
       return true;
     }
     // Fail closed: the agreement body has to be on screen before an
@@ -803,7 +807,8 @@ export default function OnboardingPage() {
         ...regData,
         ...insurancePayload,
         ...(numTrucksStr ? { numberOfTrucks: numTrucksStr } : {}),
-        ...(einFromForm ? { ein: einFromForm } : {}),
+        // v3.8.blr — sent as nine digits; the field displays XX-XXXXXXX.
+        ...(einDigits(einFromForm) ? { ein: einDigits(einFromForm) } : {}),
         // Arc 32 — proof the mailbox was reached. Declared in
         // carrierRegisterSchema, without which validateBody's
         // `req.body = result.data` would strip it and the server gate would
@@ -1762,6 +1767,39 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
+              {/* v3.8.blr — the carrier's EIN, optional. It prints on their
+                  executed Broker-Carrier Agreement and Quick Pay Agreement;
+                  left blank, both agreements omit the EIN line. Stored
+                  encrypted. The W-9 upload is not read for it: no parser
+                  extracts a TIN, which is why this is a field. */}
+              <div className="pt-2">
+                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-3">Federal Tax ID</p>
+                <div className="max-w-xs">
+                  <label htmlFor="carrier-registration-ein" className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">EIN (optional)</label>
+                  <input
+                    id="carrier-registration-ein"
+                    name="carrier-registration-ein"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="12-3456789"
+                    value={form.ein}
+                    onChange={(e) => set("ein", formatEinInput(e.target.value))}
+                    aria-invalid={!!form.ein && !einDigits(form.ein)}
+                    aria-describedby="carrier-registration-ein-help"
+                    className={cn(
+                      "w-full px-3 py-2 bg-white border rounded-lg text-sm text-[#0A2540] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]",
+                      form.ein && !einDigits(form.ein) ? "border-[#9B2C2C]" : "border-[#EFE6D3] focus:border-[#BA7517]",
+                    )}
+                  />
+                  {form.ein && !einDigits(form.ein) && (
+                    <p className="text-xs text-[#9B2C2C] mt-1">An EIN has 9 digits.</p>
+                  )}
+                  <p id="carrier-registration-ein-help" className="text-xs text-[#6B7685] mt-1">
+                    The number on your W-9. It prints on your signed agreements. Leave it blank and they omit it.
+                  </p>
+                </div>
+              </div>
+
               {/* Document Upload Section
                   v3.8.aiv — Safety Fitness Certificate conditional on
                   Canadian regions.
@@ -1797,7 +1835,7 @@ export default function OnboardingPage() {
                   const CANADIAN_REGIONS = ["Eastern Canada", "Western Canada", "Central Canada", "Cross-Border"];
                   const hasCanadianOperations = form.operatingRegions.some((r) => CANADIAN_REGIONS.includes(r));
                   const docs = [
-                    { key: "w9", label: "W-9 Form", desc: "Required for tax reporting (your EIN is extracted from this)", required: true },
+                    { key: "w9", label: "W-9 Form", desc: "Required for tax reporting", required: true },
                     { key: "insurance", label: "Insurance Certificate (COI)", desc: "Auto liability, cargo, and general liability coverage", required: true },
                     { key: "authority", label: "Authority Letter / Operating Authority", desc: "Active FMCSA authority — 18+ months of operating history required", required: true },
                     // v3.8.aky — Workers' Comp promoted from mention-inside-COI
@@ -2103,6 +2141,7 @@ export default function OnboardingPage() {
                   <p className="text-sm text-[#3A4A5F] mt-1">
                     DOT: {form.dotNumber}{form.mcNumber && ` | MC: ${form.mcNumber}`}
                     {form.numberOfTrucks && ` | Trucks: ${form.numberOfTrucks}`}
+                    {einDigits(form.ein) && ` | EIN: ${form.ein}`}
                     {fmcsaResult?.verified && <span className="ml-2 text-[#2F7A4F] font-semibold">FMCSA Verified</span>}
                   </p>
                 </div>

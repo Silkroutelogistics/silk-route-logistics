@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import path from "path";
 import multer from "multer";
 import { prisma } from "../config/database";
+import { einDigits } from "../../../shared/constants/ein";
 import { env } from "../config/env";
 import { AuthRequest } from "../middleware/auth";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
@@ -632,20 +633,25 @@ export async function registerCarrier(req: Request, res: Response) {
     })();
   }
 
-  // Store EIN in identity verification if provided
-  if (data.ein && user.carrierProfile) {
-    await prisma.carrierIdentityVerification.upsert({
-      where: { carrierId: user.carrierProfile.id },
-      create: {
-        carrierId: user.carrierProfile.id,
-        w9TinFull: data.ein,
-        w9TinLastFour: data.ein.slice(-4),
-      },
-      update: {
-        w9TinFull: data.ein,
-        w9TinLastFour: data.ein.slice(-4),
-      },
-    });
+  // v3.8.blr — the EIN the carrier gave at onboarding. It prints on their
+  // executed Broker-Carrier Agreement and Quick Pay Agreement, and feeds the
+  // IRS TIN match. Optional: with none on file the agreements omit the line.
+  //
+  // Stored encrypted (config/database.ts). Wrapped because the account already
+  // exists by this point: a storage failure here must not turn a completed
+  // application into a 500. The cost of failing is only that the line is
+  // omitted, which is what happens when no EIN was given.
+  const ein = einDigits(data.ein);
+  if (ein && user.carrierProfile) {
+    try {
+      await prisma.carrierIdentityVerification.upsert({
+        where: { carrierId: user.carrierProfile.id },
+        create: { carrierId: user.carrierProfile.id, w9TinFull: ein, w9TinLastFour: ein.slice(-4) },
+        update: { w9TinFull: ein, w9TinLastFour: ein.slice(-4) },
+      });
+    } catch (err) {
+      log.error({ err, carrierId: user.carrierProfile.id }, "[Registration] EIN not stored; agreements will omit it");
+    }
   }
 
   // ── v3.8.asb — the Quick Pay pilot REQUEST ──

@@ -54,6 +54,7 @@ import { log } from "../lib/logger";
 import { clientIp, clientUserAgent } from "../lib/clientIp";
 import { agreementContentHash, CanonicalCountersign } from "../lib/canonicalAgreementText";
 import { SIGNATORY_NAME, SIGNATORY_TITLE } from "../config/authority";
+import { formatEin } from "../../../shared/constants/ein";
 
 const router = Router();
 
@@ -804,16 +805,27 @@ async function loadActivationProfile(userId: string) {
 }
 
 // Carrier legal identity for the executed agreement PDF signature block.
+//
+// v3.8.blr — the EIN comes from the one the carrier gave at onboarding. Read
+// on the identity model itself, not through an include, so the extension
+// decrypts it. When none is on file this is null and the agreement omits the
+// EIN line rather than printing an empty one.
 async function loadCarrierIdentity(profileId: string) {
-  const p = await prisma.carrierProfile.findUnique({
-    where: { id: profileId },
-    select: { companyName: true, mcNumber: true, dotNumber: true },
-  });
+  const [p, idv] = await Promise.all([
+    prisma.carrierProfile.findUnique({
+      where: { id: profileId },
+      select: { companyName: true, mcNumber: true, dotNumber: true },
+    }),
+    prisma.carrierIdentityVerification.findUnique({
+      where: { carrierId: profileId },
+      select: { w9TinFull: true },
+    }),
+  ]);
   return {
     legalName: p?.companyName || "Carrier",
     mcNumber: p?.mcNumber || null,
     dotNumber: p?.dotNumber || null,
-    ein: null,
+    ein: formatEin(idv?.w9TinFull),
   };
 }
 

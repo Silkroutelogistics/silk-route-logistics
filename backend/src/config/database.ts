@@ -84,6 +84,10 @@ const ENCRYPTED_FIELDS: Record<string, string[]> = {
   // Note: User.totpSecret and totpBackupCodes are encrypted at the application layer
   // by totpService.ts using encrypt/decrypt from utils/encryption.ts (to avoid double encryption)
   Driver: ["licenseNumber"],
+  // The carrier's full EIN. The schema has always called this column encrypted
+  // and until v3.8.blr nothing encrypted it; onboarding now captures it, so it
+  // is encrypted from the first row. Only the last four stay plaintext.
+  CarrierIdentityVerification: ["w9TinFull"],
 };
 
 const ENC_PREFIX = "enc:";
@@ -91,6 +95,15 @@ const ENC_PREFIX = "enc:";
 function encryptValue(val: unknown): unknown {
   if (typeof val !== "string" || !val || val.startsWith(ENC_PREFIX)) return val;
   return ENC_PREFIX + aesEncrypt(val);
+}
+
+/**
+ * For a value reached through a nested `include`, which this extension does
+ * not see: it decrypts only records returned for the model the query named.
+ * Plain values pass through unchanged.
+ */
+export function decryptStoredValue(val: unknown): unknown {
+  return decryptValue(val);
 }
 
 function decryptValue(val: unknown): unknown {
@@ -130,8 +143,13 @@ function createClient(): PrismaClient {
     query: {
       async $allOperations({ model, operation, args, query }: { model?: string; operation: string; args: any; query: (args: any) => Promise<any> }) {
         // Encrypt on write operations
-        if (model && ENCRYPTED_FIELDS[model] && args.data) {
-          encryptDataFields(model, args.data);
+        if (model && ENCRYPTED_FIELDS[model]) {
+          if (args.data) encryptDataFields(model, args.data);
+          // An upsert carries its payloads in create/update, not data. Before
+          // v3.8.blr no encrypted field was ever written by an upsert, so the
+          // gap never showed; the EIN is.
+          if (args.create) encryptDataFields(model, args.create);
+          if (args.update) encryptDataFields(model, args.update);
         }
 
         // v3.8.asy — log-first Load.status transition observation (§13.3 Item
