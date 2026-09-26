@@ -19157,6 +19157,8 @@
 // tells the AE. It used to reach the log only (SRL-121492, invoicing audit G-2).
 // v3.8.bjo — B2b: an AE flip to POD_RECEIVED runs the idempotent auto-invoice,
 // as the POD-upload path already did (invoicing audit G-10).
+// v3.8.bjp — B4: the Load Board Rate Conf button serves the issued, hashed RC the
+// carrier was sent, not a re-render with today's template (invoicing audit G-4).
 export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {

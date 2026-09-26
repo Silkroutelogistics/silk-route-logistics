@@ -12,6 +12,40 @@ import {
   DOCUMENT_FILENAME_LABEL,
 } from "../lib/documentNumber";
 
+/**
+ * Invoicing audit G-4: these two routes RE-RENDERED the rate confirmation from the
+ * latest SIGNED row's formData with today's template, so the Load Board's Rate
+ * Conf button produced a different document from the one the carrier was sent and
+ * signed, whose bytes do not match its contentHash. When the load has an issued
+ * RC (frozen PDF + hash, not DRAFT or VOID) the stored bytes are served, as
+ * GET /rate-confirmations/:id/pdf does. A load with none falls back to the render,
+ * which is honest for a document nobody has been sent.
+ */
+async function streamIssuedRateConfirmation(loadId: string, res: Response): Promise<boolean> {
+  const issued = await prisma.rateConfirmation.findFirst({
+    where: { loadId, pdfUrl: { not: null }, contentHash: { not: null }, status: { notIn: ["DRAFT", "VOID"] } },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, pdfUrl: true, contentHash: true, rateConNumber: true, load: { select: { referenceNumber: true, loadNumber: true } } },
+  });
+  if (!issued?.pdfUrl || !issued.contentHash) return false;
+  try {
+    const { getFileStream } = await import("../services/storageService");
+    const stream = await getFileStream(issued.pdfUrl);
+    const filename = documentFilename(
+      documentNumberFor(issued.rateConNumber, issued.load, "RATE_CONFIRMATION") ?? issued.load.referenceNumber,
+      DOCUMENT_FILENAME_LABEL.RATE_CONFIRMATION,
+    );
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("X-SRL-Content-Hash", issued.contentHash);
+    stream.pipe(res);
+    return true;
+  } catch (err) {
+    log.error({ err, rcId: issued.id }, "[PDF] issued RC unreadable, re-rendering");
+    return false;
+  }
+}
+
 export async function downloadRateConfirmation(req: AuthRequest, res: Response) {
   try {
     const load = await prisma.load.findUnique({
@@ -31,6 +65,8 @@ export async function downloadRateConfirmation(req: AuthRequest, res: Response) 
     const isAssignedCarrier = load.carrierId === req.user!.id;
     const isEmployee = ["ADMIN", "BROKER", "DISPATCH", "OPERATIONS"].includes(req.user!.role);
     if (!isPoster && !isAssignedCarrier && !isEmployee) { res.status(403).json({ error: "Not authorized" }); return; }
+
+    if (await streamIssuedRateConfirmation(load.id, res)) return;
 
     // v3.8.aqk — this route now renders the BRANDED rate confirmation (skill
     // chrome). It previously called the legacy off-canonical generator, so the
@@ -69,6 +105,8 @@ export async function downloadEnhancedRateConfirmation(req: AuthRequest, res: Re
     });
 
     if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+
+    if (await streamIssuedRateConfirmation(load.id, res)) return;
 
     const rc = load.rateConfirmations?.[0];
     const formData = (rc?.formData && typeof rc.formData === "object" && !Array.isArray(rc.formData) ? rc.formData : {}) as Record<string, any>;
