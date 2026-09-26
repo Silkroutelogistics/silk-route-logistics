@@ -25,6 +25,7 @@
  */
 import crypto from "crypto";
 import type { LegalAgreement } from "../data/agreements";
+import { fillCarrierParty } from "../../../shared/constants/agreementParty";
 
 /** A drawable unit. `kind` selects the style; `text` is what is both drawn and hashed. */
 export interface AgreementSegment {
@@ -144,12 +145,18 @@ export function assembleAgreementSegments(
   } = {},
 ): AgreementSegment[] {
   const out: AgreementSegment[] = [];
+  // Revision 3 of the BCA and Revision 6 of the Quick Pay Agreement name the
+  // carrier in their opening paragraph. The name goes in HERE, so the hashed
+  // text, the executed PDF (which draws these segments) and the carrier column
+  // all say the same thing. Bodies authored before those revisions carry no
+  // placeholder and pass through unchanged, which keeps their hashes stable.
+  const party = (t: string) => fillCarrierParty(t, opts.carrier?.legalName);
 
   out.push({ kind: "effective-note", text: norm(agreement.effectiveNote) });
-  for (const p of agreement.preamble) out.push({ kind: "preamble", text: norm(p) });
+  for (const p of agreement.preamble) out.push({ kind: "preamble", text: norm(party(p)) });
   for (const s of agreement.sections) {
     out.push({ kind: "heading", text: norm(s.heading) });
-    for (const c of s.clauses) out.push({ kind: "clause", text: norm(c) });
+    for (const c of s.clauses) out.push({ kind: "clause", text: norm(party(c)) });
     // A table is hashed as one deterministic segment. The separators are
     // arbitrary but FIXED: what matters is that two different tables can never
     // flatten to the same string, so a cell moving between columns changes the

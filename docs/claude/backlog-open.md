@@ -2254,10 +2254,10 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
       is a commercial judgment SRL is entitled to make, not a fact held by
       another party.
     - **BCA section 22 is the clause a mandatory-ELD amendment replaces.** The
-      body is authored at `docs/legal/bca-content-F11.md` and compiled into
-      `brokerCarrierAgreement.generated.ts:12` (`BCA_F11_VERSION` =
-      `"2026-09-03-F11"`), aliased at `agreements.ts:71` and assembled at
-      `agreements.ts:203`. Replacing it is Dirk Beckwith's to ratify rather than
+      body is authored at `docs/legal/bca-content-R3.md` (Revision 3,
+      `SRL-BCA-2026-R3`, since 2026-09-26; paragraph 22 unchanged from the
+      Foundation Edition) and compiled into `brokerCarrierAgreement.generated.ts`
+      (`BCA_BODY_VERSION`), which `agreements.ts` re-exports as `BCA_VERSION`. Replacing it is Dirk Beckwith's to ratify rather than
       a sprint's, and it rides with §16 #1.
     - **The compliance page's vetting-report fetch is dead.**
       `compliance/page.tsx:156` calls `GET /carrier/vetting-report`. The only

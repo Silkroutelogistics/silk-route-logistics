@@ -4,7 +4,7 @@
  *
  *   npx tsx scripts/generate-agreement-content.ts
  *
- * Edit docs/legal/bca-content-F11.md, run this, commit BOTH. A parity test fails
+ * Edit docs/legal/bca-content-R3.md, run this, commit BOTH. A parity test fails
  * if the committed constant stops matching a fresh parse, so the two cannot
  * drift without CI saying so.
  *
@@ -21,7 +21,8 @@ import fs from "fs";
 import path from "path";
 import { parseAgreementFile } from "./agreementContentParser";
 
-const MD = path.resolve(__dirname, "../../docs/legal/bca-content-F11.md");
+const SOURCE = "docs/legal/bca-content-R3.md";
+const MD = path.resolve(__dirname, "../..", SOURCE);
 const OUT = path.resolve(__dirname, "../src/data/brokerCarrierAgreement.generated.ts");
 
 const s = (v: string) => JSON.stringify(v);
@@ -50,7 +51,7 @@ function main() {
   const out =
     "// GENERATED FILE -- DO NOT EDIT BY HAND.\n" +
     "//\n" +
-    "// Source:    docs/legal/bca-content-F11.md\n" +
+    "// Source:    " + SOURCE + "\n" +
     "// Regenerate: npx tsx scripts/generate-agreement-content.ts\n" +
     "//\n" +
     "// Editing this file directly makes the committed text disagree with the\n" +
@@ -58,13 +59,13 @@ function main() {
     "// drift -- because the drift would be in the words a carrier signs.\n" +
     "import type { LegalSection } from \"./agreements\";\n\n" +
     "/** Reference version carried in the document itself. */\n" +
-    "export const BCA_F11_VERSION = " + s(version) + ";\n\n" +
-    "export const BCA_F11_TITLE = " + s(agreement.title) + ";\n" +
-    "export const BCA_F11_SUBTITLE = " + s(agreement.subtitle) + ";\n" +
-    "export const BCA_F11_EFFECTIVE_NOTE = " + s(agreement.effectiveNote) + ";\n\n" +
-    "export const BCA_F11_PREAMBLE: string[] = [\n" +
+    "export const BCA_BODY_VERSION = " + s(version) + ";\n\n" +
+    "export const BCA_BODY_TITLE = " + s(agreement.title) + ";\n" +
+    "export const BCA_BODY_SUBTITLE = " + s(agreement.subtitle) + ";\n" +
+    "export const BCA_BODY_EFFECTIVE_NOTE = " + s(agreement.effectiveNote) + ";\n\n" +
+    "export const BCA_BODY_PREAMBLE: string[] = [\n" +
     agreement.preamble.map((p) => "  " + s(p) + ",").join("\n") + "\n];\n\n" +
-    "export const BCA_F11_SECTIONS: LegalSection[] = [\n" + sections + "\n];\n";
+    "export const BCA_BODY_SECTIONS: LegalSection[] = [\n" + sections + "\n];\n";
 
   fs.writeFileSync(OUT, out);
 

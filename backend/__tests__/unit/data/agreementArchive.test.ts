@@ -24,6 +24,8 @@ import {
 } from "../../../src/data/agreements";
 import { BROKER_CARRIER_AGREEMENT_2026_06_27_V1 } from "../../../src/data/archive/brokerCarrierAgreement.2026-06-27-v1";
 import { CARAVAN_QUICK_PAY_AGREEMENT_2026_08_16_V4 } from "../../../src/data/archive/caravanQuickPayAgreement.2026-08-16-v4";
+import { BROKER_CARRIER_AGREEMENT_2026_09_03_F11 } from "../../../src/data/archive/brokerCarrierAgreement.2026-09-03-F11";
+import { CARAVAN_QUICK_PAY_AGREEMENT_2026_09_04_V5 } from "../../../src/data/archive/caravanQuickPayAgreement.2026-09-04-v5";
 import { agreementContentHash } from "../../../src/lib/canonicalAgreementText";
 
 const ARCHIVED_V = "2026-06-27-v1";
@@ -191,5 +193,69 @@ describe("the archived Quick Pay body still resolves", () => {
     if (QP_VERSION === QP_ARCHIVED_V) return;
     const h = agreementContentHash(CARAVAN_QUICK_PAY_AGREEMENT, { carrier: CARRIER, signature: QP_SIGNATURE });
     expect(h).not.toBe(QP_ARCHIVED_TEXT_HASH);
+  });
+});
+
+/**
+ * THE 2026-09-26 SWAP: Foundation Edition BCA (2026-09-03-F11) and Quick Pay v5
+ * (2026-09-04-v5), replaced by BCA Revision 3 and Quick Pay Revision 6.
+ *
+ * Four carriers executed F11 and two executed v5. Before the swap every stored
+ * contentHash on those rows was re-derived READ-ONLY against production from
+ * these archived bodies and matched. Their real inputs are not pinned here for
+ * the reason given above -- a signer's IP does not belong in source -- so these
+ * pins use the same synthetic inputs and hold the property that would break
+ * verification: the archived TEXT does not move.
+ */
+
+const F11 = "2026-09-03-F11";
+const V5 = "2026-09-04-v5";
+const sigFor = (version: string) => ({ ...SIGNATURE, version });
+
+describe("the Foundation Edition BCA and Quick Pay v5 are archived", () => {
+  it("both resolve by the version stored on their signature rows, through every alias", () => {
+    expect(getAgreement("broker-carrier", F11)).toBe(BROKER_CARRIER_AGREEMENT_2026_09_03_F11);
+    expect(getAgreement("bca", F11)).toBe(BROKER_CARRIER_AGREEMENT_2026_09_03_F11);
+    for (const alias of ["quick-pay", "quickpay", "qp"]) {
+      expect(getAgreement(alias, V5), alias).toBe(CARAVAN_QUICK_PAY_AGREEMENT_2026_09_04_V5);
+    }
+  });
+
+  it("the archived versions are literals, not the moved constants", () => {
+    expect(BROKER_CARRIER_AGREEMENT_2026_09_03_F11.version).toBe(F11);
+    expect(CARAVAN_QUICK_PAY_AGREEMENT_2026_09_04_V5.version).toBe(V5);
+    expect(BCA_VERSION).not.toBe(F11);
+    expect(QP_VERSION).not.toBe(V5);
+    const flat = JSON.stringify([BROKER_CARRIER_AGREEMENT_2026_09_03_F11, CARAVAN_QUICK_PAY_AGREEMENT_2026_09_04_V5]);
+    expect(flat, "an unresolved placeholder reached an archived text").not.toContain("${");
+    // The carrier-name placeholder arrived with Revision 3; a body signed before
+    // it must not carry one, or filling it would move that body's hash.
+    expect(flat).not.toContain("{{CARRIER}}");
+  });
+
+  it("the archived F11 text is FROZEN", () => {
+    const h = agreementContentHash(BROKER_CARRIER_AGREEMENT_2026_09_03_F11, { carrier: CARRIER, signature: sigFor(F11) });
+    expect(
+      h,
+      "the archived Foundation Edition text changed. Four carriers signed it; their stored hashes no " +
+        "longer re-derive. Revert rather than updating this pin.",
+    ).toBe("7cbe92a9051acc9c3d3ed4abddc40ada86aa4d24fd5a35768f456e92ab6f34db");
+  });
+
+  it("the archived Quick Pay v5 text is FROZEN", () => {
+    const h = agreementContentHash(CARAVAN_QUICK_PAY_AGREEMENT_2026_09_04_V5, { carrier: CARRIER, signature: sigFor(V5) });
+    expect(
+      h,
+      "the archived Quick Pay v5 text changed. Two carriers signed it; their stored hashes no longer " +
+        "re-derive. Revert rather than updating this pin.",
+    ).toBe("13265ab80560fb9142082b1365fb12b377861bf6784050eb3345c8474e26c2ef");
+  });
+
+  it("the current bodies are different documents from the ones archived", () => {
+    // What makes the archive load-bearing rather than decorative.
+    expect(agreementContentHash(BROKER_CARRIER_AGREEMENT, { carrier: CARRIER, signature: sigFor(F11) }))
+      .not.toBe("7cbe92a9051acc9c3d3ed4abddc40ada86aa4d24fd5a35768f456e92ab6f34db");
+    expect(agreementContentHash(CARAVAN_QUICK_PAY_AGREEMENT, { carrier: CARRIER, signature: sigFor(V5) }))
+      .not.toBe("13265ab80560fb9142082b1365fb12b377861bf6784050eb3345c8474e26c2ef");
   });
 });

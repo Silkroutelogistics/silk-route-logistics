@@ -19,6 +19,7 @@ import { CarrierCard } from "@/components/carrier";
 // Direct, not through the barrel: it loads the signature face, which no other
 // barrel consumer should pull in.
 import { SignaturePreview } from "@/components/carrier/SignaturePreview";
+import { AgreementBody } from "@/components/carrier/AgreementBody";
 import {
   // QP_TIER_TERMS + QP_SAME_DAY_NOTE are pure §8 economics and the pilot did
   // not touch them, so they stay imported.
@@ -61,6 +62,10 @@ interface ActivationStatus {
     pilotApproved?: boolean;
   };
   activatedAt: string | null;
+  // The carrier's legal name, which fills the party line of each agreement's
+  // opening paragraph. Optional so a frontend ahead of the backend shows the
+  // blank line the agreement prints without a name, rather than crashing.
+  carrier?: { legalName: string | null };
 }
 
 // Canonical BCA content fetched from the backend (single source) — the review
@@ -71,7 +76,7 @@ interface AgreementContent {
   version: string;
   effectiveNote: string;
   preamble: string[];
-  sections: { heading: string; clauses: string[] }[];
+  sections: { heading: string; clauses: string[]; table?: { headers: string[]; rows: string[][] } }[];
 }
 
 function extractError(err: unknown, fallback: string): string {
@@ -370,17 +375,7 @@ export default function CarrierActivationPage() {
                 </div>
               ) : (
                 <>
-                  {bca.preamble.map((p, i) => (
-                    <p key={`pre-${i}`} className="text-[11px] text-gray-600 leading-relaxed mb-2">{p}</p>
-                  ))}
-                  {bca.sections.map((s) => (
-                    <div key={s.heading} className="mb-3 last:mb-0">
-                      <p className="text-xs font-bold text-[#0A2540] mb-0.5">{s.heading}</p>
-                      {s.clauses.map((c, i) => (
-                        <p key={i} className="text-[11px] text-gray-600 leading-relaxed">{c}</p>
-                      ))}
-                    </div>
-                  ))}
+                  <AgreementBody agreement={bca} carrierName={data.carrier?.legalName} />
                   <p className="text-[10px] text-gray-400 mt-3 pt-3 border-t border-gray-300/60">
                     {bca.title}. The full executed agreement governs.
                   </p>
@@ -634,17 +629,7 @@ export default function CarrierActivationPage() {
                     <>
                       <p className="text-xs font-bold text-[#0A2540] mb-0.5">{qp.title}</p>
                       <p className="text-[10px] text-gray-400 mb-2">{qp.effectiveNote}</p>
-                      {qp.preamble.map((p, i) => (
-                        <p key={`qp-pre-${i}`} className="text-[11px] text-gray-600 leading-relaxed mb-2">{p}</p>
-                      ))}
-                      {qp.sections.map((s) => (
-                        <div key={s.heading} className="mb-3 last:mb-0">
-                          <p className="text-xs font-bold text-[#0A2540] mb-0.5">{s.heading}</p>
-                          {s.clauses.map((c, i) => (
-                            <p key={i} className="text-[11px] text-gray-600 leading-relaxed">{c}</p>
-                          ))}
-                        </div>
-                      ))}
+                      <AgreementBody agreement={qp} carrierName={data.carrier?.legalName} />
                       <p className="text-[10px] text-gray-400 mt-3 pt-3 border-t border-gray-300/60">
                         {qp.title}. The full executed agreement governs.
                       </p>

@@ -107,6 +107,46 @@ function coverTerm(agreement: LegalAgreement): string {
 }
 
 /**
+ * The edition as the running header prints it. The cover sets the edition in
+ * spaced capitals ("REVISION 3 · SEPTEMBER 2026"); repeated at that weight at
+ * the top of every page it shouts, so the header carries the same words in
+ * sentence case, abbreviated: "Rev. 3 · September 2026". It is DERIVED from
+ * the subtitle, which is hashed, so the header can never name a different
+ * edition from the one the document is. Any other subtitle prints as it is.
+ */
+export function runningEdition(subtitle: string): string {
+  const m = /^REVISION\s+(\d+)\s*·\s*([A-Z]+)\s+(\d{4})$/.exec(subtitle.trim());
+  if (!m) return subtitle;
+  const month = m[2].charAt(0) + m[2].slice(1).toLowerCase();
+  return "Rev. " + m[1] + " · " + month + " " + m[3];
+}
+
+/**
+ * The identity line under the first header, broken only at its " · "
+ * separators. Left to PDFKit it broke wherever a line ran out, which put
+ * "Reference SRL-" at the end of one line and "BCA-2026-R3" at the start of the
+ * next -- a reference split at its own hyphen. Each part is kept whole and a
+ * line that ends early keeps its separator, so the drawn characters are the
+ * hashed ones and only the line breaks move. A single part wider than the
+ * column is left for PDFKit to wrap.
+ */
+function identityLines(doc: PDFDoc, note: string, width: number): string {
+  const lines: string[] = [];
+  let line = "";
+  for (const part of note.split(" · ")) {
+    const joined = line ? line + " · " + part : part;
+    if (line && doc.widthOfString(joined) > width) {
+      lines.push(line + " ·");
+      line = part;
+    } else {
+      line = joined;
+    }
+  }
+  lines.push(line);
+  return lines.join("\n");
+}
+
+/**
  * Body-page geometry. Shared by the document constructor, which needs the
  * margins before the first page exists, and by the renderer.
  */
@@ -183,7 +223,7 @@ function renderLegalAgreement(
   const runHead = () =>
     drawShellRunningHeader(doc, {
       left: BRAND_LINE + " · " + agreement.title,
-      right: agreement.subtitle,
+      right: runningEdition(agreement.subtitle),
     });
   const continuationHead = () => (shell ? runHead() : drawContinuationHeader(doc, agreement.title, docId));
 
@@ -226,8 +266,8 @@ function renderLegalAgreement(
   // ran off the right edge. It now wraps inside the body column.
   const note = seg("effective-note")[0]?.text ?? "";
   if (note) {
-    doc.font(FONT_BODY_ITALIC, 8.5).fillColor(TOKENS.fg3)
-       .text(note, M, y, { width: CW, align: "left", lineGap: 1 });
+    doc.font(FONT_BODY_ITALIC, 8.5).fillColor(TOKENS.fg3);
+    doc.text(identityLines(doc, note, CW), M, y, { width: CW, align: "left", lineGap: 1 });
     y = doc.y + 12;
   }
 

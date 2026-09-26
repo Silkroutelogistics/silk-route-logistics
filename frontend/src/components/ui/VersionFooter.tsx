@@ -19256,6 +19256,14 @@
 // up by the name on the countersign row), else that name in the same face,
 // "Countersigned electronically". Specimens leave both lines open. The signing
 // page previews the carrier's signature in the same face as they type.
+// v3.8.bli — Broker-Carrier Agreement Revision 3 and Caravan Quick Pay Agreement Revision 6: the carrier is named, the references read like references.
+//   Edition lines read "REVISION 3 · SEPTEMBER 2026" and "REVISION 6 · SEPTEMBER
+// 2026"; references SRL-BCA-2026-R3 and SRL-QPA-2026-R6, which are also the
+// versions stored on the signature rows; running header "Rev. 3 · September
+// 2026". The opening paragraph names the carrier by legal name, in the hashed
+// text, the executed PDF and every review pane. Quick Pay's citations of the
+// Broker-Carrier Agreement point at its real paragraphs. The review panes show
+// the tables. Foundation Edition and Quick Pay v5 archived for their signers.
 export const SRL_VERSION = "3.8.blv";
 
 export function VersionFooter({ className }: { className?: string }) {

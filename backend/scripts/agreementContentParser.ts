@@ -36,7 +36,7 @@ import type { LegalAgreement, LegalSection, LegalTable } from "../src/data/agree
 
 export interface ParsedAgreement {
   agreement: Omit<LegalAgreement, "templateName">;
-  /** Reference version carried in the document itself, e.g. 2026-09-01-F10. */
+  /** Reference version carried in the document itself, e.g. SRL-BCA-2026-R3. */
   version: string;
 }
 
@@ -45,7 +45,14 @@ const H1 = /^#\s+(.+)$/;
 const H2 = /^##\s+(.+)$/;
 const TABLE_ROW = /^\|(.+)\|$/;
 const TABLE_RULE = /^\|[\s|:-]+\|$/;
-const REFERENCE = /Reference\s+BCA-([A-Za-z0-9-]+)/;
+/**
+ * The reference in the meta line IS the version stored on a signature row.
+ * Revision 3 onward carries the whole reference (SRL-BCA-2026-R3) because that
+ * is what the document prints; the Foundation Edition carried BCA-<version>
+ * and stored only the part after the prefix. Both parse, so the F11 source
+ * still round-trips against its archive.
+ */
+const REFERENCE = /Reference\s+(?:(SRL-BCA-[A-Za-z0-9-]+)|BCA-([A-Za-z0-9-]+))/;
 /**
  * The page footer, repeated as body text at the end of the document.
  * NOT anchored at the end: the line continues past the tagline into
@@ -121,9 +128,10 @@ export function parseAgreementMarkdown(md: string): ParsedAgreement {
   }
   push(current);
 
-  const version = REFERENCE.exec(effectiveNote || subtitle)?.[1] ?? "";
+  const ref = REFERENCE.exec(effectiveNote || subtitle);
+  const version = ref ? (ref[1] ?? ref[2] ?? "") : "";
   if (!title) throw new Error("no title (# heading) found");
-  if (!version) throw new Error("no `Reference BCA-<version>` found in the document meta lines");
+  if (!version) throw new Error("no `Reference SRL-BCA-<version>` found in the document meta lines");
   if (!sections.length) throw new Error("no sections found");
 
   return { agreement: { title, subtitle, version, effectiveNote, preamble, sections }, version };

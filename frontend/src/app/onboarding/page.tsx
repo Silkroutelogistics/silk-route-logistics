@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, ChevronRight, ChevronLeft, Upload, CheckCircle2, X, FileText, Image as ImageIcon, MapPin, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AgreementBody, type AgreementBodyContent } from "@/components/carrier/AgreementBody";
 
 const steps = ["Company Info", "Equipment & Regions", "Documents", "Terms", "Review"];
 
@@ -587,11 +588,7 @@ export default function OnboardingPage() {
   //
   // Now: bounded by a timeout, every failure named, and a retry. Fail-closed is
   // preserved exactly — the checkbox is still gated on `bcaContent`.
-  const [bcaContent, setBcaContent] = useState<{
-    version: string;
-    preamble: string[];
-    sections: { heading: string; clauses: string[] }[];
-  } | null>(null);
+  const [bcaContent, setBcaContent] = useState<({ version: string } & AgreementBodyContent) | null>(null);
   const [bcaError, setBcaError] = useState<string | null>(null);
   const [bcaLoading, setBcaLoading] = useState(true);
   const [bcaAttempt, setBcaAttempt] = useState(0);
@@ -1971,19 +1968,10 @@ export default function OnboardingPage() {
                   </div>
                 ) : (
                   <>
-                    {bcaContent.preamble.map((p, i) => (
-                      <p key={`pre-${i}`}>{p}</p>
-                    ))}
-                    {bcaContent.sections.map((s) => (
-                      <div key={s.heading}>
-                        <p className="font-semibold text-[#0A2540] mt-3">{s.heading}</p>
-                        <ul className="list-disc ml-5 space-y-1">
-                          {s.clauses.map((c, i) => (
-                            <li key={i}>{c}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
+                    {/* The company name typed in Step 1 is the legal name the
+                        registration records, so it is the name the agreement's
+                        opening paragraph carries. */}
+                    <AgreementBody agreement={bcaContent} carrierName={form.company} size="comfortable" />
                     <p className="text-xs text-[#6B7685] mt-4 italic">
                       Silk Route Logistics Inc. reserves the right to update these terms with 30 days&apos; notice to registered carriers. When the standalone Broker-Carrier Agreement and Caravan Quick Pay Agreement are executed between Broker and Carrier, those agreements govern where they conflict.
                     </p>

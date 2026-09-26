@@ -62,13 +62,18 @@ import { PAPERWORK_DUE_HOURS } from "../lib/accessorialPolicy";
 import { standardNetDays, quickPayFeePercent, SAME_DAY_PREMIUM } from "../lib/quickPayPricing";
 import { BUSINESS_HOURS_SENTENCE } from "../lib/businessHours";
 import {
-  BCA_F11_VERSION, BCA_F11_TITLE, BCA_F11_SUBTITLE, BCA_F11_EFFECTIVE_NOTE,
-  BCA_F11_PREAMBLE, BCA_F11_SECTIONS,
+  BCA_BODY_VERSION, BCA_BODY_TITLE, BCA_BODY_SUBTITLE, BCA_BODY_EFFECTIVE_NOTE,
+  BCA_BODY_PREAMBLE, BCA_BODY_SECTIONS,
 } from "./brokerCarrierAgreement.generated";
 import { BROKER_CARRIER_AGREEMENT_2026_06_27_V1 } from "./archive/brokerCarrierAgreement.2026-06-27-v1";
+import { BROKER_CARRIER_AGREEMENT_2026_09_03_F11 } from "./archive/brokerCarrierAgreement.2026-09-03-F11";
 import { CARAVAN_QUICK_PAY_AGREEMENT_2026_08_16_V4 } from "./archive/caravanQuickPayAgreement.2026-08-16-v4";
+import { CARAVAN_QUICK_PAY_AGREEMENT_2026_09_04_V5 } from "./archive/caravanQuickPayAgreement.2026-09-04-v5";
 
-export const BCA_VERSION = BCA_F11_VERSION;
+// From Revision 3 the version IS the reference the document prints
+// (SRL-BCA-2026-R3), so the string a carrier reads on the cover and the string
+// stored on their signature row are the same string.
+export const BCA_VERSION = BCA_BODY_VERSION;
 
 // v3.8.art — QP_VERSION bumped 2026-05-24-v1 → 2026-08-15-v1. The prior string
 // was set when NO Quick Pay body existed anywhere in the repo: the activation
@@ -189,9 +194,37 @@ export const BCA_VERSION = BCA_F11_VERSION;
 // compares the POSTED version to this constant, so a stale open tab is
 // rejected rather than stamped — which is the intended behaviour and the
 // reason the constant is the only version anywhere.
-export const QP_VERSION = "2026-09-04-v5";
+//
+// v3.8 (2026-09-26) — 2026-09-04-v5 → SRL-QPA-2026-R6. Revision 6. The version
+// is now the reference the document prints, matching the BCA's SRL-BCA-2026-R3,
+// so the cover, the running header and the signature row all carry one string.
+// WHAT CHANGED:
+//   preamble  names the carrier: "{{CARRIER}}, the motor carrier identified in
+//             the signature block below", filled from the carrier's legal name
+//             by fillCarrierParty, in the hashed text and on every surface.
+//   §1 cl.3   the incorporation clause cited the ELEVEN-section BCA's numbering
+//             (Sections 1, 2, 4, 6, 8, 10, 11). The BCA has had forty numbered
+//             paragraphs since the Foundation Edition, so those citations
+//             pointed at the wrong provisions. Re-mapped by subject to R3.
+//   §5, §8, §9  the same stale citations (Section 5, Sections 1 and 2,
+//             Section 6) re-mapped to paragraphs 25; 2-4, 12 and 13; and 14.
+//   subtitle / effectiveNote  the edition line reads "REVISION 6 · SEPTEMBER
+//             2026" and the pilot description moves to the reference line.
+// WHAT DID NOT CHANGE — every economic figure, every Quick Pay mechanic.
+// The v5 body is archived (archive/caravanQuickPayAgreement.2026-09-04-v5.ts)
+// because two carriers executed it.
+export const QP_VERSION = "SRL-QPA-2026-R6";
 
-// v3.8.ayn — the body is the Foundation Edition, generated from
+// v3.8 (2026-09-26) — the body is Revision 3 (SRL-BCA-2026-R3), generated from
+// docs/legal/bca-content-R3.md. Revision 3 names the carrier in the opening
+// paragraph, corrects the entity name to "Silk Route Logistics Inc." (the
+// Foundation Edition had a comma in the opening paragraph and in the notice
+// address), points the carrier's notice address at the carrier profile rather
+// than at a signature block that never carried one, and numbers the Schedule A
+// notes instead of running all four into one line. The Foundation Edition it replaced is archived
+// at archive/brokerCarrierAgreement.2026-09-03-F11.ts; four carriers signed it.
+//
+// v3.8.ayn — the body was the Foundation Edition, generated from
 // docs/legal/bca-content-F11.md. It is composed here rather than pasted so
 // there is exactly one copy of the text: the generated module is the only
 // place it lives, and a parity test fails if that module stops matching the
@@ -202,12 +235,12 @@ export const QP_VERSION = "2026-09-04-v5";
 // through getAgreement("broker-carrier", "2026-06-27-v1") -- see v3.8.aym.
 export const BROKER_CARRIER_AGREEMENT: LegalAgreement = {
   templateName: "broker-carrier",
-  title: BCA_F11_TITLE,
-  subtitle: BCA_F11_SUBTITLE,
+  title: BCA_BODY_TITLE,
+  subtitle: BCA_BODY_SUBTITLE,
   version: BCA_VERSION,
-  effectiveNote: BCA_F11_EFFECTIVE_NOTE,
-  preamble: BCA_F11_PREAMBLE,
-  sections: BCA_F11_SECTIONS,
+  effectiveNote: BCA_BODY_EFFECTIVE_NOTE,
+  preamble: BCA_BODY_PREAMBLE,
+  sections: BCA_BODY_SECTIONS,
 };
 
 // v3.8.art — Caravan Quick Pay Agreement.
@@ -320,14 +353,14 @@ export const BROKER_CARRIER_AGREEMENT: LegalAgreement = {
 export const CARAVAN_QUICK_PAY_AGREEMENT: LegalAgreement = {
   templateName: "quick-pay",
   title: "Caravan Quick Pay Agreement",
-  // The pilot belongs in the subtitle because the subtitle is the second line
-  // of the PDF and of the portal review pane — a reader meets it before any
-  // clause. Availability is the first thing that has to be true.
-  subtitle: "Supplement to the Broker-Carrier Agreement · Limited Pilot, By Request · Optional Per-Load Election",
+  // The edition line, as on the BCA. The pilot still reaches a reader before
+  // any clause: it opens the reference line directly under the title, and the
+  // preamble's third paragraph states it in full.
+  subtitle: "REVISION 6 · SEPTEMBER 2026",
   version: QP_VERSION,
-  effectiveNote: `Version ${QP_VERSION} · Effective on execution`,
+  effectiveNote: `Supplement to the Broker-Carrier Agreement · Limited pilot, by request · Reference ${QP_VERSION} · Effective on execution`,
   preamble: [
-    "This Caravan Quick Pay Agreement (the “Quick Pay Agreement”) is made and entered into between Silk Route Logistics Inc., a Michigan corporation and FMCSA-licensed property broker (USDOT 4526880, MC# 1794414) (“Broker”), and the motor carrier identified in the signature block below (“Carrier”).",
+    "This Caravan Quick Pay Agreement (the “Quick Pay Agreement”) is made and entered into between Silk Route Logistics Inc., a Michigan corporation and FMCSA-licensed property broker (USDOT 4526880, MC# 1794414) (“Broker”), and {{CARRIER}}, the motor carrier identified in the signature block below (“Carrier”).",
     "This Quick Pay Agreement supplements, and does not replace, the Broker-Carrier Agreement between the parties (the “Broker-Carrier Agreement”). It governs one thing: Carrier’s optional election to be paid earlier than Carrier’s standard tier payment terms on a load Broker has tendered. Carrier is never required to elect Quick Pay, and declining it has no effect on Carrier’s eligibility to haul, on load tendering, or on Carrier’s standing in the Caravan Partner Program.",
     "Quick Pay is currently offered as a limited pilot. Carrier requests it, Broker approves or declines the request, and Broker may withdraw Carrier from the pilot, or end the pilot, on notice to Carrier. Signing this Quick Pay Agreement is a request to join the pilot; it does not by itself admit Carrier to it. Carrier’s standard tier payment terms are unaffected by any of this and are always available at no fee: Net-30 at Silver, Net-21 at Gold, Net-14 at Platinum. The fee schedule in Section 4 and the approval limits in Section 6 apply to Carrier on the same published terms as every other participant for as long as Carrier is in the pilot.",
   ],
@@ -337,7 +370,7 @@ export const CARAVAN_QUICK_PAY_AGREEMENT: LegalAgreement = {
       clauses: [
         "The Broker-Carrier Agreement is incorporated into this Quick Pay Agreement by reference in its entirety and remains in full force. This Quick Pay Agreement adds an optional payment-timing election and changes nothing else.",
         "In the event of any conflict or inconsistency between this Quick Pay Agreement and the Broker-Carrier Agreement, the Broker-Carrier Agreement controls.",
-        "Sections 1 (Authority & Compliance), 2 (Insurance Requirements), 4 (Load Acceptance & Transportation, including the prohibition on double-brokering, re-brokering, and assignment), 6 (Cargo Claims & Liability, including the allocation of Carmack liability to Carrier), 8 (Confidentiality & Non-Solicitation), 10 (Governing Law & Dispute Resolution), and 11 (Data Privacy & Consent) of the Broker-Carrier Agreement apply to this Quick Pay Agreement without modification and are not restated here.",
+        "Paragraphs 2 (Carrier qualification and compliance), 3 (Continuing qualification is a condition of each tender), 4 (Sanctions and authority integrity), 6 (Transport without delay), 9 (Carrier is responsible for the transportation), 12 (Insurance), 13 (Certificates, notice and standing), 14 (Liability for loss, damage or delay, including the allocation of Carmack liability to Carrier), 15 (Claims handling), 31 (Double brokering is prohibited), 33 (Confidentiality and non-solicitation), 37 (Governing law and disputes), and 39 (Data and privacy) of the Broker-Carrier Agreement apply to this Quick Pay Agreement without modification and are not restated here.",
         "Each individual load remains governed by the rate confirmation issued for that load, which incorporates the Broker-Carrier Agreement by reference.",
       ],
     },
@@ -401,7 +434,7 @@ export const CARAVAN_QUICK_PAY_AGREEMENT: LegalAgreement = {
     {
       heading: "5. Documentation Trigger and Payment Timing",
       clauses: [
-        "All Quick Pay timing runs from Broker’s receipt of complete and accurate documentation for the load, the same trigger stated in Section 5 of the Broker-Carrier Agreement. Documentation is complete when Broker has received the items required by that section, including a clean signed Bill of Lading, Proof of Delivery, and any lumper or accessorial receipts.",
+        "All Quick Pay timing runs from Broker’s receipt of complete and accurate documentation for the load, the same trigger stated in paragraph 25 of the Broker-Carrier Agreement. Documentation is complete when Broker has received the items required by that paragraph, including a clean signed Bill of Lading, Proof of Delivery, and any lumper or accessorial receipts.",
         "7-day Quick Pay is paid within seven (7) calendar days of that trigger.",
         // v3.8.bac — the hours are STATED, and generated from the constants
         // integrationService.sameDayQuickPayDueDate funds against. This
@@ -433,7 +466,7 @@ export const CARAVAN_QUICK_PAY_AGREEMENT: LegalAgreement = {
     {
       heading: "8. Rejected, Disputed, and Adjusted Invoices",
       clauses: [
-        "Broker may decline to fund a load under Quick Pay while a cargo claim, shortage, overage, or damage exception is open on that load, or while Carrier’s operating authority or insurance is not in good standing under Sections 1 and 2 of the Broker-Carrier Agreement. A load Broker declines to fund is paid on Carrier’s standard tier payment terms at no fee, as stated in Section 6. Incomplete or inaccurate documentation does not make a load ineligible; it holds the timing clock under Section 5, and the load remains eligible for Quick Pay on the same terms once the deficiency is cured.",
+        "Broker may decline to fund a load under Quick Pay while a cargo claim, shortage, overage, or damage exception is open on that load, or while Carrier’s operating authority or insurance is not in good standing under paragraphs 2 through 4, 12 and 13 of the Broker-Carrier Agreement. A load Broker declines to fund is paid on Carrier’s standard tier payment terms at no fee, as stated in Section 6. Incomplete or inaccurate documentation does not make a load ineligible; it holds the timing clock under Section 5, and the load remains eligible for Quick Pay on the same terms once the deficiency is cured.",
         "Payment under Quick Pay is not a waiver of Broker’s right to audit the load, to verify documentation, or to assert a claim, deduction, or set-off that arises or is discovered after funding.",
         "If a load is later short-paid, disputed, adjusted, or reversed by the customer, that alone does not unwind a Quick Pay payment already made to Carrier. Any amount Carrier owes Broker as a result is handled under Section 9.",
         "If Carrier has assigned, or later assigns, the receivable for a load to a factor or other third party, that load is not eligible for Quick Pay. Carrier shall notify Broker before electing Quick Pay on any load subject to an existing notice of assignment.",
@@ -442,7 +475,7 @@ export const CARAVAN_QUICK_PAY_AGREEMENT: LegalAgreement = {
     {
       heading: "9. Set-Off and Recoupment",
       clauses: [
-        "Broker may set off and recoup against amounts otherwise payable to Carrier, including amounts payable on other or future loads, any of the following: cargo loss, damage, or shortage claims for which Carrier is liable under Section 6 of the Broker-Carrier Agreement; customer chargebacks attributable to Carrier’s performance; overpayments, duplicate payments, and payments made in error; advances and reimbursements not supported by an original receipt; and fines, penalties, or third-party costs Broker incurs as a result of Carrier’s acts or omissions.",
+        "Broker may set off and recoup against amounts otherwise payable to Carrier, including amounts payable on other or future loads, any of the following: cargo loss, damage, or shortage claims for which Carrier is liable under paragraph 14 of the Broker-Carrier Agreement; customer chargebacks attributable to Carrier’s performance; overpayments, duplicate payments, and payments made in error; advances and reimbursements not supported by an original receipt; and fines, penalties, or third-party costs Broker incurs as a result of Carrier’s acts or omissions.",
         "Broker will notify Carrier in writing of any set-off, identifying the load, the amount, and the basis for it.",
         "This right of set-off is in addition to, and does not limit, any other remedy available to Broker under the Broker-Carrier Agreement or at law.",
       ],
@@ -474,9 +507,11 @@ export const CARAVAN_QUICK_PAY_AGREEMENT: LegalAgreement = {
 const ARCHIVED: Record<string, Record<string, LegalAgreement>> = {
   "broker-carrier": {
     "2026-06-27-v1": BROKER_CARRIER_AGREEMENT_2026_06_27_V1,
+    "2026-09-03-F11": BROKER_CARRIER_AGREEMENT_2026_09_03_F11,
   },
   "quick-pay": {
     "2026-08-16-v4": CARAVAN_QUICK_PAY_AGREEMENT_2026_08_16_V4,
+    "2026-09-04-v5": CARAVAN_QUICK_PAY_AGREEMENT_2026_09_04_V5,
   },
 };
 

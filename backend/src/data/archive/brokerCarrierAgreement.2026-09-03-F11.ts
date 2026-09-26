@@ -1,29 +1,36 @@
-// GENERATED FILE -- DO NOT EDIT BY HAND.
+// ARCHIVED AGREEMENT BODY -- DO NOT EDIT.
 //
-// Source:    docs/legal/bca-content-R3.md
-// Regenerate: npx tsx scripts/generate-agreement-content.ts
+// The Broker-Carrier Agreement exactly as it stood at version 2026-09-03-F11
+// (the Foundation Edition), frozen 2026-09-26 when Revision 3 replaced it.
 //
-// Editing this file directly makes the committed text disagree with the
-// authored markdown, and the parity test will fail rather than let the two
-// drift -- because the drift would be in the words a carrier signs.
-import type { LegalSection } from "./agreements";
+// WHY IT IS KEPT. Four carriers executed this text -- JETEX FREIGHT LLC, JOT
+// FREIGHT LLC, A&E LUNA TRUCKING LLC and BLUE FALCON BROKERAGE LLC -- and each
+// row stores a contentHash computed over it. Before the swap every one of those
+// hashes was re-derived read-only from this body and matched. Only one CURRENT
+// body lives in the running code, so without this file those hashes would stop
+// being recomputable the moment Revision 3 landed.
+//
+// Generated from the live body, not retyped, and every string is a LITERAL:
+// nothing here may follow BCA_VERSION or any constant, or the hash moves.
+//
+// Resolvable via getAgreement("broker-carrier", "2026-09-03-F11").
+// Guarded by __tests__/unit/data/agreementArchive.test.ts.
+import type { LegalAgreement } from "../agreements";
 
-/** Reference version carried in the document itself. */
-export const BCA_BODY_VERSION = "SRL-BCA-2026-R3";
-
-export const BCA_BODY_TITLE = "Broker-Carrier Agreement";
-export const BCA_BODY_SUBTITLE = "REVISION 3 · SEPTEMBER 2026";
-export const BCA_BODY_EFFECTIVE_NOTE = "Silk Route Logistics Inc. · MC# 1794414 · USDOT# 4526880 · 2317 S 35th St, Galesburg, Michigan 49053 · Reference SRL-BCA-2026-R3";
-
-export const BCA_BODY_PREAMBLE: string[] = [
-  "THIS AGREEMENT is made and entered into by and between {{CARRIER}} (\"CARRIER\") and Silk Route Logistics Inc., a Michigan corporation (\"BROKER\"), effective as of the date of the last signature in the execution section at the end of this Agreement (the \"Effective Date\").",
-  "WHEREAS, BROKER is licensed by the Federal Motor Carrier Safety Administration as a property broker under 49 U.S.C. sections 13904 and 13906, MC# 1794414, USDOT# 4526880; and",
-  "WHEREAS, CARRIER is registered with the FMCSA as a motor carrier with authority to operate in interstate, intrastate and/or foreign commerce and is qualified to transport freight as required by BROKER; and",
-  "WHEREAS, BROKER wishes to engage CARRIER to perform transportation within the limits of CARRIER's operating authority, and CARRIER wishes to perform it;",
-  "NOW THEREFORE, intending to be legally bound, the parties agree as follows.",
-];
-
-export const BCA_BODY_SECTIONS: LegalSection[] = [
+export const BROKER_CARRIER_AGREEMENT_2026_09_03_F11: LegalAgreement = {
+  templateName: "broker-carrier",
+  title: "Broker-Carrier Agreement",
+  subtitle: "FOUNDATION EDITION · 3 SEPTEMBER 2026",
+  version: "2026-09-03-F11",
+  effectiveNote: "Silk Route Logistics Inc. · MC# 1794414 · USDOT# 4526880 · 2317 S 35th St, Galesburg, Michigan 49053 · Reference BCA-2026-09-03-F11",
+  preamble: [
+    "THIS AGREEMENT is made and entered into by and between ________________________________ (\"CARRIER\") and Silk Route Logistics, Inc., a Michigan corporation (\"BROKER\"), effective as of the date of the last signature in the execution section at the end of this Agreement (the \"Effective Date\").",
+    "WHEREAS, BROKER is licensed by the Federal Motor Carrier Safety Administration as a property broker under 49 U.S.C. sections 13904 and 13906, MC# 1794414, USDOT# 4526880; and",
+    "WHEREAS, CARRIER is registered with the FMCSA as a motor carrier with authority to operate in interstate, intrastate and/or foreign commerce and is qualified to transport freight as required by BROKER; and",
+    "WHEREAS, BROKER wishes to engage CARRIER to perform transportation within the limits of CARRIER's operating authority, and CARRIER wishes to perform it;",
+    "NOW THEREFORE, intending to be legally bound, the parties agree as follows.",
+  ],
+  sections: [
     {
       heading: "1. Term",
       clauses: [
@@ -357,8 +364,8 @@ export const BCA_BODY_SECTIONS: LegalSection[] = [
       heading: "38. Notices",
       clauses: [
         "Notices shall be in writing and sent by certified mail with return receipt, by overnight courier with receipt, or by email to the addresses below. Shipment-specific communications, including Rate Confirmations, instructions, status updates and Proofs of Delivery, may be exchanged by ordinary electronic means.",
-        "BROKER: Silk Route Logistics Inc., 2317 S 35th St, Galesburg, Michigan 49053. Operational notices to operations@silkroutelogistics.ai. Compliance, insurance and fraud notices to compliance@silkroutelogistics.ai. Claims and remittance notices to accounting@silkroutelogistics.ai.",
-        "CARRIER: at the address, email and telephone number in CARRIER's carrier profile with BROKER, as later updated in writing and verified under paragraph 32.",
+        "BROKER: Silk Route Logistics, Inc., 2317 S 35th St, Galesburg, Michigan 49053. Operational notices to operations@silkroutelogistics.ai. Compliance, insurance and fraud notices to compliance@silkroutelogistics.ai. Claims and remittance notices to accounting@silkroutelogistics.ai.",
+        "CARRIER: at the address, email and telephone stated in the execution section, or as later updated in writing and verified under paragraph 32.",
         "Each party consents to receiving communications electronically. Each is responsible for its own anti-virus and security precautions, and neither is liable to the other for loss caused by computer viruses transmitted through ordinary electronic exchange.",
       ],
     },
@@ -388,6 +395,7 @@ export const BCA_BODY_SECTIONS: LegalSection[] = [
       heading: "Schedule A · Caravan Partner Program: current tier terms",
       clauses: [
         "BROKER may update this Schedule from time to time on thirty (30) days' written notice to CARRIER under paragraph 30, without amending the Agreement. A change to this Schedule does not apply to any shipment already tendered and accepted before the notice period expires.",
+        "1. Standard tier payment is free of charge and is always available, measured from BROKER's receipt of a clean, complete invoice with signed bill of lading and Proof of Delivery. 2. Tier advancement is performance-based and independent of fleet size. 3. Every approved carrier starts at Silver from the first load. 4. Quick Pay, where offered, is a limited pilot governed exclusively by the separately executed Caravan Quick Pay Agreement under paragraph 25, and no Quick Pay term appears in this Schedule.",
       ],
       table: {
         headers: ["Tier", "Standard payment terms"],
@@ -398,13 +406,5 @@ export const BCA_BODY_SECTIONS: LegalSection[] = [
         ],
       },
     },
-    {
-      heading: "Notes to Schedule A",
-      clauses: [
-        "1. Standard tier payment is free of charge and is always available, measured from BROKER's receipt of a clean, complete invoice with signed bill of lading and Proof of Delivery.",
-        "2. Tier advancement is performance-based and independent of fleet size.",
-        "3. Every approved carrier starts at Silver from the first load.",
-        "4. Quick Pay, where offered, is a limited pilot governed exclusively by the separately executed Caravan Quick Pay Agreement under paragraph 25, and no Quick Pay term appears in this Schedule.",
-      ],
-    },
-];
+  ],
+};

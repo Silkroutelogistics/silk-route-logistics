@@ -789,6 +789,7 @@ async function loadActivationProfile(userId: string) {
       carrierProfile: {
         select: {
           id: true,
+          companyName: true,
           onboardingStatus: true,
           activatedAt: true,
           portalTourCompletedAt: true,
@@ -1228,6 +1229,10 @@ router.get("/activation-status", authenticate, authorize("CARRIER"), async (req:
       // whether the switch is offered at all.
       pilotApproved: qpEnrollment?.status === "APPROVED",
     },
+    // The legal name that fills each agreement's opening paragraph in the
+    // review panes -- the same name the executed PDF and the hashed text carry,
+    // so what the carrier reads before signing is what the signed copy says.
+    carrier: { legalName: profile.companyName ?? null },
     activatedAt: profile.activatedAt,
   });
 });
