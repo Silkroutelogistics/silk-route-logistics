@@ -27,9 +27,32 @@ import {
   type AgreementSegment, type CanonicalCountersign,
 } from "../lib/canonicalAgreementText";
 import { SIGNATORY_NAME, SIGNATORY_TITLE } from "../config/authority";
-import { roleFieldKey } from "../lib/srl-chrome";
+import { roleFieldKey, type SignatureMark } from "../lib/srl-chrome";
+import fs from "fs";
+import path from "path";
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
+
+/**
+ * An SRL officer's scanned pen signature, when one has been supplied, from
+ * assets/signatures/<name-slug>.png ("Pat Officer" -> pat-officer.png).
+ *
+ * Looked up by the NAME ON THE COUNTERSIGN ROW, never by whoever the signatory
+ * is today: an agreement countersigned by one officer must not re-render with a
+ * later officer's signature above the first one's name. Missing file, null, and
+ * the name is set in the signature face instead. Cached per process: the asset
+ * ships with the build.
+ */
+const SIGNATURE_DIR = path.resolve(__dirname, "../assets/signatures");
+const signatureCache = new Map<string, Buffer | null>();
+function officerSignatureImage(name: string): Buffer | null {
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  if (!signatureCache.has(slug)) {
+    const file = path.join(SIGNATURE_DIR, `${slug}.png`);
+    signatureCache.set(slug, slug && fs.existsSync(file) ? fs.readFileSync(file) : null);
+  }
+  return signatureCache.get(slug) ?? null;
+}
 
 /** Running-head owner line. Upper-cased once rather than at every page. */
 const BRAND_LINE = "SILK ROUTE LOGISTICS INC.";
@@ -414,9 +437,10 @@ function renderLegalAgreement(
 
   // Keep the execution area together. Height must fit the taller column — the
   // CARRIER role has 8 fields (LEGAL NAME / MC # / DOT # / EIN / PRINT NAME /
-  // TITLE / SIGNATURE / DATE) at ~26pt row spacing, so ~250pt, or its last
-  // fields overflow the block and collide with the attestation strip below.
-  const sigHeight = 250;
+  // TITLE / SIGNATURE / DATE) at 26pt, with the SIGNATURE row SIGNATURE_ROW_H
+  // tall, so ~260pt, or its last fields overflow the block and collide with the
+  // attestation strip below.
+  const sigHeight = 262;
   if (y + sigHeight + 56 > CONTENT_BOTTOM) pageBreak();
   else y += 14;
   block(seg("witness")[0]?.text ?? WITNESS_LINE, { font: FONT_BODY_ITALIC, size: 9, gap: 14, align: "left" });
@@ -462,17 +486,37 @@ function renderLegalAgreement(
   // Unsigned specimens are untouched: with no signature there is nobody to
   // name, and a specimen's whole job is to show what a carrier will fill in.
   //
-  // SIGNATURE stays blank on both columns. It is the line a wet or drawn mark
-  // goes on; the electronic execution is evidenced by the attestation strip,
-  // and printing a typed name there would assert a mark nobody made.
+  // THE SIGNATURE LINES, as an e-signature platform draws them (ratified by the
+  // owner 2026-09-26). The carrier's line carries the name they typed, set in
+  // the signature face: typing it and accepting is how they signed, so this is
+  // their adopted signature, not a mark invented for them. The broker's carries
+  // the officer's scanned pen signature when one is on file, else the officer's
+  // name in the same face. Each says how it was made, so neither can pass for
+  // wet ink. A specimen passes no marks and its lines stay open for a pen.
+  //
+  // This reverses the earlier rule that SIGNATURE stays blank. That rule held
+  // while a typed name printed there would have been an unlabelled claim of a
+  // handwritten mark; the caption is what makes the line honest.
+  const marks: Record<string, SignatureMark> = {};
+  const CARRIER_ROLE = MASTER_AGREEMENT_SIGNATURE_ROLES[1].title;
+  if (countersign) {
+    marks[roleFieldKey(BROKER_ROLE, "SIGNATURE")] = {
+      image: (opts.signatureImage ?? officerSignatureImage)(countersign.name) ?? undefined,
+      typedName: countersign.name,
+      caption: "Countersigned electronically",
+    };
+  }
   if (signature) {
-    const CARRIER_ROLE = MASTER_AGREEMENT_SIGNATURE_ROLES[1].title;
     prefilled[roleFieldKey(CARRIER_ROLE, "PRINT NAME")] = signature.signedByName;
     if (signature.signedByTitle) {
       prefilled[roleFieldKey(CARRIER_ROLE, "TITLE")] = signature.signedByTitle;
     }
     prefilled[roleFieldKey(CARRIER_ROLE, "DATE")] =
       new Date(signature.signedAt).toISOString().slice(0, 10);
+    marks[roleFieldKey(CARRIER_ROLE, "SIGNATURE")] = {
+      typedName: signature.signedByName,
+      caption: "Electronically signed",
+    };
   }
 
   y = drawSignatureBlock(doc, y, {
@@ -481,6 +525,7 @@ function renderLegalAgreement(
     prefilledValues: prefilled,
     x: M,
     width: CW,
+    signatureMarks: marks,
   });
 
   // The countersign line, DRAWN because it is HASHED. canonicalAgreementText
@@ -551,6 +596,12 @@ export type AgreementPdfOptions = {
    * agreement already executed.
    */
   countersign?: CanonicalCountersign;
+  /**
+   * Resolves an officer's scanned signature by name. Defaults to the assets
+   * directory; a test passes its own so it does not depend on which image files
+   * happen to be in the tree.
+   */
+  signatureImage?: (officerName: string) => Buffer | null;
 };
 
 /**

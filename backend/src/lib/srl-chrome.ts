@@ -193,6 +193,10 @@ export const FONT_DISPLAY_BOLD = 'Playfair-Bold';
 export const FONT_DISPLAY_ITALIC = 'Playfair-Italic';
 export const FONT_MONO = 'Courier';
 export const FONT_MONO_BOLD = 'Courier-Bold';
+// The adopted-signature face (Alex Brush, SIL OFL 1.1). Not a typography face:
+// it draws ONLY a signer's typed name on a SIGNATURE line, the way e-signature
+// platforms render an adopted signature. Ratified by the owner 2026-09-26.
+export const FONT_SIGNATURE = 'Signature-Script';
 
 // ============================================================================
 // FONT REGISTRATION (Sprint 47, Item 101)
@@ -216,8 +220,12 @@ export const FONT_MONO_BOLD = 'Courier-Bold';
 
 import * as pathLib from 'path';
 const FONTS_DIR = pathLib.resolve(__dirname, '../assets/fonts/bol-v2.9');
+const SIGNATURE_FONT = pathLib.resolve(__dirname, '../assets/fonts/signature/AlexBrush-Regular.ttf');
 
 export function registerSkillFonts(doc: PDFKit.PDFDocument): void {
+  // Registering embeds nothing; a face enters a PDF only when text uses it, so
+  // documents that never draw a signature are byte-for-byte unchanged.
+  doc.registerFont(FONT_SIGNATURE, SIGNATURE_FONT);
   doc.registerFont('Playfair-Regular', pathLib.join(FONTS_DIR, 'PlayfairDisplay-Regular.ttf'));
   doc.registerFont('Playfair-Italic', pathLib.join(FONTS_DIR, 'PlayfairDisplay-Italic.ttf'));
   doc.registerFont('Playfair-Bold', pathLib.join(FONTS_DIR, 'PlayfairDisplay-Bold.ttf'));
@@ -776,6 +784,23 @@ export function roleFieldKey(roleTitle: string, field: string): string {
   return roleTitle + '::' + field;
 }
 
+/**
+ * What goes on a SIGNATURE line of an executed document.
+ *
+ * `image` is a scanned pen signature and wins when present; otherwise
+ * `typedName` is set in the signature face. `caption` says how the mark was
+ * made ("Electronically signed"), so an adopted signature can never read as a
+ * wet one.
+ */
+export interface SignatureMark {
+  image?: Buffer;
+  typedName?: string;
+  caption?: string;
+}
+
+/** Height of a SIGNATURE row when marks are drawn. Other rows stay 26pt. */
+export const SIGNATURE_ROW_H = 40;
+
 export function drawSignatureBlock(
   doc: PDFDoc,
   yTop: number,
@@ -791,6 +816,13 @@ export function drawSignatureBlock(
      */
     x?: number;
     width?: number;
+    /**
+     * Signature marks keyed roleFieldKey(role.title, 'SIGNATURE'). Passing this
+     * option (even empty) draws every SIGNATURE row SIGNATURE_ROW_H tall, room
+     * for a written or adopted signature. The BOL and Rate Confirmation pass
+     * nothing and are drawn exactly as before.
+     */
+    signatureMarks?: Record<string, SignatureMark>;
   }
 ): number {
   // Sprint 48.c (v3.8.abj) — added prefilledValues option. Pre-fill SRL-known
@@ -800,7 +832,7 @@ export function drawSignatureBlock(
   // When a field is in prefilledValues, the value renders above the underline
   // in fg1 (primary text), otherwise underline stays bare for handwriting.
   // Local mirror — propagate to skill canonical srl_chrome.ts at next sync.
-  const { roles, height = 220, prefilledValues = {}, x: left = MARGIN, width = CONTENT_W } = options;
+  const { roles, height = 220, prefilledValues = {}, x: left = MARGIN, width = CONTENT_W, signatureMarks } = options;
   const n = roles.length;
   const colW = width / n;
 
@@ -858,6 +890,11 @@ export function drawSignatureBlock(
       // The bare lookup is kept as the fallback, so this is a PURE WIDENING:
       // with no role-scoped key present the resolution is byte-identical to
       // before, which is what the unmoved pins on this commit prove.
+      if (signatureMarks && f === 'SIGNATURE') {
+        fieldY = drawSignatureRow(doc, signatureMarks[roleFieldKey(role.title, f)], x, fieldY, colInnerW);
+        return;
+      }
+
       const preVal = prefilledValues[roleFieldKey(role.title, f)] ?? prefilledValues[f];
       if (preVal) {
         doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg1);
@@ -877,6 +914,54 @@ export function drawSignatureBlock(
   });
 
   return yTop + height;
+}
+
+/**
+ * One SIGNATURE row, SIGNATURE_ROW_H tall: the label (already drawn by the
+ * caller at `fieldY`), the mark sitting on the line as a pen signature would,
+ * the line, and the caption at the line's right end.
+ *
+ * The caption goes RIGHT so a long name or a descender cannot run into it; the
+ * mark is sized to leave it room. No mark leaves the line bare, for a hand
+ * signature on a printed copy.
+ */
+function drawSignatureRow(
+  doc: PDFDoc,
+  mark: SignatureMark | undefined,
+  x: number,
+  fieldY: number,
+  w: number,
+): number {
+  const lineY = fieldY + 29;
+  let captionW = 0;
+  if (mark?.caption) {
+    doc.font(FONT_BODY_ITALIC, 6.5);
+    captionW = doc.widthOfString(mark.caption);
+    doc.fillColor(TOKENS.fg3).text(mark.caption, x + w - captionW, lineY + 3, { lineBreak: false });
+  }
+  const room = w - (captionW ? captionW + 10 : 0);
+
+  if (mark?.image) {
+    // Box from just under the label to just below the line, so the ink can
+    // cross the line the way a pen signature does.
+    doc.image(mark.image, x, fieldY + 8, { fit: [Math.min(room, 170), lineY + 1 - (fieldY + 8)], valign: 'bottom' });
+  } else if (mark?.typedName) {
+    let size = 18;
+    doc.font(FONT_SIGNATURE, size);
+    const natural = doc.widthOfString(mark.typedName);
+    if (natural > room) size = Math.max(10, (size * room) / natural);
+    doc.font(FONT_SIGNATURE, size).fillColor(TOKENS.navy)
+       .text(mark.typedName, x + 2, lineY - 2, { lineBreak: false, baseline: 'alphabetic' });
+  }
+
+  doc.save()
+     .strokeColor(TOKENS.borderStrong)
+     .lineWidth(0.5)
+     .moveTo(x, lineY)
+     .lineTo(x + w, lineY)
+     .stroke()
+     .restore();
+  return fieldY + SIGNATURE_ROW_H;
 }
 
 // ============================================================================

@@ -19249,6 +19249,13 @@
 // long ones split between rows under a repeated header; the execution block and
 // attestation sit on the 54pt shell margin; the cover's Term cell fits; the
 // running header drops its right text rather than overprint the left.
+// v3.8.bld — An executed agreement's signature lines carry the signatures, as an e-signature platform draws them.
+//   The carrier's line shows the name they typed, set in Alex Brush, with
+// "Electronically signed" under it; the broker's shows the countersigning
+// officer's scanned pen signature when one is on file (assets/signatures, looked
+// up by the name on the countersign row), else that name in the same face,
+// "Countersigned electronically". Specimens leave both lines open. The signing
+// page previews the carrier's signature in the same face as they type.
 export const SRL_VERSION = "3.8.blv";
 
 export function VersionFooter({ className }: { className?: string }) {

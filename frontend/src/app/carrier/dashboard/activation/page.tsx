@@ -16,6 +16,9 @@ import { api } from "@/lib/api";
 import { useStepUp } from "@/hooks/useStepUp";
 import { StepUpPrompt } from "@/components/carrier";
 import { CarrierCard } from "@/components/carrier";
+// Direct, not through the barrel: it loads the signature face, which no other
+// barrel consumer should pull in.
+import { SignaturePreview } from "@/components/carrier/SignaturePreview";
 import {
   // QP_TIER_TERMS + QP_SAME_DAY_NOTE are pure §8 economics and the pilot did
   // not touch them, so they stay imported.
@@ -396,6 +399,7 @@ export default function CarrierActivationPage() {
                 <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Owner" />
               </div>
             </div>
+            <SignaturePreview name={name} />
             <label className="flex items-start gap-2 mb-3 cursor-pointer">
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 accent-[#BA7517]" />
               <span className="text-xs text-gray-600">
@@ -657,6 +661,7 @@ export default function CarrierActivationPage() {
                     <input className={inputCls} value={qpTitle} onChange={(e) => setQpTitle(e.target.value)} placeholder="Owner" />
                   </div>
                 </div>
+                <SignaturePreview name={qpName} />
                 <label className="flex items-start gap-2 mb-3 cursor-pointer">
                   <input type="checkbox" checked={qpAgreed} onChange={(e) => setQpAgreed(e.target.checked)} disabled={!qp} className="mt-0.5 accent-[#BA7517] disabled:opacity-40" />
                   <span className="text-xs text-gray-600">
