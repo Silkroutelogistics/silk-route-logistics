@@ -19376,6 +19376,8 @@
 // it, so every customer W-9 was refused while the tab just cleared its spinner.
 // W9 joins the list, a test holds the tab's categories to it, and a failed upload
 // names the document and the server's reason.
+// v3.8.bkv — The contact typed on a new customer goes on its contact list, and the CRM
+// row shows that contact instead of Customer.email (the AP / billing address).
 export const SRL_VERSION = "3.8.bme";
 
 export function VersionFooter({ className }: { className?: string }) {

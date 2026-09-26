@@ -38,4 +38,49 @@ describe("CRM customers list", () => {
     expect(screen.getByText("4 loads YTD")).toBeTruthy();
     expect(document.body.textContent).not.toContain("43,450");
   });
+
+  it("v3.8.bkv — the row names the primary contact from the list, never Customer.email", async () => {
+    get.mockImplementation(async (_url: string, cfg: any) =>
+      cfg?.params?.context === "onboarding"
+        ? { data: { customers: [], total: 0 } }
+        : {
+            data: {
+              total: 1,
+              customers: [{
+                id: "cust-bee", name: "Beekeepers Naturals USA Inc.", type: "SHIPPER", onboardingStatus: "APPROVED",
+                email: "accountspayable@beekeepersnaturals.com", city: "Covina", state: "CA",
+                ytdRevenue: 3700, ytdLoads: 4,
+                contacts: [{ id: "ct-1", name: "Jane Ops", email: "jane@bee.test", isPrimary: true }],
+              }],
+            },
+          },
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><CrmPage /></QueryClientProvider>);
+
+    expect(await screen.findByText(/Jane Ops <jane@bee\.test> · Covina, CA/)).toBeTruthy();
+    expect(document.body.textContent).not.toContain("accountspayable@");
+  });
+
+  it("v3.8.bkv — a customer with no contact on the list shows no address at all", async () => {
+    get.mockImplementation(async (_url: string, cfg: any) =>
+      cfg?.params?.context === "onboarding"
+        ? { data: { customers: [], total: 0 } }
+        : {
+            data: {
+              total: 1,
+              customers: [{
+                id: "cust-bee", name: "Beekeepers Naturals USA Inc.", type: "SHIPPER", onboardingStatus: "APPROVED",
+                email: "accountspayable@beekeepersnaturals.com", city: "Covina", state: "CA",
+                ytdRevenue: 0, ytdLoads: 0, contacts: [],
+              }],
+            },
+          },
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><CrmPage /></QueryClientProvider>);
+
+    expect(await screen.findByText("Covina, CA")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("accountspayable@");
+  });
 });

@@ -43,6 +43,13 @@ interface CustomersResponse {
 // from lib/customerLoadStats (cancelled loads out, earned revenue only, pickup on
 // or after Jan 1 ET). They used to read an all-time figure that added carrier
 // rates to customer rates.
+/** The list's first contact (the API returns them primary first), or nothing. */
+function primaryContactLabel(c: CrmCustomer): string | null {
+  const pc = c.contacts?.[0];
+  if (!pc) return null;
+  return pc.email ? `${pc.name} <${pc.email}>` : pc.name;
+}
+
 function loadCountOf(c: CrmCustomer): number {
   return c.ytdLoads ?? 0;
 }
@@ -190,7 +197,10 @@ export default function CrmPage() {
                     )}
                   </div>
                   <div className="text-xs text-gray-500 truncate mt-0.5">
-                    {[c.email, c.city && c.state ? `${c.city}, ${c.state}` : null, c.industry ?? c.industryType]
+                    {/* v3.8.bkv — the primary contact from the contact list, not
+                        Customer.email: that column is also the AP / billing
+                        address, and the row presented it as the customer's contact. */}
+                    {[primaryContactLabel(c), c.city && c.state ? `${c.city}, ${c.state}` : null, c.industry ?? c.industryType]
                       .filter(Boolean)
                       .join(" · ")}
                   </div>

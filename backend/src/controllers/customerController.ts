@@ -61,6 +61,26 @@ export async function createCustomer(req: AuthRequest, res: Response) {
   const data = createCustomerSchema.parse(req.body);
   const customer = await prisma.customer.create({ data: data as any });
 
+  // v3.8.bkv — the person typed into the create form's Contact section goes
+  // on the contact list. They were written only to Customer.contactName/email,
+  // which the contact-list rule (lib/listedContact) deliberately never reads, so
+  // a new customer could not receive a portal invite or a quote until someone
+  // re-entered the same person on the Contacts tab. Only a NAMED contact: an
+  // email with no name is as likely to be a shared mailbox (AP) as a person.
+  // No consent flags are set; being on the list is not consent to be mailed.
+  const contactName = data.contactName?.trim();
+  if (contactName) {
+    await prisma.customerContact.create({
+      data: {
+        customerId: customer.id,
+        name: contactName,
+        email: data.email?.trim() || null,
+        phone: data.phone?.trim() || null,
+        isPrimary: true,
+      },
+    }).catch((err) => log.error({ err, customerId: customer.id }, "[Customer] primary contact not created"));
+  }
+
   // Auto-initialize ShipperCredit with default $50K limit
   await prisma.shipperCredit.create({
     data: {

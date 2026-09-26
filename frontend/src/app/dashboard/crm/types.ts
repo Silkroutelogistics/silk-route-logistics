@@ -59,6 +59,8 @@ export interface CrmCustomer {
   ytdLoads?: number;
   ytdRevenue?: number;
   _count?: { shipments?: number; loads?: number };
+  /** v3.8.bkv — GET /customers includes up to five, primary first. */
+  contacts?: Pick<CrmContact, "id" | "name" | "email" | "isPrimary">[];
 }
 
 export type ContactSalesRole =
