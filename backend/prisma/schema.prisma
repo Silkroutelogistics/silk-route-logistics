@@ -2428,10 +2428,12 @@ model Invoice {
   // at the SRL-stem scheme would break that generator, so the customer-facing
   // document number lives in srlDocNumber below and this stays as-is.
   invoiceNumber String        @unique
-  // The customer-facing document number, suffix form on the load stem:
-  //   SRL-121485I  base invoice
-  //   SRL-121485S  supplemental accessorial invoice (invoiceKind SUPPLEMENTAL)
-  // Re-issues take a numeric revision (SRL-121485I2); numbers are never reused.
+  // The customer-facing document number (§21.2, corrected 2026-09-26): the
+  // load's digits plus I, no prefix: 121498I, and 121498I-2 for a re-issue.
+  // One issued in the retired form (SRL-121494I) keeps it and occupies its bare
+  // twin (121494I), so no two invoices share a number in either spelling.
+  // Supplementals (invoiceKind SUPPLEMENTAL) keep their own form, unchanged.
+  // Numbers are never reused.
   srlDocNumber  String?       @unique
   loadId        String
   load          Load          @relation(fields: [loadId], references: [id], onDelete: Restrict)

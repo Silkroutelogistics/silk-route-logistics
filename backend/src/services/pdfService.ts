@@ -3006,9 +3006,10 @@ interface InvoiceLineItemData {
 
 interface InvoiceData {
   invoiceNumber: string;
-  /** Customer-facing document number (SRL-121485I, or …S for a supplemental),
-   *  allocated at invoice creation. Optional so the email-attach path and older
-   *  rows still type; absent falls back to the internal INV- sequence. */
+  /** Customer-facing document number (121498I; SRL-121494I on one issued before
+   *  the prefix was dropped; a supplemental has its own form), allocated at
+   *  invoice creation. Optional so the email-attach path and older rows still
+   *  type; absent falls back to the internal INV- sequence. */
   srlDocNumber?: string | null;
   invoiceKind?: "BASE" | "SUPPLEMENTAL" | null;
   amount: number; status: string;

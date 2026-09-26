@@ -99,9 +99,10 @@ export interface Invoice {
   /** Internal sequence, INV-<n>. Distinct from the customer-facing SRL number. */
   invoiceNumber: string;
   /**
-   * The SRL document number printed on the PDF — `SRL-121485I` for a base,
-   * `…S` for a supplemental. This is what a customer quotes when they call, so
-   * screens should prefer it. Null on rows predating the scheme.
+   * The document number printed on the PDF: `121498I` for a base (`SRL-121494I`
+   * on one issued before the prefix was dropped); a supplemental has its own
+   * form. This is what a customer quotes when they call, so screens should
+   * prefer it. Null on rows predating the scheme.
    */
   srlDocNumber?: string | null;
   /**
