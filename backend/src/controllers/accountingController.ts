@@ -27,6 +27,7 @@ import {
 import { atCostReimbursementsForLoad, carrierAccessorialsForLoad } from "../services/integrationService";
 import { BILLED_STATUSES, invoiceValue } from "../lib/invoiceTotals";
 import { assertInvoiceOnFileOrOverride, invoiceOnFile } from "../lib/carrierPayInvoiceGate";
+import { priorSentBaseInvoice, priorSentMessage } from "../lib/invoiceSendGuard";
 
 // ============================================================
 // HELPERS
@@ -587,6 +588,11 @@ export async function sendInvoice(req: AuthRequest, res: Response) {
     }
     if (!["DRAFT", "SUBMITTED"].includes(existing.status)) {
       res.status(400).json({ error: `Cannot send invoice in status ${existing.status}` });
+      return;
+    }
+    const prior = await priorSentBaseInvoice(existing.loadId, existing.id, existing.invoiceKind);
+    if (prior) {
+      res.status(409).json({ error: priorSentMessage(prior), code: "LOAD_ALREADY_INVOICED", priorInvoiceId: prior.id });
       return;
     }
 

@@ -19165,6 +19165,8 @@
 // day prints on any host, not the day before on one west of UTC.
 // v3.8.bjs — D5: loads number from 50001. 5001, 5002 and SRL-1214xx keep
 // their numbers; the first draw below the floor lifts the sequence once.
+// v3.8.bjt — a BASE invoice cannot be sent for a load whose first invoice
+// already went out (409 LOAD_ALREADY_INVOICED); supplementals still send.
 export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {
