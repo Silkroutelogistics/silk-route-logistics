@@ -101,17 +101,22 @@ async function main() {
 
     let rowId = facts.row?.id ?? null;
     let rowNotes: string | null = live?.notes ?? null;
+    // The amount the audit row says it moved FROM. For a row recorded in this
+    // run that is the figure recordTonuObligation wrote, not null — the first
+    // production run (2026-09-26, SRL-121492) logged from: null before this fix.
+    let fromAmount: number | null = facts.row?.amount ?? null;
     for (const step of plan.steps!) {
       if (step === "RECORD_OBLIGATION") {
         const r = await recordTonuObligation(before.id, before.tonuFaultSide as any, performer.id);
         console.log("[tonu-override] RECORD_OBLIGATION", JSON.stringify(r));
         rowId = r.accessorialId ?? null;
+        fromAmount = typeof r.amount === "number" ? r.amount : null;
         const row = rowId ? await prisma.loadAccessorial.findUnique({ where: { id: rowId }, select: { notes: true } }) : null;
         rowNotes = row?.notes ?? null;
         if (!rowId) throw new Error("recordTonuObligation returned no row");
       }
       if (step === "SET_AMOUNT") {
-        const from = facts.row?.amount ?? null;
+        const from = fromAmount;
         await prisma.$transaction(async (tx: any) => {
           await tx.loadAccessorial.update({ where: { id: rowId }, data: { amount, notes: overrideNote(amount, reason, by, rowNotes) } });
           await tx.auditTrail.create({
