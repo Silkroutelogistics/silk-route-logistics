@@ -757,7 +757,7 @@ async function resolveSignerEmail(userId: string): Promise<string | null> {
 async function deliverExecutedCopy(
   agreementId: string,
   userId: string,
-  params: { documentTitle: string; version: string; signedByName: string; pdf: Buffer; fileName: string },
+  params: { documentTitle: string; signedByName: string; pdf: Buffer; fileName: string },
 ): Promise<void> {
   try {
     const to = await resolveSignerEmail(userId);
@@ -946,7 +946,7 @@ router.get("/agreement/:type/pdf", authenticate, authorize("CARRIER"), async (re
     if (!executed || executed.version !== signed.version) {
       res.status(409).json({
         error:
-          `This agreement was signed on version ${signed.version}, which is not archived. ` +
+          `The text you signed is not archived, so it cannot be shown. ` +
           `Serving the current body would show you a document you did not sign. ` +
           `Contact compliance@silkroutelogistics.ai.`,
         code: "AGREEMENT_VERSION_UNARCHIVED",
@@ -1424,10 +1424,9 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
     // Decision 6 — the same bytes just stored, delivered to the signer.
     await deliverExecutedCopy(agreement.id, req.user!.id, {
       documentTitle: "Broker-Carrier Agreement",
-      version: bcaVersion,
       signedByName,
       pdf: buf,
-      fileName: `SRL-Broker-Carrier-Agreement-${bcaVersion}.pdf`,
+      fileName: "SRL-Broker-Carrier-Agreement.pdf",
     });
   })().catch(() => {});
 
@@ -1645,10 +1644,9 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), requireSte
         // Decision 6 — same bytes, delivered to the signer.
         await deliverExecutedCopy(qpRow.id, req.user!.id, {
           documentTitle: "Caravan Quick Pay Agreement",
-          version,
           signedByName: signedByName!,
           pdf: buf,
-          fileName: `SRL-Caravan-Quick-Pay-Agreement-${version}.pdf`,
+          fileName: "SRL-Caravan-Quick-Pay-Agreement.pdf",
         });
       })().catch(() => {});
     }

@@ -43,13 +43,17 @@ describe("the executed copy is emailed at execution", () => {
     expect(carrierAuth.split("generateAgreementBuffer(").length - 1).toBe(2);
   });
 
-  it("sends from operations@ with the document and version in the subject, and no marketing", () => {
+  it("sends from operations@ with the document named in the subject, no version, and no marketing", () => {
     const fn = emailService.slice(
       emailService.indexOf("export async function sendExecutedAgreementEmail"),
       emailService.indexOf("export async function sendCarrierTrainingCompletionEmail"),
     );
     expect(fn).toContain('replyTo: "operations@silkroutelogistics.ai"');
-    expect(fn).toContain("`Executed ${params.documentTitle} — version ${params.version}`");
+    expect(fn).toContain("`Executed ${params.documentTitle}`");
+    // Carriers see the agreement by name only (2026-09-26). The version stays on
+    // the signed row and inside the executed PDF, where it is the evidence.
+    expect(fn).not.toContain("params.version");
+    expect(fn).not.toMatch(/version \$\{/i);
     expect(fn).toContain('contentType: "application/pdf"');
     // One line of body. No call-to-action button, no tracking link.
     expect(fn).not.toContain("href=");

@@ -244,15 +244,15 @@ router.get("/loads/:loadId/quickpay-speed", async (req: AuthRequest, res: Respon
     // speed costs THEM. §8: same-day is the seven-day fee plus two points.
     eligible,
     tier,
-    // The agreement version the attestation is made under, so the portal
-    // states which text the carrier is electing beneath rather than implying
-    // the current one. Counsel will replace that body (§16 #2).
+    // The agreement version the carrier signed. Carriers are not shown it
+    // (2026-09-26: agreements are named without a version on every carrier
+    // screen); the election row records it at decision time as the evidence.
     quickPayVersion: profile?.quickPayVersion ?? null,
     // Written here rather than in the component so the wording lives beside
     // the agreement it quotes. No em dashes and no contractions, per the
     // brand voice rules for carrier-facing copy.
     attestation: eligible
-      ? `I elect this Quick Pay option for this load under the Caravan Quick Pay Agreement${profile.quickPayVersion ? ` (version ${profile.quickPayVersion})` : ""}. The fee shown applies to this load only. Standard tier pay remains free and is not affected.`
+      ? `I elect this Quick Pay option for this load under the Caravan Quick Pay Agreement. The fee shown applies to this load only. Standard tier pay remains free and is not affected.`
       : null,
     options: eligible
       ? [

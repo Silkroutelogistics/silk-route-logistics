@@ -651,7 +651,6 @@ export default function OnboardingPage() {
       controller.abort();
     };
   }, [bcaAttempt]);
-  const bcaVersionResolved = bcaContent?.version ?? null;
   const toggleArray = (field: "equipmentTypes" | "operatingRegions", val: string) => {
     const arr = form[field];
     set(field, arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
@@ -1919,10 +1918,7 @@ export default function OnboardingPage() {
                   the scroll-pane to full agreement on print. User's
                   browser print dialog offers "Save as PDF" as a
                   destination — no PDF library needed. */}
-              <div className="flex items-center justify-between gap-3 print:hidden">
-                <div className="text-xs text-[#6B7685]">
-                  <span className="uppercase tracking-[0.18em] font-semibold text-[#BA7517]">Version</span> {bcaVersionResolved ?? "loading…"}
-                </div>
+              <div className="flex items-center justify-end gap-3 print:hidden">
                 <button
                   type="button"
                   onClick={() => window.print()}
@@ -1933,11 +1929,11 @@ export default function OnboardingPage() {
                 </button>
               </div>
               {/* Hidden print-only header — appears in the printed
-                  PDF only, not on screen. Captures the version + agreed-at
-                  timestamp at print time for the carrier's records. */}
+                  PDF only, not on screen. Captures the print date for the
+                  carrier's records; the version is not shown to carriers. */}
               <div className="hidden print:block mb-4 pb-3 border-b border-[#EFE6D3]">
                 <p className="text-xs text-[#6B7685]">
-                  Silk Route Logistics Inc. — Broker-Carrier Agreement (Click-Through) — Version {bcaVersionResolved ?? "not loaded"} — Printed {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                  Silk Route Logistics Inc. — Broker-Carrier Agreement (Click-Through) — Printed {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
                 </p>
               </div>
               <div className="p-5 rounded-xl bg-[#FBF7F0] border border-[#EFE6D3] max-h-80 overflow-y-auto text-sm text-[#3A4A5F] leading-relaxed space-y-4 print:max-h-none print:overflow-visible print:bg-white print:border-0 print:p-0">

@@ -351,8 +351,7 @@ export default function CarrierActivationPage() {
 
         {bcaSigned ? (
           <p className="text-[13px] text-gray-600">
-            Signed by <span className="font-semibold text-[#0A2540]">{data.bca.signedByName}</span> on {fmtDate(data.bca.signedAt)}
-            {data.bca.version ? <> (version {data.bca.version})</> : null}.
+            Signed by <span className="font-semibold text-[#0A2540]">{data.bca.signedByName}</span> on {fmtDate(data.bca.signedAt)}.
           </p>
         ) : (
           <>
@@ -380,7 +379,7 @@ export default function CarrierActivationPage() {
                     </div>
                   ))}
                   <p className="text-[10px] text-gray-400 mt-3 pt-3 border-t border-gray-300/60">
-                    {bca.title} v{bca.version}. The full executed agreement governs.
+                    {bca.title}. The full executed agreement governs.
                   </p>
                 </>
               )}
@@ -400,7 +399,7 @@ export default function CarrierActivationPage() {
             <label className="flex items-start gap-2 mb-3 cursor-pointer">
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 accent-[#BA7517]" />
               <span className="text-xs text-gray-600">
-                I have read and agree to the Broker-Carrier Agreement (v{bca?.version}) on behalf of my company. Typing my name above is my electronic signature.
+                I have read and agree to the Broker-Carrier Agreement on behalf of my company. Typing my name above is my electronic signature.
               </span>
             </label>
 
@@ -643,7 +642,7 @@ export default function CarrierActivationPage() {
                         </div>
                       ))}
                       <p className="text-[10px] text-gray-400 mt-3 pt-3 border-t border-gray-300/60">
-                        {qp.title} v{qp.version}. The full executed agreement governs.
+                        {qp.title}. The full executed agreement governs.
                       </p>
                     </>
                   )}
@@ -661,7 +660,7 @@ export default function CarrierActivationPage() {
                 <label className="flex items-start gap-2 mb-3 cursor-pointer">
                   <input type="checkbox" checked={qpAgreed} onChange={(e) => setQpAgreed(e.target.checked)} disabled={!qp} className="mt-0.5 accent-[#BA7517] disabled:opacity-40" />
                   <span className="text-xs text-gray-600">
-                    I have read and agree to the Caravan Quick Pay Agreement{qp ? ` (v${qp.version})` : ""} on behalf of my company. Typing my name above is my electronic signature.
+                    I have read and agree to the Caravan Quick Pay Agreement on behalf of my company. Typing my name above is my electronic signature.
                   </span>
                 </label>
                 <label className="flex items-start gap-2 mb-3 cursor-pointer">

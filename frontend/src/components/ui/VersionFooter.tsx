@@ -19233,6 +19233,14 @@
 // No flags, no early OVERDUE, no late-payment count, no credit auto-block; aging still shows.
 // v3.8.blv — the invoice prints the PO from the load record only (Load.poNumbers), never a hand fill-in;
 // a load with no PO prints "PO: none on file" and logs a warning. Ruled 2026-09-26.
+// v3.8.bkx — Carriers see the agreements by name, never by version.
+//   The activation consent sentences read "the Broker-Carrier Agreement (v2026-09-03-F11)"
+// and "the Caravan Quick Pay Agreement (v2026-09-04-v5)"; the same string sat under each
+// review pane, on the signed-status line, beside the onboarding Print button, in the
+// onboarding print header, in the per-load Quick Pay election sentence, in the
+// executed-copy email subject and body, and in the executed PDF filenames. All gone.
+// The version is still stamped on the signature row and the election row, and stays
+// inside the signed text and the executed PDF, where it proves which text was signed.
 export const SRL_VERSION = "3.8.blv";
 
 export function VersionFooter({ className }: { className?: string }) {

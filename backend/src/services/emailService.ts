@@ -783,14 +783,14 @@ export interface CarrierTrainingCompletionParams {
  */
 export async function sendExecutedAgreementEmail(
   to: string,
-  params: { documentTitle: string; version: string; signedByName: string; pdf: Buffer; fileName: string },
+  params: { documentTitle: string; signedByName: string; pdf: Buffer; fileName: string },
 ): Promise<string | undefined> {
   const html = wrap(`
-    <p style="color:#0A2540;font-size:14px">Attached is your executed ${params.documentTitle} (version ${params.version}), signed by ${params.signedByName}. Keep it for your records.</p>
+    <p style="color:#0A2540;font-size:14px">Attached is your executed ${params.documentTitle}, signed by ${params.signedByName}. Keep it for your records.</p>
   `);
   return sendEmail(
     to,
-    `Executed ${params.documentTitle} — version ${params.version}`,
+    `Executed ${params.documentTitle}`,
     html,
     [{ filename: params.fileName, content: params.pdf, contentType: "application/pdf" }],
     { replyTo: "operations@silkroutelogistics.ai", fromName: "Silk Route Logistics" },

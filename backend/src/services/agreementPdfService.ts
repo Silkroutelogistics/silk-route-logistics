@@ -436,7 +436,7 @@ export async function generateAgreementBuffer(
  * a Quick Pay PDF is not served as "Broker-Carrier-Agreement-*.pdf".
  */
 export function agreementPdfFilename(agreement: LegalAgreement): string {
-  return `${agreement.title.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${agreement.version}.pdf`;
+  return `${agreement.title.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "")}.pdf`;
 }
 
 // v3.8.asa — the four per-agreement wrappers (generateBrokerCarrierAgreementPdf
