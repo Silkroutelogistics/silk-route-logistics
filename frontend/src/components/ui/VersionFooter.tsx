@@ -19137,7 +19137,12 @@
 // click a notification would have kept the badge forever. Every reader now uses
 // readAt, the field the AE surfaces and unread-count already used; `read` is
 // deprecated, not dropped. Production had 0 portal rows in the stuck state yet.
-export const SRL_VERSION = "3.8.bkl";
+// v3.8.bkm — Notification retention deletes read rows by readAt (Item 322).
+//   The daily cleanup's "read >30 days" branch filtered read: true, which nothing
+// has ever written, so it never deleted a row and every notification lived the
+// full 90 days. It keys on readAt now; the 90-day unread branch is unchanged.
+// The cleanup moved into an exported cleanupStaleNotifications so a test drives it.
+export const SRL_VERSION = "3.8.bkm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
