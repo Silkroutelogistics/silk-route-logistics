@@ -234,14 +234,14 @@ core document issued against it:
 
 | Document | Number |
 |---|---|
-| Load | `5001` |
-| Bill of lading | `5001` |
-| Rate confirmation | `5001` |
-| Invoice | `5001` |
-| Carrier settlement (`CarrierPay`) | `5001` |
+| Load | `50001` |
+| Bill of lading | `50001` |
+| Rate confirmation | `50001` |
+| Invoice | `50001` |
+| Carrier settlement (`CarrierPay`) | `50001` |
 
 The number is the point of reference: a carrier, a shipper or an AE quoting
-`5001` names the load and every document on it without having to say which. The
+`50001` names the load and every document on it without having to say which. The
 suffix scheme existed so one load's documents sorted together; one number does
 that better, because there is nothing left to sort.
 
@@ -267,8 +267,8 @@ to share a letter:
 **`I` is skipped deliberately** — it reads as a `1` in a hand-written or faxed
 reference, on the kind of document a lumper receipt gets stapled to.
 
-**A repeat supplemental of the same type takes a digit**: `5001A`, then `5001A2`,
-then `5001A3`. The first carries no digit so the common case reads clean, which is
+**A repeat supplemental of the same type takes a digit**: `50001A`, then `50001A2`,
+then `50001A3`. The first carries no digit so the common case reads clean, which is
 the one mechanic carried over from the retired scheme.
 
 **"Settlement" means `CarrierPay`, per load, and takes the bare number.** The
@@ -289,18 +289,18 @@ different things and must stay different.
 
 **Search resolves in three passes, in order:** exact match on the document number,
 then exact match on a legacy `SRL-` number, then substring results after. Order is
-the whole design. `SRL-121495` was self-delimiting; `5001` is not, so a plain
-substring search for `5001` also matches `15001` and `50012`, and the load the AE
+the whole design. `SRL-121495` was self-delimiting; `50001` is not, so a plain
+substring search for `50001` also matches `150001` and `500012`, and the load the AE
 actually typed must come back first rather than ranked among its own superstrings.
 
 **Legacy numbers are never rewritten.** Loads issued before this amendment keep
 their `SRL-1214xx` stems and their `B`/`R`/`I`/`S`/`P` suffixes, and search accepts
 both forms. A number already printed on a signed bill of lading is not a formatting
 decision. The two namespaces cannot collide: the legacy one is prefixed and the new
-one is not, so a new `5001B` and a legacy `SRL-121495B` are distinct strings.
+one is not, so a new `50001B` and a legacy `SRL-121495B` are distinct strings.
 
-**Filenames carry the number, never a type prefix** — `5001_BOL.pdf`,
-`5001_Rate_Confirmation.pdf`, `5001_Invoice.pdf`, `5001A_Lumper.pdf`. Sorting a
+**Filenames carry the number, never a type prefix** — `50001_BOL.pdf`,
+`50001_Rate_Confirmation.pdf`, `50001_Invoice.pdf`, `50001A_Lumper.pdf`. Sorting a
 download folder by name is the same use case the numbering scheme exists for, and
 a `TYPE-` prefix breaks it there exactly as it would anywhere else.
 
@@ -308,11 +308,17 @@ a `TYPE-` prefix breaks it there exactly as it would anywhere else.
 and carrier surface; the shipment sequence stays for internal joins and is not
 quoted outward.
 
-**Sequence start: 5001**, from `load_number_seq`.
+**Sequence start: 50001**, from `load_number_seq`. **Ruled 2026-09-26 by Wasi**,
+replacing the start of 5001 the amendment first set. Loads `5001` and `5002` were
+issued under that start and keep their numbers, exactly as `SRL-1214xx` keeps its
+suffixes: a number already on paper is never rewritten. Production's sequence
+already existed at 5002, so `generateLoadNumber` carries a floor
+(`LOAD_NUMBER_FLOOR`) that lifts it to 50001 on the first draw below it, once;
+no separate restart is run.
 
 **Status: the numbering and the filenames are BUILT; three consequences are not.**
 `generateLoadNumber` emits the bare number from a sequence declared `START WITH
-5001`. `lib/documentNumber.ts` carries the letter map, the supplemental allocator,
+50001`. `lib/documentNumber.ts` carries the letter map, the supplemental allocator,
 the core re-issue separator and the filename rule, and a permanence guard fails CI
 on a number built outside that module, a `TYPE-` filename prefix, or a letter
 assigned anywhere else.
@@ -322,13 +328,13 @@ assigned anywhere else.
 `SHP-YYYY-NNN` being confined to internal surfaces. Each is a change to a surface
 outside the numbering module.
 
-**A core re-issue takes a hyphen: `5001`, then `5001-2`, then `5001-3`. Ratified
+**A core re-issue takes a hyphen: `50001`, then `50001-2`, then `50001-3`. Ratified
 2026-09-24.** A re-issue is a new row for the same load against a `@unique` column,
 and a bare number has no suffix letter to hang a revision on the way `SRL-121485R2`
 did.
 
 **A bare digit was not available, and that is the reason rather than a preference.**
-`5001` followed by `2` is `50012` — which is load 50012's own number. The document
+`50001` followed by `2` is `500012` — which is load 500012's own number. The document
 would read as another load's, and the allocator would inherit the same ambiguity:
 its scan for the next free revision would sweep in that load's row and skip a
 number because of freight nobody was looking at. The hyphen cannot occur in a bare
