@@ -621,15 +621,55 @@ export async function terminateAgreement(req: AuthRequest, res: Response) {
     return;
   }
 
-  const updated = await prisma.carrierAgreement.update({
-    where: { id: agreement.id },
-    data: {
-      status: "TERMINATED",
-      terminatedAt: new Date(),
-      terminatedBy: req.user!.id,
-      terminationReason: reason.slice(0, 2000),
-    },
-  });
+  const terminationData = {
+    status: "TERMINATED" as const,
+    terminatedAt: new Date(),
+    terminatedBy: req.user!.id,
+    terminationReason: reason.slice(0, 2000),
+  };
+
+  // v3.8.blt — A TERMINATED QUICK PAY AGREEMENT SWITCHES QUICK PAY OFF.
+  //
+  // The two charge paths already refuse a fee without a SIGNED quick-pay row,
+  // so no money moved wrongly. What termination left behind was the profile:
+  // quickPayEnabled stayed true and quickPayAgreedAt / quickPayVersion kept
+  // naming an agreement no longer in force. The carrier portal then read
+  // "enabled" beside "not signed", a per-load election could still be recorded
+  // and printed on a rate confirmation whose fee settlement would refuse, and
+  // the on-behalf election stamped the dead version.
+  //
+  // In the same transaction as the status change, so there is no moment when
+  // the agreement is terminated and Quick Pay still reads on. Only when no
+  // other quick-pay agreement is still SIGNED: a carrier can hold rows from
+  // more than one version, and ending an older one must not switch off the
+  // one in force. The pilot enrolment is untouched. Admission is SRL's
+  // decision and termination is not a withdrawal; the carrier stays approved
+  // and turns Quick Pay back on by signing the current agreement, which is
+  // the only writer of quickPayEnabled: true.
+  let quickPayDisabled = false;
+  const updated =
+    agreement.templateName === "quick-pay"
+      ? await prisma.$transaction(async (tx) => {
+          const row = await tx.carrierAgreement.update({ where: { id: agreement.id }, data: terminationData });
+          const stillSigned = await tx.carrierAgreement.count({
+            where: { carrierId, templateName: "quick-pay", status: "SIGNED" },
+          });
+          if (stillSigned === 0) {
+            await tx.carrierProfile.update({
+              where: { id: carrierId },
+              data: {
+                quickPayEnabled: false,
+                quickPayAgreedAt: null,
+                quickPayAgreedFromIp: null,
+                quickPayAgreedFromUserAgent: null,
+                quickPayVersion: null,
+              },
+            });
+            quickPayDisabled = true;
+          }
+          return row;
+        })
+      : await prisma.carrierAgreement.update({ where: { id: agreement.id }, data: terminationData });
 
   // The carrier is told, and told what it means for them. Non-blocking: a
   // notification failure must not leave the agreement half-terminated.
@@ -640,11 +680,20 @@ export async function terminateAgreement(req: AuthRequest, res: Response) {
           userId: agreement.carrier.userId,
           type: "GENERAL",
           title: "Carrier agreement terminated",
+          // v3.8.blt — the two agreements end differently, so they are told
+          // differently. The Quick Pay notice used to say the carrier could not
+          // accept new loads, which is only true of the Broker-Carrier Agreement.
           message:
-            `Your ${agreement.templateName === "quick-pay" ? "Quick Pay Agreement" : "Broker-Carrier Agreement"} has been terminated. ` +
-            `${reason.slice(0, 400)} ` +
-            `You will not be able to accept new loads until a current agreement is signed. Loads already in flight are unaffected. ` +
-            `Contact operations@silkroutelogistics.ai if you believe this is an error.`,
+            agreement.templateName === "quick-pay"
+              ? `Your Quick Pay Agreement has been terminated. ${reason.slice(0, 400)} ` +
+                `Quick Pay is off: any load not yet paid will pay on your standard terms, with no fee. ` +
+                `Payments already made are unaffected, and you can still accept loads. ` +
+                `To use Quick Pay again, sign the current Quick Pay Agreement in your portal. ` +
+                `Contact operations@silkroutelogistics.ai if you believe this is an error.`
+              : `Your Broker-Carrier Agreement has been terminated. ` +
+                `${reason.slice(0, 400)} ` +
+                `You will not be able to accept new loads until a current agreement is signed. Loads already in flight are unaffected. ` +
+                `Contact operations@silkroutelogistics.ai if you believe this is an error.`,
           actionUrl: "/carrier/dashboard/activation",
         },
       })
@@ -691,6 +740,7 @@ export async function terminateAgreement(req: AuthRequest, res: Response) {
 
   res.json({
     ...updated,
+    quickPayDisabled,
     inFlight: {
       count: impact.affected.length,
       loads: impact.affected.map((l: any) => ({ referenceNumber: l.referenceNumber, status: l.status, lane: l.lane })),

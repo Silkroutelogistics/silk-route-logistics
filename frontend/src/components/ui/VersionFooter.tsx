@@ -19285,6 +19285,12 @@
 // says so, once, with "No signature on this document is required". SRL's
 // countersignature stays as its full statement. Terms version bumped; it also
 // carries the week's detention and layover figures, which moved without one.
+// v3.8.blt — Terminating a Quick Pay Agreement switches Quick Pay off, and says so.
+//   The charge paths already refused a fee without a signed agreement; the
+// profile kept reading "enabled" with a dead version. Now the same transaction
+// clears it, unless another signed Quick Pay Agreement is still in force, and
+// the pilot admission stands so re-signing turns it back on. The carrier notice,
+// the AE dialog and the banner stop saying a Quick Pay termination blocks loads.
 export const SRL_VERSION = "3.8.blv";
 
 export function VersionFooter({ className }: { className?: string }) {

@@ -820,6 +820,18 @@ export default function CarrierPoolPage() {
       // the check-call schedules it tightened; an admin who just terminated a
       // carrier mid-haul should see that count, not be reassured by a constant.
       const n = data?.inFlight?.count ?? 0;
+      // v3.8.blt — a Quick Pay termination ends Quick Pay, not tendering, and
+      // the banner says which one happened. quickPayDisabled comes from the
+      // server: false means another signed Quick Pay Agreement is still in force.
+      if (data?.templateName === "quick-pay") {
+        setTerminateMessage({
+          tone: "success",
+          text: data?.quickPayDisabled
+            ? "Quick Pay Agreement terminated. Quick Pay is off for this carrier until they sign the current version. They can still be tendered."
+            : "Quick Pay Agreement terminated. Another signed Quick Pay Agreement is still in force, so Quick Pay stays on.",
+        });
+        return;
+      }
       setTerminateMessage({
         tone: "success",
         text:
@@ -1873,6 +1885,21 @@ export default function CarrierPoolPage() {
                                         The ratified policy (§14) is that they complete AND
                                         pay; an admin about to terminate a carrier mid-haul
                                         needs to be told that plainly, not reassured. */}
+                                    {/* v3.8.blt — a Quick Pay Agreement ends Quick Pay, not the
+                                        carrier's ability to haul. The Broker-Carrier wording
+                                        below was shown for both, and told an admin that ending
+                                        Quick Pay would stop tendering. */}
+                                    {ag.templateName === "quick-pay" ? (
+                                    <div className="text-[11px] text-red-800 space-y-1">
+                                      <p><span className="font-semibold">Stops immediately:</span>{" "}
+                                        Quick Pay for this carrier. Any load not yet paid pays on their standard terms, with no fee,
+                                        until they sign the current Quick Pay Agreement.</p>
+                                      <p><span className="font-semibold">Does not stop:</span>{" "}
+                                        tendering. This carrier keeps hauling under their Broker-Carrier Agreement, and payments
+                                        already made stand. Their pilot admission stays approved, so re-signing turns Quick Pay back on.</p>
+                                      <p className="text-red-700">The agreement and its signed PDF are kept as a record.</p>
+                                    </div>
+                                    ) : (
                                     <div className="text-[11px] text-red-800 space-y-1">
                                       <p><span className="font-semibold">Stops immediately:</span>{" "}
                                         this carrier cannot be tendered or accept any new load until they sign a new agreement.</p>
@@ -1884,6 +1911,7 @@ export default function CarrierPoolPage() {
                                         If a load must be taken off this carrier, do that on the load itself — termination will not do it.
                                         The agreement and its signed PDF are kept as a record.</p>
                                     </div>
+                                    )}
                                     <textarea
                                       value={terminateReason}
                                       onChange={(e) => setTerminateReason(e.target.value)}

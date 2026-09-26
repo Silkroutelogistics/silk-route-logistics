@@ -496,3 +496,70 @@ describe("Lift suspension — the exit from SUSPENDED", () => {
     expect(within(panel).queryByRole("button", { name: /Lift suspension…/ })).toBeNull();
   });
 });
+
+// v3.8.blt — ending a Quick Pay Agreement ends Quick Pay, not tendering. The
+// dialog and the success banner used the Broker-Carrier wording for both.
+describe("Terminating an agreement says what it ends", () => {
+  const QP = {
+    id: "ag-qp", templateName: "quick-pay", version: "SRL-QPA-2026-R6", status: "SIGNED",
+    signedAt: "2026-09-26T15:43:58Z", signedByName: "John Doe", terminatedAt: null, terminationReason: null,
+    documentUrl: null, executedCopySent: true, executedCopySentAt: null, executedCopySendError: null, contentHash: null,
+  };
+  const BCA = { ...QP, id: "ag-bca", templateName: "broker-carrier", version: "SRL-BCA-2026-R3" };
+
+  beforeEach(async () => {
+    const { api } = await import("@/lib/api");
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.startsWith("/carrier/all")) return Promise.resolve({ data: { carriers: [LIVE], total: 1 } });
+      if (url === "/carriers/cp-live/agreements") return Promise.resolve({ data: [QP, BCA] });
+      // The Compliance tab also mounts the security card, which reads these
+      // three fields unconditionally; an empty object would crash the tab.
+      if (url === "/carriers/cp-live/security-signals") {
+        return Promise.resolve({ data: { geo: { geoMismatch: false }, events: [], chameleonMatches: [], unusualOtpSmsOverride: null } });
+      }
+      if (url.startsWith("/carriers/quickpay-enrollments")) return Promise.resolve({ data: { status: "ALL", count: 0, enrollments: [] } });
+      return Promise.resolve({ data: {} });
+    });
+  });
+
+  async function openCompliance() {
+    const user = userEvent.setup();
+    mount();
+    await screen.findByText("Live Freight LLC", { selector: "p" });
+    await user.click(rowFor("Live Freight LLC"));
+    const panel = await screen.findByRole("dialog");
+    await user.click(within(panel).getByRole("button", { name: /Compliance/ }));
+    // The agreements render in the order the server returns them: QP, then BCA.
+    const buttons = await within(panel).findAllByRole("button", { name: /Terminate this agreement/ });
+    expect(buttons).toHaveLength(2);
+    return { user, panel, buttons };
+  }
+
+  it("the Quick Pay dialog says Quick Pay stops and tendering does not, and so does the banner", async () => {
+    const { api } = await import("@/lib/api");
+    (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      data: { ...QP, status: "TERMINATED", quickPayDisabled: true, inFlight: { count: 0, loads: [], aesNotified: 0, checkCallsEscalated: 0 } },
+    });
+    const { user, panel, buttons } = await openCompliance();
+    await user.click(buttons[0]);
+
+    expect(panel.textContent).toContain("Quick Pay for this carrier");
+    expect(panel.textContent).toContain("tendering. This carrier keeps hauling under their Broker-Carrier Agreement");
+    expect(panel.textContent).not.toContain("cannot be tendered or accept any new load");
+
+    await user.type(within(panel).getByPlaceholderText(/Why is this being terminated/), "Reversing a test signature");
+    await user.click(within(panel).getByRole("button", { name: /Confirm termination/ }));
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/carriers/cp-live/agreements/ag-qp/terminate", { reason: "Reversing a test signature" }),
+    );
+    expect(await within(panel).findByText(/Quick Pay is off for this carrier/)).toBeTruthy();
+    expect(panel.textContent).not.toContain("cannot be tendered until they re-sign");
+  });
+
+  it("the Broker-Carrier dialog keeps its wording", async () => {
+    const { user, panel, buttons } = await openCompliance();
+    await user.click(buttons[1]);
+    expect(panel.textContent).toContain("cannot be tendered or accept any new load");
+    expect(panel.textContent).not.toContain("Quick Pay for this carrier");
+  });
+});

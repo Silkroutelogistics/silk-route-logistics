@@ -13,8 +13,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { mockPrisma } = vi.hoisted(() => ({
   mockPrisma: {
-    carrierAgreement: { findFirst: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
+    carrierAgreement: { findFirst: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn(), count: vi.fn() },
+    carrierProfile: { update: vi.fn() },
     notification: { create: vi.fn() },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -55,6 +57,8 @@ describe("terminateAgreement", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockPrisma.notification.create.mockResolvedValue({});
+    // The interactive form: the callback runs against the same mock client.
+    mockPrisma.$transaction.mockImplementation(async (fn: any) => fn(mockPrisma));
   });
 
   it("moves a signed agreement to TERMINATED and stamps who, when and why", async () => {
@@ -166,5 +170,76 @@ describe("terminateAgreement", () => {
     expect(where.id).toBe("agreement-1");
     expect(where.carrierId).toBe("carrier-1");
     expect(res.status).toHaveBeenCalledWith(404);
+  });
+});
+
+// v3.8.blt — ending a Quick Pay Agreement switches Quick Pay off, in the same
+// transaction, unless another signed Quick Pay Agreement is still in force.
+describe("terminateAgreement — Quick Pay", () => {
+  const QP_AGREEMENT = { ...SIGNED_AGREEMENT, templateName: "quick-pay" };
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockPrisma.notification.create.mockResolvedValue({});
+    mockPrisma.$transaction.mockImplementation(async (fn: any) => fn(mockPrisma));
+    mockPrisma.carrierAgreement.findFirst.mockResolvedValue(QP_AGREEMENT);
+    mockPrisma.carrierAgreement.update.mockResolvedValue({ ...QP_AGREEMENT, status: "TERMINATED" });
+    mockPrisma.carrierProfile.update.mockResolvedValue({});
+  });
+
+  it("switches Quick Pay off and clears the agreed-at and version fields", async () => {
+    mockPrisma.carrierAgreement.count.mockResolvedValue(0);
+    const res = makeRes();
+    await terminateAgreement(makeReq(), res);
+
+    expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+    const call = mockPrisma.carrierProfile.update.mock.calls[0][0];
+    expect(call.where.id).toBe("carrier-1");
+    expect(call.data).toEqual({
+      quickPayEnabled: false,
+      quickPayAgreedAt: null,
+      quickPayAgreedFromIp: null,
+      quickPayAgreedFromUserAgent: null,
+      quickPayVersion: null,
+    });
+    expect(res.json.mock.calls[0][0].quickPayDisabled).toBe(true);
+  });
+
+  it("asks whether another quick-pay agreement is still SIGNED, for this carrier only", async () => {
+    mockPrisma.carrierAgreement.count.mockResolvedValue(0);
+    await terminateAgreement(makeReq(), makeRes());
+    expect(mockPrisma.carrierAgreement.count.mock.calls[0][0].where).toEqual({
+      carrierId: "carrier-1", templateName: "quick-pay", status: "SIGNED",
+    });
+  });
+
+  it("leaves Quick Pay on when another signed Quick Pay Agreement is still in force", async () => {
+    // A carrier can hold rows from more than one version. Ending an older one
+    // must not switch off the one they are working under.
+    mockPrisma.carrierAgreement.count.mockResolvedValue(1);
+    const res = makeRes();
+    await terminateAgreement(makeReq(), res);
+    expect(mockPrisma.carrierProfile.update).not.toHaveBeenCalled();
+    expect(res.json.mock.calls[0][0].quickPayDisabled).toBe(false);
+  });
+
+  it("tells the carrier Quick Pay is off, and that they can still accept loads", async () => {
+    mockPrisma.carrierAgreement.count.mockResolvedValue(0);
+    await terminateAgreement(makeReq(), makeRes());
+    const note = mockPrisma.notification.create.mock.calls[0][0].data;
+    expect(note.message).toContain("Quick Pay Agreement has been terminated");
+    expect(note.message).toContain("Quick Pay is off");
+    expect(note.message).toContain("you can still accept loads");
+    expect(note.message).not.toContain("not be able to accept new loads");
+  });
+
+  it("never touches the profile when a Broker-Carrier Agreement is terminated", async () => {
+    mockPrisma.carrierAgreement.findFirst.mockResolvedValue(SIGNED_AGREEMENT);
+    mockPrisma.carrierAgreement.update.mockResolvedValue({ ...SIGNED_AGREEMENT, status: "TERMINATED" });
+    const res = makeRes();
+    await terminateAgreement(makeReq(), res);
+    expect(mockPrisma.carrierProfile.update).not.toHaveBeenCalled();
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    expect(res.json.mock.calls[0][0].quickPayDisabled).toBe(false);
   });
 });
