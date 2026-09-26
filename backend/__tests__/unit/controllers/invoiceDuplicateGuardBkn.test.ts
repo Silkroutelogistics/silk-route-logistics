@@ -1,9 +1,9 @@
 /**
  * RECONCILE step 3e (ruled 2026-09-26): the four BKN invoices SRL delivered through
- * Tipalti on 2026-09-25 are recorded SENT via TIPALTI (step 3c), so the send lock is
- * lifted and the duplicate guard refuses a second email: sendInvoice refuses a
- * non-DRAFT, generateInvoiceFromLoad returns the invoice a load already has. The
- * lock module and its own cases below go in the next commit.
+ * Tipalti on 2026-09-25 are recorded SENT via TIPALTI (step 3c), and the duplicate
+ * guard is what refuses a second email for them: sendInvoice refuses a non-DRAFT,
+ * generateInvoiceFromLoad returns the invoice a load already has. It replaced the
+ * send lock (v3.8.blq), whose module is gone.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { prisma } from "../../../src/config/database";
@@ -18,7 +18,6 @@ vi.mock("../../../src/services/invoiceService", () => ({ assessLoadBillable: vi.
 vi.mock("../../../src/services/storageService", () => ({ uploadFileToPath: vi.fn().mockResolvedValue("invoices/x.pdf") }));
 vi.mock("../../../src/services/customerRecipientResolver", () => ({ resolveBillingRecipients: vi.fn().mockResolvedValue([{ email: "ap@example.com" }]) }));
 
-import { INVOICE_SEND_LOCKED, isInvoiceSendLocked, sendLockedMessage } from "../../../src/lib/invoiceSendLock";
 import { sendCustomerInvoiceEmail, sendEmail } from "../../../src/services/emailService";
 import { sendInvoice } from "../../../src/controllers/accountingController";
 import { generateInvoiceFromLoad } from "../../../src/controllers/invoiceController";
@@ -29,27 +28,6 @@ const load = (loadNumber: string) => ({ loadNumber, referenceNumber: loadNumber,
   destCity: "Hebron", destState: "KY", customer: { name: "Beekeepers Naturals USA Inc.", email: "ap@example.com", paymentTerms: "Net 30" } });
 const draft = (loadNumber: string) => ({ id: "inv-1", invoiceNumber: "X", srlDocNumber: "X", invoiceKind: "BASE", loadId: "load-1",
   status: "DRAFT", amount: 700, totalAmount: 700, dueDate: null, load: load(loadNumber), lineItems: [] });
-
-describe("which loads are locked", () => {
-  it("the four delivered BKN loads, in either spelling", () => {
-    for (const n of ["121492", "121494", "121495", "121496"]) {
-      expect(isInvoiceSendLocked(n)).toBe(true);
-      expect(isInvoiceSendLocked(`SRL-${n}`)).toBe(true);
-    }
-  });
-
-  it("nothing else: the neighbours, the continuing series, the withdrawn series, an invoice number, nothing", () => {
-    for (const n of ["SRL-121493", "SRL-121497", "121498", "5003", "SRL-121494I", "121494I", "", null, undefined]) {
-      expect(isInvoiceSendLocked(n as any)).toBe(false);
-    }
-  });
-
-  it("the refusal names the load, the channel and the way out", () => {
-    expect(INVOICE_SEND_LOCKED).toBe("INVOICE_SEND_LOCKED");
-    const m = sendLockedMessage("SRL-121494");
-    for (const s of ["SRL-121494", "Tipalti", "mark-sent"]) expect(m).toContain(s);
-  });
-});
 
 const FOUR = ["SRL-121492", "SRL-121494", "SRL-121495", "SRL-121496"];
 
