@@ -17,6 +17,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import fs from "fs";
 import path from "path";
 import { prisma } from "../../../src/config/database";
+import { log } from "../../../src/lib/logger";
 import {
   autoGenerateInvoice,
   syncInvoiceAccessorials,
@@ -148,9 +149,23 @@ describe("the stamp on every charge path", () => {
   });
 });
 
+/**
+ * Item 290 — the credit path reads what the row was BILLED off the stamped
+ * invoice's keyed lines. Answer that WHERE (invoiceId + accessorialId IN) from a
+ * fixture: the $100 charge line that billed acc-rej onto inv-base.
+ */
+function billedLinesAnsweringTheWhere(lines = [{ invoiceId: "inv-base", accessorialId: "acc-rej", amount: 100 }]) {
+  mockPrisma.invoiceLineItem.findMany.mockImplementation(async ({ where }: any) =>
+    lines.filter((l) =>
+      (!where?.invoiceId || l.invoiceId === where.invoiceId) &&
+      (!where?.accessorialId?.in || where.accessorialId.in.includes(l.accessorialId))),
+  );
+}
+
 describe("the stamp on both credit paths", () => {
   it("DRAFT credit: the negative line names the rejected row it takes off", async () => {
     ledgerAnsweringTheWhere();
+    billedLinesAnsweringTheWhere();
     mockPrisma.invoice.findUnique.mockResolvedValue(BASE_DRAFT); // the stamped invoice, still a draft
 
     await creditRejectedAccessorials("load-1");
@@ -164,6 +179,7 @@ describe("the stamp on both credit paths", () => {
 
   it("SUPPLEMENTAL credit memo: the negative line on the new document names the rejected row", async () => {
     ledgerAnsweringTheWhere();
+    billedLinesAnsweringTheWhere();
     mockPrisma.invoice.findUnique.mockResolvedValue({ ...BASE_DRAFT, status: "SENT" });
     mockPrisma.invoice.create.mockImplementation(async ({ data }: any) => ({ id: "inv-credit", ...data }));
 
@@ -187,6 +203,73 @@ describe("the stamp on both credit paths", () => {
     await autoGenerateInvoice("load-1");
 
     expect(writtenLines().map((l: any) => l.accessorialId)).not.toContain("acc-rej");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// §13.3 Item 290 — a credit takes back what the customer was BILLED, read off
+// the stamped invoice's own lines. Never the carrier amount, never today's card.
+describe("Item 290: the credit is priced from the invoiced line", () => {
+  // Detention billed on a 3h × $75 rate card = $225, while SRL paid the carrier $150.
+  const RATE_CARD_ROW = { ...LEDGER[2], id: "acc-rc", type: "DETENTION_DEL", amount: 150 };
+  const RATE_CARD_LINE = [{ invoiceId: "inv-base", accessorialId: "acc-rc", amount: 225 }];
+
+  it("rate-card customer, DRAFT: credits the $225 billed, not the $150 carrier cost", async () => {
+    ledgerAnsweringTheWhere([RATE_CARD_ROW]);
+    billedLinesAnsweringTheWhere(RATE_CARD_LINE);
+    mockPrisma.invoice.findUnique.mockResolvedValue(BASE_DRAFT);
+
+    await creditRejectedAccessorials("load-1");
+
+    expect(writtenLines()).toEqual([expect.objectContaining({ accessorialId: "acc-rc", amount: -225, rate: -225 })]);
+    expect(mockPrisma.invoice.update.mock.calls[0][0].data).toMatchObject({ totalAmount: 3175, amount: 3175 });
+  });
+
+  it("rate-card customer, SENT: the credit memo totals -$225", async () => {
+    ledgerAnsweringTheWhere([RATE_CARD_ROW]);
+    billedLinesAnsweringTheWhere(RATE_CARD_LINE);
+    mockPrisma.invoice.findUnique.mockResolvedValue({ ...BASE_DRAFT, status: "SENT" });
+    mockPrisma.invoice.create.mockImplementation(async ({ data }: any) => ({ id: "inv-credit", ...data }));
+
+    await creditRejectedAccessorials("load-1");
+
+    expect(mockPrisma.invoice.create.mock.calls[0][0].data.totalAmount).toBe(-225);
+    expect(writtenLines()[0]).toMatchObject({ accessorialId: "acc-rc", amount: -225 });
+  });
+
+  it("non-rate-card customer: billed equals carrier cost, and the credit is that figure", async () => {
+    ledgerAnsweringTheWhere();
+    billedLinesAnsweringTheWhere(); // $100 billed at cost
+    mockPrisma.invoice.findUnique.mockResolvedValue(BASE_DRAFT);
+
+    await creditRejectedAccessorials("load-1");
+
+    expect(writtenLines()).toEqual([expect.objectContaining({ accessorialId: "acc-rej", amount: -100 })]);
+  });
+
+  it("no invoiced line: the credit is REFUSED and logged, the row stays stamped", async () => {
+    const warn = vi.spyOn(log, "warn");
+    ledgerAnsweringTheWhere();
+    billedLinesAnsweringTheWhere([]);
+    mockPrisma.invoice.findUnique.mockResolvedValue(BASE_DRAFT);
+
+    await creditRejectedAccessorials("load-1");
+
+    expect(mockPrisma.invoiceLineItem.createMany).not.toHaveBeenCalled();
+    expect(mockPrisma.invoice.update).not.toHaveBeenCalled();
+    expect(mockPrisma.invoice.create).not.toHaveBeenCalled();
+    expect(mockPrisma.loadAccessorial.updateMany).not.toHaveBeenCalled();
+    expect(warn.mock.calls.map((c) => String(c[0])).join("\n")).toMatch(/Credit REFUSED for rejected accessorial acc-rej/);
+  });
+
+  it("a $0 carrier row billed $200 is credited (it used to be filtered out on carrier cost)", async () => {
+    ledgerAnsweringTheWhere([{ ...LEDGER[2], id: "acc-zero", amount: 0 }]);
+    billedLinesAnsweringTheWhere([{ invoiceId: "inv-base", accessorialId: "acc-zero", amount: 200 }]);
+    mockPrisma.invoice.findUnique.mockResolvedValue(BASE_DRAFT);
+
+    await creditRejectedAccessorials("load-1");
+
+    expect(writtenLines()).toEqual([expect.objectContaining({ accessorialId: "acc-zero", amount: -200 })]);
   });
 });
 

@@ -200,17 +200,38 @@ async function rejectedBilledCustomerAccessorials(loadId: string, client: any = 
     orderBy: { createdAt: "asc" },
     select: { id: true, type: true, amount: true, notes: true, status: true, rejectedReason: true, shipperInvoiceId: true },
   });
+  // No amount filter here. `amount` is the CARRIER figure; whether there is
+  // anything to credit is decided by what the customer was billed (Item 290).
   return (rows || [])
     .filter((r: any) => String(r.status).toUpperCase() === "REJECTED" && !!r.shipperInvoiceId)
     .map((r: any) => ({
       id: r.id,
       type: String(r.type),
-      amount: round2(Number(r.amount)),
+      carrierAmount: round2(Number(r.amount)),
       notes: r.notes ?? null,
       rejectedReason: r.rejectedReason ?? null,
       invoiceId: String(r.shipperInvoiceId),
-    }))
-    .filter((r: any) => r.amount > 0);
+    }));
+}
+
+/**
+ * §13.3 Item 290 — what the customer was billed for each row on the invoice it
+ * is stamped to: the NET of every line keyed to it there (282b's meaning of
+ * "billed", so a charge, a credit and a re-charge net correctly). This is the
+ * document as issued. Neither the carrier `amount` nor today's rate card is it:
+ * the card can change after the invoice went out.
+ */
+async function billedNetByRow(invoiceId: string, ids: string[]): Promise<Map<string, number>> {
+  const lines = await prisma.invoiceLineItem.findMany({
+    where: { invoiceId, accessorialId: { in: ids } },
+    select: { accessorialId: true, amount: true },
+  });
+  const net = new Map<string, number>();
+  for (const l of lines || []) {
+    if (!l.accessorialId) continue;
+    net.set(l.accessorialId, round2((net.get(l.accessorialId) ?? 0) + Number(l.amount)));
+  }
+  return net;
 }
 
 /** The credit line for a rejected charge. Negative, and it says why. */
@@ -270,9 +291,8 @@ export async function creditRejectedAccessorials(loadId: string) {
 
   let lastCredit: any = null;
 
-  for (const [invoiceId, rows] of byInvoice) {
-    const ids = rows.map((r: any) => r.id);
-    const credited = round2(rows.reduce((s: number, r: any) => s + r.amount, 0));
+  for (const [invoiceId, stamped] of byInvoice) {
+    const stampedIds = stamped.map((r: any) => r.id);
 
     const invoice = await prisma.invoice.findUnique({
       where: { id: invoiceId },
@@ -282,17 +302,38 @@ export async function creditRejectedAccessorials(loadId: string) {
     // The invoice was deleted out from under the stamp. Nothing to credit, but
     // the row must not keep claiming it was billed.
     if (!invoice) {
-      await prisma.loadAccessorial.updateMany({ where: { id: { in: ids } }, data: { shipperInvoiceId: null } });
+      await prisma.loadAccessorial.updateMany({ where: { id: { in: stampedIds } }, data: { shipperInvoiceId: null } });
       continue;
     }
 
     if (invoice.status === "VOID") {
-      await prisma.loadAccessorial.updateMany({ where: { id: { in: ids } }, data: { shipperInvoiceId: null } });
+      await prisma.loadAccessorial.updateMany({ where: { id: { in: stampedIds } }, data: { shipperInvoiceId: null } });
       log.info(
-        `[AutoInvoice] $${credited.toFixed(2)} of rejected accessorials released from VOID invoice ${invoice.srlDocNumber ?? invoice.invoiceNumber} on load ${load.referenceNumber}`,
+        `[AutoInvoice] ${stampedIds.length} rejected accessorial(s) released from VOID invoice ${invoice.srlDocNumber ?? invoice.invoiceNumber} on load ${load.referenceNumber}`,
       );
       continue;
     }
+
+    // Item 290 — credit the figure the customer was billed, read off this
+    // invoice's own lines. A row with no billed line here is REFUSED, loudly,
+    // and left stamped so the next sync and 282b's diff still see it. Falling
+    // back to the carrier amount would credit a rate-card customer the wrong
+    // number on a document they hold.
+    const billed = await billedNetByRow(invoice.id, stampedIds);
+    const rows: Array<(typeof stamped)[number] & { amount: number }> = [];
+    for (const r of stamped) {
+      const b = billed.get(r.id) ?? 0;
+      if (b > 0) {
+        rows.push({ ...r, amount: b });
+      } else {
+        log.warn(
+          `[AutoInvoice] Credit REFUSED for rejected accessorial ${r.id} (${r.type}) on load ${load.referenceNumber}: invoice ${invoice.srlDocNumber ?? invoice.invoiceNumber} carries no billed line keyed to it (net $${b.toFixed(2)}). Not falling back to carrier cost ($${r.carrierAmount.toFixed(2)}).`,
+        );
+      }
+    }
+    if (!rows.length) continue;
+    const ids = rows.map((r: any) => r.id);
+    const credited = round2(rows.reduce((s: number, r: any) => s + r.amount, 0));
 
     if (invoice.status === "DRAFT") {
       const existingCount = await prisma.invoiceLineItem.count({ where: { invoiceId: invoice.id } });

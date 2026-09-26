@@ -19100,7 +19100,14 @@
 // Builder sidebar: cancelled loads are out; revenue is invoices, else the TONU
 // charge, else customerRate once delivered. Rows link to ?load=<id>, which Track &
 // Trace now reads to open that load directly, cancelled and TONU included.
-export const SRL_VERSION = "3.8.bjx";
+// v3.8.bjy — A customer credit takes back what the customer was billed (Item 290).
+//   creditRejectedAccessorials priced every credit at the ledger row's carrier
+// amount, so a rate-card customer billed $225 for detention SRL paid $150 on was
+// credited $150. It now reads the net of the stamped invoice's lines keyed to the
+// row (282a) — the document as issued, not today's card — and REFUSES, logged and
+// left stamped, when no billed line exists rather than falling back to cost. The
+// rejected-row query also stopped dropping $0-carrier rows the customer was billed for.
+export const SRL_VERSION = "3.8.bjy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

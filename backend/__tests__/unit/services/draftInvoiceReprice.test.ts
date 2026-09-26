@@ -244,11 +244,18 @@ describe("order inside the sync", () => {
     const calls: string[] = [];
     ledger([tonuRow(250, { status: "REJECTED", rejectedReason: "disputed" })]);
     mockPrisma.invoiceLineItem.createMany.mockImplementation(async () => { calls.push("credit-fold"); return { count: 1 }; });
-    mockPrisma.invoiceLineItem.findMany.mockImplementation(async () => { calls.push("reprice-read"); return [TONU_LINE]; });
+    // Item 290: the credit pass now READS lines too — the billed figure, keyed by
+    // accessorialId IN — so reads are told apart by their WHERE, not lumped as one.
+    mockPrisma.invoiceLineItem.findMany.mockImplementation(async ({ where }: any) => {
+      calls.push(where?.accessorialId ? "credit-billed-read" : "reprice-read");
+      return [TONU_LINE];
+    });
 
     await syncInvoiceAccessorials("load-1");
 
     expect(calls.indexOf("credit-fold")).toBeGreaterThan(-1);
+    expect(calls.indexOf("credit-billed-read")).toBeGreaterThan(-1);
+    expect(calls.indexOf("credit-billed-read")).toBeLessThan(calls.indexOf("credit-fold"));
     expect(calls.indexOf("reprice-read")).toBeGreaterThan(calls.indexOf("credit-fold"));
     expect(mockPrisma.invoiceLineItem.update).not.toHaveBeenCalled();
   });
