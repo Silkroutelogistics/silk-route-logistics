@@ -5,7 +5,7 @@
  * to: a presigned redirect puts the storage URL in the browser's address bar
  * and its history, which is the same leak as returning the key outright.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
 import { Readable } from "stream";
@@ -37,8 +37,16 @@ const mockPrisma = prisma as any;
 const RC = "rc-1";
 const KEY = "s3://srl-docs/agreements/rc-sign-cert-rc-1.pdf";
 
+// The router is imported once, here, not inside the first case. Loading its
+// module graph took longer than a case's 5 s budget on a cold Windows run, so
+// the first case timed out even alone (Item 300.1); one cold run measured ~45 s.
+// The hook gets its own budget, with room above that; the cases keep 5 s.
+let routes: express.Router;
+beforeAll(async () => {
+  routes = (await import("../../../src/routes/rateConfirmations")).default;
+}, 120_000);
+
 async function app() {
-  const routes = (await import("../../../src/routes/rateConfirmations")).default;
   const a = express();
   a.use(express.json());
   a.use("/api/rate-confirmations", routes);

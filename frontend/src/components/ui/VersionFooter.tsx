@@ -19142,7 +19142,11 @@
 // has ever written, so it never deleted a row and every notification lived the
 // full 90 days. It keys on readAt now; the 90-day unread branch is unchanged.
 // The cleanup moved into an exported cleanupStaleNotifications so a test drives it.
-export const SRL_VERSION = "3.8.bkm";
+// v3.8.bks — executionEvidence loads its router before the cases, not inside the first one (Item 300.1).
+//   Test-only. The first case imported the rate-confirmations router inside its 5 s
+//   budget and timed out even run alone on this machine (one cold run: ~45 s). The
+//   import moved to a beforeAll with a 120 s hook budget; case budgets are unchanged.
+export const SRL_VERSION = "3.8.bks";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
