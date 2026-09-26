@@ -149,7 +149,6 @@ const OWN_CLIENT_INVENTORY: Record<string, Reason> = {
   "reconcile-carrier-status-drift.ts": "MAINTENANCE",
   "reconcile-srl-121488.ts": "MAINTENANCE",
   "repair-load-121495-tracking-and-notice.ts": "MAINTENANCE",
-  "restart-load-number-sequence.ts": "MAINTENANCE",
   "rotate-seed-accounts.ts": "MAINTENANCE",
   "rotate-whaider-password.ts": "MAINTENANCE",
   "seed-training-courses.ts": "MAINTENANCE",
@@ -172,7 +171,7 @@ const OWN_CLIENT_INVENTORY: Record<string, Reason> = {
  * is a literal in the inventory above rather than an inferred property, so the
  * mislabel is a visible word in a reviewed diff instead of a silent skip.
  */
-const MAINTENANCE_CEILING = 20;
+const MAINTENANCE_CEILING = 19;
 
 describe("the detector reads code, not prose", () => {
   // These fixtures ARE the gate. The count below is only as trustworthy as the
