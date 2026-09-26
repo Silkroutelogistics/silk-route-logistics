@@ -28,6 +28,7 @@ import {
   documentNumberFor,
   formatDocumentNumber,
   formatSupplementalNumber,
+  invoiceNumberTwins,
   generateLoadNumber,
   isBareStem,
   isLegacyStem,
@@ -148,14 +149,27 @@ describe("a NEW document for a legacy SRL- load prints its digits (§21.2, corre
     expect(formatSupplementalNumber("SRL-121494", "TONU")).toBe("SRL-121494S");
   });
 
-  it("allocates in the digits form and does not count retired-form numbers", async () => {
+  it("allocates in the digits form, and an invoice's retired twin occupies its number (RECONCILE)", async () => {
     const client = makeClient([{ srlDocNumber: "SRL-121494I" }, { srlDocNumber: "SRL-121494I2" }]);
-    expect(await nextDocumentNumber("INVOICE", "SRL-121494", client as any)).toBe("121494I");
+    expect(await nextDocumentNumber("INVOICE", "SRL-121494", client as any)).toBe("121494I-3");
     expect(client.wheres[0]).toEqual({
-      OR: [{ srlDocNumber: "121494I" }, { srlDocNumber: { startsWith: "121494I-" } }],
+      OR: [{ srlDocNumber: "121494I" }, { srlDocNumber: { startsWith: "121494I-" } }, { srlDocNumber: { startsWith: "SRL-121494I" } }],
     });
+    expect(await nextDocumentNumber("INVOICE", "SRL-121494", makeClient([]) as any)).toBe("121494I");
     const issued = makeClient([{ srlDocNumber: "121494I" }]);
     expect(await nextDocumentNumber("INVOICE", "SRL-121494", issued as any)).toBe("121494I-2");
+    // Only invoices: a retired rate con keeps its own sequence (open decision).
+    expect(await nextDocumentNumber("RATE_CONFIRMATION", "SRL-121494", makeClient([{ rateConNumber: "SRL-121494R" }]) as any)).toBe("121494");
+  });
+
+  it("an invoice number and its retired twin are one number", () => {
+    expect(invoiceNumberTwins("121494I")).toEqual(["121494I", "SRL-121494I"]);
+    expect(invoiceNumberTwins("SRL-121494I")).toEqual(["121494I", "SRL-121494I"]);
+    expect(invoiceNumberTwins("121498I-2")).toEqual(["121498I-2", "SRL-121498I2"]);
+    expect(invoiceNumberTwins("SRL-121494I2")).toEqual(["121494I-2", "SRL-121494I2"]);
+    for (const other of ["INV-1003", "121494A", "SRL-121494S", "121494", "121494I-1", "RFQ-9Z3K1I"]) {
+      expect(invoiceNumberTwins(other)).toEqual([other]);
+    }
   });
 
   it("no newly generated core number carries SRL-, and a legacy load's digits never meet a new load's", () => {

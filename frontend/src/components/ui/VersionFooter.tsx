@@ -19185,6 +19185,9 @@
 // confirmation, load confirmation or invoice prints the bare digits, a legacy load's
 // included (SRL-121494 -> 121494); a page already issued with SRL- keeps the
 // reference it was issued with when regenerated (pdfService.bareLoadRef).
+// v3.8.bkp — an invoice number and its retired twin are one number: SRL-121494I is
+// 121494I. The allocator counts the twin, so after SRL-121494I the next invoice on
+// that load is 121494I-2, never a second 121494I (RECONCILE 2026-09-26).
 export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {

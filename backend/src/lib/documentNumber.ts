@@ -240,6 +240,24 @@ export function legacySearchForm(term: string | null | undefined): string | null
   return LEGACY_PREFIX + t;
 }
 
+/**
+ * An invoice number and its retired twin are ONE number (RECONCILE 2026-09-26):
+ * SRL-121494I is 121494I, SRL-121494I2 is 121494I-2. The prefix was dropped for
+ * every invoice, legacy and new, so a number issued in the retired form still
+ * occupies its bare form, and no two invoices may carry the same one. Both
+ * spellings for an invoice on a load's digits; the value alone for anything else
+ * (INV-…, a supplemental, a numberless stem's …I).
+ */
+export function invoiceNumberTwins(value: string): string[] {
+  const v = String(value ?? "").trim();
+  const legacy = v.toUpperCase().startsWith(LEGACY_PREFIX);
+  const m = (legacy ? /^([0-9]+)I([0-9]*)$/ : /^([0-9]+)I(?:-([0-9]+))?$/).exec(legacy ? v.slice(LEGACY_PREFIX.length) : v);
+  const rev = m ? (m[2] ? parseInt(m[2], 10) : 1) : 0;
+  if (!m || (m[2] && rev < 2)) return [v];
+  const bare = coreBase(m[1], "INVOICE") + (rev === 1 ? "" : `${CORE_REVISION_SEPARATOR}${rev}`);
+  return [bare, `${LEGACY_PREFIX}${m[1]}${DOCUMENT_SUFFIX.INVOICE}${rev === 1 ? "" : rev}`];
+}
+
 /** The shape every derivation needs off a load. Deliberately structural rather
  *  than the Prisma type: renderers are handed plain fixture objects by
  *  scripts/verify-rc-matrix.ts and by pdfController's ad-hoc BOL payload. */
@@ -549,18 +567,24 @@ export async function nextDocumentNumber(
   const digits = CORE_KINDS.has(kind) ? documentDigits(stem) : null;
   if (digits !== null) {
     const base = coreBase(digits, kind);
+    // An invoice issued in the retired form occupies its bare twin (see
+    // invoiceNumberTwins): after SRL-121494I the next invoice is 121494I-2. Other
+    // kinds count only the base's own form.
+    const retired = kind === "INVOICE" && isLegacyStem(stem) ? `${stem}${DOCUMENT_SUFFIX.INVOICE}` : null;
     const rows = await client[model].findMany({
       where: {
-        OR: [{ [field]: base }, { [field]: { startsWith: `${base}${CORE_REVISION_SEPARATOR}` } }],
+        OR: [
+          { [field]: base },
+          { [field]: { startsWith: `${base}${CORE_REVISION_SEPARATOR}` } },
+          ...(retired ? [{ [field]: { startsWith: retired } }] : []),
+        ],
       },
       select: { [field]: true },
     });
-    // Only the base's own form counts. parseDocumentRevision would also read a
-    // legacy load's retired-form numbers, which belong to a different sequence.
     let max = 0;
     for (const row of rows || []) {
       const v = row?.[field];
-      const rev = typeof v === "string" ? parseCoreRevision(v, base) : null;
+      const rev = typeof v !== "string" ? null : retired ? parseDocumentRevision(v, stem, kind) : parseCoreRevision(v, base);
       if (rev !== null && rev > max) max = rev;
     }
     return formatDocumentNumber(stem, kind, max + 1);
