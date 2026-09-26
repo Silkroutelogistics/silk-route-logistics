@@ -128,6 +128,9 @@ const OWN_CLIENT_INVENTORY: Record<string, Reason> = {
   // Items 320-322: dry-run as srl_readonly; --commit only to an operator-named URL.
   "cleanup-notification-dupes.ts": "PRODUCTION_WRITE",
   "_arc-a2-counter-proof.ts": "PROOF",
+  // v3.8.blr — the bare client IS the instrument: it reads the stored EIN
+  // bytes without the encryption extension, to prove they are ciphertext.
+  "_arc-ein-proof.ts": "PROOF",
   "_arc-inforequest-concurrent-proof.ts": "PROOF",
   "_b11-countersign-proof.ts": "PROOF",
   "_b5-fk-gate.ts": "PROOF",
