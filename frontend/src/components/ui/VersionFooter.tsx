@@ -19159,6 +19159,8 @@
 // as the POD-upload path already did (invoicing audit G-10).
 // v3.8.bjp — B4: the Load Board Rate Conf button serves the issued, hashed RC the
 // carrier was sent, not a re-render with today's template (invoicing audit G-4).
+// v3.8.bjq — B6: the Accounting invoice PDF button downloads the generated
+// invoice; it had no handler (invoicing audit G-8).
 export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {

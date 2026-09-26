@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { downloadFromApi } from "@/lib/download";
 import {
   Search, FileText, Send, Download, ChevronLeft, ChevronRight,
   Clock, DollarSign, AlertTriangle, CheckCircle2, X, Ban,
@@ -486,7 +487,16 @@ export default function InvoicesPage() {
                         </button>
                       </>
                     )}
-                  <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 text-slate-400 rounded-lg text-xs font-medium hover:bg-white/10 transition ml-auto">
+                  {/* Invoicing audit G-8: this button had no handler. It downloads the
+                      generated invoice PDF through the api client so a 401/404 surfaces. */}
+                  <button
+                    onClick={() =>
+                      downloadFromApi(`/pdf/invoice/${selectedInvoice.id}`, `${selectedInvoice.invoiceNumber}.pdf`).catch(() =>
+                        toast("Could not download the invoice PDF", "error"),
+                      )
+                    }
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 text-slate-400 rounded-lg text-xs font-medium hover:bg-white/10 transition ml-auto"
+                  >
                     <Download className="w-3 h-3" /> PDF
                   </button>
                 </div>
