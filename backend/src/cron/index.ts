@@ -65,7 +65,6 @@ export const SCHEDULED_JOB_NAMES = [
   "identity-validation",
   "invoice-aging",
   "load-compliance-scan",
-  "monthly-invoice-reminders",
   "monthly-qp-variance",
   "news-fetch",
   "ofac-rescan",
@@ -515,54 +514,10 @@ export function initCronJobs() {
     }
   }));
 
-  // ─── Monthly (1st, 6 AM): Invoice reminder emails ───────────
-  cron.schedule("0 6 1 * *", () => withGuard("monthly-invoice-reminders", async () => {
-    try {
-      // Find invoices needing 31/45/60 day reminders
-      const now = new Date();
-
-      const unpaidInvoices = await prisma.invoice.findMany({
-        where: {
-          status: { in: ["SENT", "OVERDUE"] },
-          paidAt: null,
-        },
-        include: {
-          load: {
-            include: { poster: { select: { id: true, email: true, firstName: true } } },
-          },
-        },
-        take: 5000,
-      });
-
-      const ids60: string[] = [];
-      const ids45: string[] = [];
-      const ids31: string[] = [];
-
-      for (const inv of unpaidInvoices) {
-        if (!inv.dueDate) continue;
-        const daysSinceDue = Math.floor((now.getTime() - new Date(inv.dueDate).getTime()) / 86_400_000);
-
-        if (daysSinceDue >= 60 && !inv.reminderSent60) {
-          ids60.push(inv.id);
-          log.info(`[Cron Monthly] 60-day reminder for invoice ${inv.invoiceNumber}`);
-        } else if (daysSinceDue >= 45 && !inv.reminderSent45) {
-          ids45.push(inv.id);
-          log.info(`[Cron Monthly] 45-day reminder for invoice ${inv.invoiceNumber}`);
-        } else if (daysSinceDue >= 31 && !inv.reminderSent31) {
-          ids31.push(inv.id);
-          log.info(`[Cron Monthly] 31-day reminder for invoice ${inv.invoiceNumber}`);
-        }
-      }
-
-      await prisma.$transaction([
-        ...(ids60.length > 0 ? [prisma.invoice.updateMany({ where: { id: { in: ids60 } }, data: { reminderSent60: true } })] : []),
-        ...(ids45.length > 0 ? [prisma.invoice.updateMany({ where: { id: { in: ids45 } }, data: { reminderSent45: true } })] : []),
-        ...(ids31.length > 0 ? [prisma.invoice.updateMany({ where: { id: { in: ids31 } }, data: { reminderSent31: true } })] : []),
-      ]);
-    } catch (err) {
-      log.error({ err }, "[Cron Monthly] Invoice reminder error:");
-    }
-  }), { timezone: "America/New_York" });  // Eastern per Item 185 — reminder flag flips drive email sends
+  // (retired v3.8.blg) "monthly-invoice-reminders" ran here on the 1st. It sent
+  // no email and only ticked reminderSent31/45/60, which made the real sender
+  // (arCollectionsService) skip those reminders. Its registry row is deleted by
+  // migration 20260926170000_ar_helper_cleanup.
 
   // ─── Monthly (1st, 6:30 AM): Quick Pay override variance report (v3.7.a) ───
   cron.schedule("30 6 1 * *", () => withGuard("monthly-qp-variance", async () => {

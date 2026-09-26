@@ -177,7 +177,6 @@ export async function seedCronRegistry() {
     { jobName: "weekly-report", schedule: "0 7 * * 1", description: "Weekly report snapshot Monday 7 AM" },
     { jobName: "cpp-weekly-recalc", schedule: "0 11 * * 0", description: "CPP tier recalculation weekly Sunday 6 AM ET" },
     { jobName: "monthly-report-gen", schedule: "0 13 1 * *", description: "Monthly financial report auto-generation 1st of month 8 AM ET" },
-    { jobName: "monthly-invoice-reminders", schedule: "0 6 1 * *", description: "Invoice reminder emails monthly 1st 6 AM" },
     { jobName: "ai-queue-processor", schedule: "*/10 * * * *", description: "AI learning event queue processor every 10 minutes" },
     { jobName: "ai-anomaly-scan", schedule: "15 */2 * * *", description: "AI anomaly detection scanner every 2 hours" },
     { jobName: "ai-full-training", schedule: "0 7 * * *", description: "Full AI model training cycle daily 2 AM ET" },

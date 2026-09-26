@@ -8,7 +8,7 @@ import { processDueCheckCalls } from "./checkCallAutomation";
 import { runRiskFlagging } from "./riskEngine";
 import { processDueSequences } from "./emailSequenceService";
 import { processShipperTransitUpdates } from "./shipperNotificationService";
-import { processARReminders } from "../controllers/accountingController";
+import { applyOverdueCreditBlocks } from "./overdueCreditBlock";
 import { processArReminders as processArCollections } from "./arCollectionsService";
 import { processAllCPPRecalculations } from "./integrationService";
 import { processQueue } from "./aiLearningLoop/feedbackCollector";
@@ -487,12 +487,14 @@ export function startSchedulers() {
     await withLock("shipper-transit-pm", 10 * 60 * 1000, processShipperTransitUpdates);
   });
 
-  // Accounting: Daily AR reminders at 6 AM ET (11:00 UTC)
+  // Accounting: the 90-day credit block, daily at 11:00 UTC. v3.8.blg — this
+  // slot ran a "reminder" job that sent nothing and ticked the boxes the real
+  // sender (14:00 below) reads. It now does only the block, which is what it
+  // did that was real, and says so in its log line.
   cron.schedule("0 11 * * *", async () => {
-    log.info("[Scheduler] Running daily AR reminder processing...");
-    await withLock("ar-reminders-daily", 10 * 60 * 1000, async () => {
-      const result = await processARReminders();
-      log.info(`[Scheduler] AR reminders: ${result.remindersSent} sent of ${result.processed} processed`);
+    await withLock("overdue-credit-block-daily", 10 * 60 * 1000, async () => {
+      const r = await applyOverdueCreditBlocks();
+      log.info(`[Scheduler] 90-day credit block: ${r.blocked} blocked, ${r.alreadyBlocked} already blocked, ${r.noCreditRecord} with no credit record, of ${r.checked} checked`);
     });
   });
 

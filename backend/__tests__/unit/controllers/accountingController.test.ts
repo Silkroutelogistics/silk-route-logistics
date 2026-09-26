@@ -66,7 +66,9 @@ describe("markInvoicePaid — payment ledger (go-live audit R1/R2/R3)", () => {
     const data = lastUpdateManyData();
     expect(data.status).toBe("PAID");
     expect(data.paidAmount).toBe(1000);
-    expect(onInvoicePaid).toHaveBeenCalledWith("inv-1", 1000);
+    // v3.8.blg — true: this payment settled the invoice, so the payment
+    // record (on time or late) is counted now, and only now.
+    expect(onInvoicePaid).toHaveBeenCalledWith("inv-1", 1000, true);
     expect(res.status).not.toHaveBeenCalledWith(400);
   });
 
@@ -81,6 +83,7 @@ describe("markInvoicePaid — payment ledger (go-live audit R1/R2/R3)", () => {
     const data = lastUpdateManyData();
     expect(data.paidAmount).toBe(1000); // 600 prior + 400 now — NOT overwritten to 400
     expect(data.status).toBe("PAID");
+    expect(onInvoicePaid).toHaveBeenCalledWith("inv-1", 400, true); // the $400 settles it
   });
 
   it("keeps status PARTIAL when the cumulative amount is still below total", async () => {
@@ -96,6 +99,8 @@ describe("markInvoicePaid — payment ledger (go-live audit R1/R2/R3)", () => {
     expect(data.paidAmount).toBe(300);
     // willBePaid is false -> load-completion branch skipped
     expect(mockPrisma.load.findUnique).not.toHaveBeenCalled();
+    // v3.8.blg — not settled: credit is released, no payment record yet.
+    expect(onInvoicePaid).toHaveBeenCalledWith("inv-1", 300, false);
   });
 
   it("R3: rejects a non-positive amount with 400 and records nothing", async () => {

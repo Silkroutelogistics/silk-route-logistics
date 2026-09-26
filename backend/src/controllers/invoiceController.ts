@@ -490,7 +490,7 @@ export async function markInvoicePaid(req: AuthRequest, res: Response) {
 
   // Trigger integration chain only because we actually applied a payment (count>0),
   // so the concurrent-race loser never double-credits the factoring fund.
-  onInvoicePaid(invoice.id, rawAmount).catch((e) =>
+  onInvoicePaid(invoice.id, rawAmount, willBePaid).catch((e) =>
     log.error({ err: e }, "[Invoice] onInvoicePaid integration error:")
   );
 

@@ -21,6 +21,7 @@ vi.mock("../../../src/services/emailService", () => ({ sendCustomerInvoiceEmail 
 
 import { sendInvoice } from "../../../src/controllers/accountingController";
 import { SENT_OR_LATER } from "../../../src/lib/invoiceSendGuard";
+import { applyOverdueCreditBlocks } from "../../../src/services/overdueCreditBlock";
 
 const mockPrisma = vi.mocked(prisma, true) as any;
 
@@ -84,7 +85,7 @@ describe("send guard", () => {
   });
 });
 
-describe("neither AR reminder job selects a DRAFT invoice", () => {
+describe("neither daily AR job selects a DRAFT invoice", () => {
   const src = (p: string) => readFileSync(join(__dirname, "../../../src", p), "utf8");
   const statusSet = (body: string, fn: string) => {
     const at = body.indexOf(fn);
@@ -94,12 +95,21 @@ describe("neither AR reminder job selects a DRAFT invoice", () => {
     return m![1].match(/"([A-Z_]+)"/g)!.map((s) => s.replace(/"/g, ""));
   };
 
-  it("the 11:00 job (accountingController.processARReminders) and the 14:00 job (arCollectionsService)", () => {
-    const a = statusSet(src("controllers/accountingController.ts"), "export async function processARReminders");
+  // v3.8.blg — the 11:00 job is now the 90-day credit block
+  // (services/overdueCreditBlock); accountingController.processARReminders is
+  // retired. The statuses are read from the query the job actually sends.
+  it("the 11:00 job (services/overdueCreditBlock)", async () => {
+    mockPrisma.invoice.findMany.mockClear();
+    mockPrisma.invoice.findMany.mockResolvedValue([]);
+    await applyOverdueCreditBlocks(new Date("2026-09-27T11:00:00.000Z"));
+    const set: string[] = mockPrisma.invoice.findMany.mock.calls[0][0].where.status.in;
+    expect(set.length).toBeGreaterThan(3);
+    expect(set).not.toContain("DRAFT");
+  });
+
+  it("the 14:00 job (arCollectionsService)", () => {
     const b = statusSet(src("services/arCollectionsService.ts"), "export async function processArReminders");
-    for (const set of [a, b]) {
-      expect(set.length).toBeGreaterThan(3);
-      expect(set).not.toContain("DRAFT");
-    }
+    expect(b.length).toBeGreaterThan(3);
+    expect(b).not.toContain("DRAFT");
   });
 });

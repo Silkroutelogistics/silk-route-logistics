@@ -804,7 +804,7 @@ export async function markInvoicePaid(req: AuthRequest, res: Response) {
 
     // Integration: credit factoring fund + release shipper credit
     const { onInvoicePaid } = await import("../services/integrationService");
-    onInvoicePaid(id, rawAmount).catch((e: any) => log.error({ err: e }, "[Integration] onInvoicePaid error:"));
+    onInvoicePaid(id, rawAmount, willBePaid).catch((e: any) => log.error({ err: e }, "[Integration] onInvoicePaid error:"));
 
     res.json(invoice);
   } catch (error: any) {
@@ -4016,111 +4016,14 @@ export async function deleteFinancialReport(req: AuthRequest, res: Response) {
 }
 
 // ============================================================
-// 55. AR REMINDER PROCESSOR (called by cron)
+// 55. (retired v3.8.blg) The daily "AR reminder processor" that lived here
+// sent no email and ticked the reminder boxes the real sender reads, so the
+// sender skipped most reminders. Its one real job, the 90-day credit block, is
+// services/overdueCreditBlock.ts. Late payments are counted once, when an
+// invoice is fully paid (integrationService.onInvoicePaid).
+// Its Tipalti skip (v3.8.blu) went with it. Ruling 2026-09-27 carries that
+// exemption into the credit block and the late-payment count instead.
 // ============================================================
-
-export async function processARReminders() {
-  const now = new Date();
-  const unpaidStatuses: any[] = ["SENT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED", "OVERDUE", "PARTIAL"];
-
-  const invoices = await prisma.invoice.findMany({
-    where: {
-      status: { in: unpaidStatuses },
-      dueDate: { not: null },
-    },
-    include: {
-      load: {
-        select: {
-          referenceNumber: true,
-          customer: { select: { id: true, name: true, email: true, contactName: true, defaultInvoiceChannel: true } },
-        },
-      },
-    },
-    take: 5000,
-  });
-
-  let sent = 0;
-  let skippedTipalti = 0;
-  for (const inv of invoices) {
-    if (!inv.dueDate || !inv.load?.customer?.email) continue;
-    // D-1 (ruled 2026-09-26): nothing from this job for a customer billed through
-    // Tipalti: no reminder flags, no early OVERDUE, no late-payment count, no
-    // credit auto-block. Aging still shows: the hourly aging job and the 14:00
-    // collections run turn the invoice OVERDUE once it is past due.
-    if (inv.load.customer.defaultInvoiceChannel === "TIPALTI") {
-      skippedTipalti++;
-      continue;
-    }
-
-    const daysToDue = daysBetween(now, inv.dueDate); // positive = before due, negative = overdue
-    const daysOverdue = -daysToDue;
-
-    // 7 days before due
-    if (daysToDue <= 7 && daysToDue > 0 && !inv.reminderSentPre7) {
-      await prisma.invoice.update({
-        where: { id: inv.id },
-        data: { reminderSentPre7: true, lastReminderAt: now },
-      });
-      sent++;
-    }
-    // On due date
-    else if (daysToDue <= 0 && daysToDue > -1 && !inv.reminderSentDue) {
-      await prisma.invoice.update({
-        where: { id: inv.id },
-        data: { reminderSentDue: true, status: "OVERDUE", lastReminderAt: now },
-      });
-      sent++;
-    }
-    // 7 days overdue
-    else if (daysOverdue >= 7 && daysOverdue < 30 && !inv.reminderSent7) {
-      await prisma.invoice.update({
-        where: { id: inv.id },
-        data: { reminderSent7: true, status: "OVERDUE", lastReminderAt: now },
-      });
-      sent++;
-    }
-    // 30 days overdue
-    else if (daysOverdue >= 30 && daysOverdue < 60 && !inv.reminderSent31) {
-      await prisma.invoice.update({
-        where: { id: inv.id },
-        data: { reminderSent31: true, lastReminderAt: now },
-      });
-      sent++;
-      // Auto-downgrade shipper credit
-      if (inv.load?.customer?.id) {
-        await prisma.shipperCredit.updateMany({
-          where: { customerId: inv.load.customer.id },
-          data: { latePayments: { increment: 1 } },
-        });
-      }
-    }
-    // 60 days overdue
-    else if (daysOverdue >= 60 && daysOverdue < 90 && !inv.reminderSent60) {
-      await prisma.invoice.update({
-        where: { id: inv.id },
-        data: { reminderSent60: true, lastReminderAt: now },
-      });
-      sent++;
-    }
-    // 90 days overdue
-    else if (daysOverdue >= 90 && !inv.reminderSent90) {
-      await prisma.invoice.update({
-        where: { id: inv.id },
-        data: { reminderSent90: true, lastReminderAt: now },
-      });
-      sent++;
-      // Auto-block shipper credit at 90 days
-      if (inv.load?.customer?.id) {
-        await prisma.shipperCredit.updateMany({
-          where: { customerId: inv.load.customer.id, autoBlocked: false },
-          data: { autoBlocked: true, blockedReason: `Auto-blocked: Invoice ${inv.invoiceNumber} 90+ days overdue`, blockedAt: now },
-        });
-      }
-    }
-  }
-
-  return { processed: invoices.length, remindersSent: sent, skippedTipalti };
-}
 
 // ============================================================
 // 56. AP AGING SUMMARY

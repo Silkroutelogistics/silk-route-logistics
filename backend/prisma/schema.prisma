@@ -2511,6 +2511,12 @@ model Invoice {
   reminderSent7    Boolean   @default(false)
   reminderSent90   Boolean   @default(false)
   lastReminderAt   DateTime?
+  // v3.8.blg — the reminder fields above belong to the one job that emails
+  // (arCollectionsService.processArReminders). This one belongs to the 90-day
+  // credit block (services/overdueCreditBlock), so blocking a customer is
+  // remembered per invoice and an admin's manual unblock is not undone the next
+  // morning. Backfilled from reminderSent90, which only the old block wrote.
+  creditBlockApplied Boolean @default(false)
 
   notes     String?
   createdAt DateTime @default(now())

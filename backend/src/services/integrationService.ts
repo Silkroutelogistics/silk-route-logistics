@@ -1207,7 +1207,12 @@ async function updateShipperCreditOnDelivery(load: any) {
 // LOOP 3 — Factoring Fund: credit on invoice paid
 // ──────────────────────────────────────────────────
 
-export async function onInvoicePaid(invoiceId: string, paidAmount: number) {
+/**
+ * @param settled true when THIS payment brought the invoice to PAID. The caller
+ *   knows (it just wrote the status) and says so, rather than this function
+ *   re-reading a status another payment may already have moved.
+ */
+export async function onInvoicePaid(invoiceId: string, paidAmount: number, settled: boolean) {
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
     include: {
@@ -1241,15 +1246,21 @@ export async function onInvoicePaid(invoiceId: string, paidAmount: number) {
     });
     if (credit) {
       const newUtilized = Math.max(0, credit.currentUtilized - paidAmount);
-      const updateData: Record<string, any> = {
-        currentUtilized: newUtilized,
-        onTimePayments: { increment: 1 },
-      };
+      // Money received releases credit on every payment, partial or not.
+      const updateData: Record<string, any> = { currentUtilized: newUtilized };
 
-      // Check if payment is on time
-      if (invoice.dueDate && new Date() > invoice.dueDate) {
-        updateData.latePayments = { increment: 1 };
-        delete updateData.onTimePayments;
+      // v3.8.blg — the payment record (on time or late) and the average days
+      // to pay are counted ONCE per invoice, when it is fully paid. They were
+      // counted on every payment, so a bill paid late in two parts got two
+      // late marks; and a daily job added another at 30 days overdue. That job
+      // no longer counts anything (services/overdueCreditBlock), so this is the
+      // only place a late payment is recorded.
+      if (settled) {
+        if (invoice.dueDate && new Date() > invoice.dueDate) {
+          updateData.latePayments = { increment: 1 };
+        } else {
+          updateData.onTimePayments = { increment: 1 };
+        }
       }
 
       // Unblock if was blocked and now under limit
@@ -1260,12 +1271,15 @@ export async function onInvoicePaid(invoiceId: string, paidAmount: number) {
         log.info(`[Integration] Shipper credit UNBLOCKED for customer ${invoice.load.customerId}`);
       }
 
-      // Update avg days to pay
-      const daysToPay = invoice.dueDate
-        ? Math.max(0, Math.floor((Date.now() - invoice.createdAt.getTime()) / (1000 * 60 * 60 * 24)))
-        : 30;
-      const totalPayments = credit.onTimePayments + credit.latePayments + 1;
-      updateData.avgDaysToPay = Math.round(((credit.avgDaysToPay * (totalPayments - 1)) + daysToPay) / totalPayments * 100) / 100;
+      // Update avg days to pay — one sample per settled invoice, matching the
+      // count above that it is averaged over.
+      if (settled) {
+        const daysToPay = invoice.dueDate
+          ? Math.max(0, Math.floor((Date.now() - invoice.createdAt.getTime()) / (1000 * 60 * 60 * 24)))
+          : 30;
+        const totalPayments = credit.onTimePayments + credit.latePayments + 1;
+        updateData.avgDaysToPay = Math.round(((credit.avgDaysToPay * (totalPayments - 1)) + daysToPay) / totalPayments * 100) / 100;
+      }
 
       await prisma.shipperCredit.update({
         where: { id: credit.id },
