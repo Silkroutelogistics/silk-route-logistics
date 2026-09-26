@@ -228,7 +228,7 @@ export async function processArReminders(): Promise<{ processed: number; reminde
       load: {
         select: {
           referenceNumber: true,
-          customer: { select: { id: true, name: true, email: true, contactName: true } },
+          customer: { select: { id: true, name: true, email: true, contactName: true, defaultInvoiceChannel: true } },
           posterId: true,
         },
       },
@@ -244,6 +244,22 @@ export async function processArReminders(): Promise<{ processed: number; reminde
 
     const daysToDue = daysBetween(now, inv.dueDate); // positive = before due
     const daysOverdue = -daysToDue;
+
+    // RECONCILE step 4: a TIPALTI customer is billed through its AP portal and has
+    // no email recipient, so no reminder is emailed and none is recorded as sent
+    // (no flag, no notice, no log). The invoice still turns OVERDUE once past due,
+    // so aging and the console show it: that never depended on an email.
+    if (inv.load.customer.defaultInvoiceChannel === "TIPALTI") {
+      if (daysOverdue > 0 && inv.status !== "OVERDUE") {
+        try {
+          await prisma.invoice.update({ where: { id: inv.id }, data: { status: "OVERDUE" } });
+        } catch (err) {
+          errors++;
+          log.error({ err }, `[ARCollections] Could not mark ${inv.invoiceNumber} OVERDUE:`);
+        }
+      }
+      continue;
+    }
 
     let stage: ReminderStage | null = null;
     let flagField: string | null = null;

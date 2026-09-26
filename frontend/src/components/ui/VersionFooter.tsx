@@ -19225,7 +19225,9 @@
 // A throw, an unconfigured provider or no recipient leaves it DRAFT, recorded, with the AE told.
 // v3.8.blo — a duplicate invoice number is a 409 naming the invoice that holds it, not a 500.
 // Both doors: the global error handler and accounting's createInvoice.
-export const SRL_VERSION = "3.8.blo";
+// v3.8.blp — no emailed AR reminder for a customer billed through Tipalti (RECONCILE step 4).
+// Aging and OVERDUE still show; nothing is recorded as sent.
+export const SRL_VERSION = "3.8.blp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
