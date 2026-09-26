@@ -898,9 +898,30 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
       // reversal below: the ledger write must land before anything else runs,
       // and it is the only write here that cannot be raced (the reversal never
       // touches LoadAccessorial). Idempotent, so a re-flip cannot double-bill.
-      await recordTonuObligation(load.id, faultSide, req.user!.id).catch((e) =>
-        log.error({ err: e, loadId: load.id }, "[TONU] Failed to record obligation (non-fatal)"),
-      );
+      //
+      // A failure here used to go to the log and nowhere else. SRL-121492 went
+      // TONU on 2026-09-21 with no ledger row, so neither the customer charge nor
+      // the carrier payable was ever raised, and nothing in the database said so
+      // (invoicing audit G-2). The flip stands — the status is true — but the
+      // missing charge is now recorded where someone will see it.
+      await recordTonuObligation(load.id, faultSide, req.user!.id).catch(async (e) => {
+        log.error({ err: e, loadId: load.id }, "[TONU] Failed to record obligation");
+        const message =
+          `TONU on ${existing.referenceNumber} was recorded, but its charge did not post. ` +
+          "No TONU invoice or carrier payable will be raised until it is re-entered.";
+        await prisma.systemLog.create({
+          data: {
+            logType: "ERROR", severity: "ERROR", source: "tonu-ledger", userId: req.user!.id, message,
+            details: { loadId: load.id, faultSide, error: e instanceof Error ? e.message : String(e) },
+          },
+        }).catch(() => { /* the log line above already carries it */ });
+        const recipients = [...new Set([existing.posterId, req.user!.id].filter(Boolean))] as string[];
+        for (const userId of recipients) {
+          await prisma.notification.create({
+            data: { userId, type: "INVOICE", title: "TONU charge did not post", message, actionUrl: `/dashboard/track-trace?load=${load.id}` },
+          }).catch(() => { /* never block the flip on a notice */ });
+        }
+      });
     }
     onLoadCancelledOrTONU(load.id, reason).catch((e) =>
       log.error({ err: e }, `[Integration] onLoadCancelledOrTONU error:`)

@@ -19153,6 +19153,8 @@
 // dark text while carrier and shipper pills turned into white cards with cream text.
 // All four now use literal hex classes no data-mode rule rewrites. The AE slide and
 // the shared panel said 35-check; the engine runs 33, and both joined the Compass guard.
+// v3.8.bjn — B2a: a TONU whose ledger write fails leaves a SystemLog row and
+// tells the AE. It used to reach the log only (SRL-121492, invoicing audit G-2).
 export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {

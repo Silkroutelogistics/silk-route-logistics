@@ -556,6 +556,32 @@ describe("loadController", () => {
     }));
   });
 
+  // Invoicing audit G-2: SRL-121492 went TONU with no ledger row, and the only
+  // record of why was a log line. A failed ledger write must leave a SystemLog
+  // row and tell the AE, while the flip itself still succeeds.
+  it("updateLoadStatus — a TONU whose ledger write fails says so, in the DB and to the AE", async () => {
+    const { recordTonuObligation } = await import("../../../src/services/tonuBillingService");
+    vi.mocked(recordTonuObligation).mockRejectedValueOnce(new Error("ledger insert failed"));
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "poster-1", status: "BOOKED", carrierId: "c-1", podUrl: null, referenceNumber: "SRL-121492" } as any);
+    mockPrisma.load.update.mockResolvedValue({ id: "load-1", posterId: "poster-1", status: "TONU", carrierId: "c-1", referenceNumber: "SRL-121492" } as any);
+    mockPrisma.shipment.findFirst.mockResolvedValue(null);
+    mockPrisma.notification.create.mockResolvedValue({} as any);
+    mockPrisma.systemLog.create.mockResolvedValue({} as any);
+    runTransactions();
+    const { req, res } = mockReqRes({ status: "TONU", tonuFaultSide: "CUSTOMER" }, { id: "user-1", role: "ADMIN" }, { id: "load-1" });
+
+    await updateLoadStatus(req, res);
+
+    expect(res.status, "the flip still stands").not.toHaveBeenCalledWith(500);
+    const logs = mockPrisma.systemLog.create.mock.calls.map((c: any) => c[0].data);
+    const row = logs.find((l: any) => l.source === "tonu-ledger");
+    expect(row, "a tonu-ledger SystemLog row").toBeTruthy();
+    expect(row).toEqual(expect.objectContaining({ logType: "ERROR", severity: "ERROR" }));
+    expect(row.message).toContain("SRL-121492");
+    const notes = mockPrisma.notification.create.mock.calls.map((c: any) => c[0].data).filter((n: any) => n.title === "TONU charge did not post");
+    expect(notes.map((n: any) => n.userId).sort()).toEqual(["poster-1", "user-1"]);
+  });
+
   it("updateLoadStatus — CANCELLED is refused with 409 when a POD is on file, and nothing is written", async () => {
     mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "DISPATCHED", carrierId: "c-1", podUrl: "s3://pod.pdf" } as any);
     const { req, res } = mockReqRes({ status: "CANCELLED" }, { id: "user-1", role: "ADMIN" }, { id: "load-1" });
