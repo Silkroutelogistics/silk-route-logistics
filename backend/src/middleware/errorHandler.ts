@@ -7,6 +7,7 @@ import { log } from "../lib/logger";
 import multer from "multer";
 import { env } from "../config/env";
 import { UNSUPPORTED_FILE_TYPE } from "../config/upload";
+import { DuplicateInvoiceNumberError } from "../lib/invoiceNumber";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -111,6 +112,13 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
   }
   if ((err as any).code === UNSUPPORTED_FILE_TYPE) {
     res.status(400).json({ error: err.message, code: UNSUPPORTED_FILE_TYPE });
+    return;
+  }
+
+  // A second invoice under a number already issued (§21.2): a refusal the caller
+  // can act on, not a server fault, so it names the invoice holding the number.
+  if (err instanceof DuplicateInvoiceNumberError) {
+    res.status(409).json({ error: err.message, code: err.code, heldBy: err.heldBy });
     return;
   }
 

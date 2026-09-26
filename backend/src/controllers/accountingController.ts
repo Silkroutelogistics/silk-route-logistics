@@ -7,7 +7,7 @@ import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { etStartOfMonth, etStartOfWeek } from "../lib/financePeriods";
 import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
-import { createInvoiceWithRetry } from "../lib/invoiceNumber";
+import { createInvoiceWithRetry, DuplicateInvoiceNumberError } from "../lib/invoiceNumber";
 import { buildDocumentSearch, runRankedSearch } from "../lib/documentSearch";
 import { generateInvoicePdf } from "../services/pdfService";
 import { sendCustomerInvoiceEmail } from "../services/emailService";
@@ -479,6 +479,10 @@ export async function createInvoice(req: AuthRequest, res: Response) {
 
     res.status(201).json(invoice);
   } catch (error: any) {
+    if (error instanceof DuplicateInvoiceNumberError) {
+      res.status(409).json({ error: error.message, code: error.code, heldBy: error.heldBy });
+      return;
+    }
     log.error({ err: error }, "createInvoice error:");
     res.status(500).json({ error: "Failed to create invoice", details: error.message });
   }

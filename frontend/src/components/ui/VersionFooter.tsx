@@ -19223,7 +19223,9 @@
 // A failed read or a hash mismatch is a refusal (503/500) that says so.
 // v3.8.bln — generating an invoice marks it SENT only when an email was accepted.
 // A throw, an unconfigured provider or no recipient leaves it DRAFT, recorded, with the AE told.
-export const SRL_VERSION = "3.8.bln";
+// v3.8.blo — a duplicate invoice number is a 409 naming the invoice that holds it, not a 500.
+// Both doors: the global error handler and accounting's createInvoice.
+export const SRL_VERSION = "3.8.blo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
