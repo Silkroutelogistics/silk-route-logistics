@@ -2,12 +2,12 @@
  * §21.2 as amended 2026-09-23: one bare number per load. Corrected 2026-09-26:
  * the invoice adds "I" (121498I), and loads continue at 121498.
  *
- * The retired scheme's own tests (documentNumber.test.ts,
- * documentNumberAllocation.test.ts) still pass UNCHANGED, and that is the point
- * of them — every one of their stems is legacy, so if any had moved it would
- * mean an already-issued number had changed meaning. This file covers what is
- * new, and in particular the two properties the bare scheme puts at risk that
- * the suffix scheme did not:
+ * Since 2026-09-26 the retired suffix scheme governs only stems with no number
+ * in them and a legacy load's supplementals; its own tests (documentNumber.test,
+ * documentNumberAllocation.test) run on an RFQ- stem. A legacy SRL- load's
+ * ISSUED numbers still read as issued; a NEW document for it prints its digits.
+ * This file covers what is new, and in particular the two properties the bare
+ * scheme puts at risk that the suffix scheme did not:
  *
  *   1. CROSS-LOAD BLEED. Under the retired scheme a suffix letter always
  *      followed the stem's digits, so SRL-121485I could not prefix-match a
@@ -24,6 +24,7 @@ import {
   ACCESSORIAL_LETTER,
   CORE_REVISION_SEPARATOR,
   DOCUMENT_SUFFIX,
+  documentDigits,
   documentNumberFor,
   formatDocumentNumber,
   formatSupplementalNumber,
@@ -36,6 +37,7 @@ import {
   nextSupplementalNumber,
   parseDocumentRevision,
   parseSupplementalOccurrence,
+  printedLoadNumber,
 } from "../../../src/lib/documentNumber";
 
 /** A findMany stub that records the `where` it was handed, so a test can assert
@@ -86,7 +88,7 @@ describe("the bare scheme: one number on every core document", () => {
   });
 });
 
-describe("legacy stems keep the scheme they were issued under", () => {
+describe("issued numbers and numberless stems keep the scheme they were issued under", () => {
   it("treats only an all-digits stem as new", () => {
     expect(isBareStem("5001")).toBe(true);
     expect(isBareStem("SRL-121485")).toBe(false);
@@ -115,6 +117,55 @@ describe("legacy stems keep the scheme they were issued under", () => {
     // 5001, before the I, keeps 5001
     expect(documentNumberFor("5001", { loadNumber: "5001" }, "INVOICE")).toBe("5001");
     expect(documentNumberFor(null, { loadNumber: "5001" }, "INVOICE")).toBe("5001I");
+  });
+});
+
+describe("a NEW document for a legacy SRL- load prints its digits (§21.2, corrected 2026-09-26)", () => {
+  const legacy = { loadNumber: "SRL-121494", referenceNumber: "SRL-121494" };
+
+  it("finds the digits only where there is a number to find", () => {
+    expect(documentDigits("SRL-121494")).toBe("121494");
+    expect(documentDigits("121498")).toBe("121498");
+    for (const none of ["SRL-20260211-0001", "RFQ-9Z3K1", "clx9q2z0000abcdefghijklmb", "SRL-", "", null]) {
+      expect(documentDigits(none)).toBeNull();
+    }
+  });
+
+  it("numbers the BOL, rate con and settlement 121494, and the invoice 121494I", () => {
+    expect(formatDocumentNumber("SRL-121494", "BOL")).toBe("121494");
+    expect(formatDocumentNumber("SRL-121494", "RATE_CONFIRMATION", 2)).toBe("121494-2");
+    expect(formatDocumentNumber("SRL-121494", "SETTLEMENT")).toBe("121494");
+    expect(formatDocumentNumber("SRL-121494", "INVOICE")).toBe("121494I");
+    expect(documentNumberFor(null, legacy, "INVOICE")).toBe("121494I");
+    expect(printedLoadNumber(legacy)).toBe("121494");
+    expect(printedLoadNumber({ referenceNumber: "RFQ-9Z3K1" })).toBe("RFQ-9Z3K1");
+  });
+
+  it("keeps what was already issued, and a legacy supplemental's S (open decision)", () => {
+    expect(documentNumberFor("SRL-121494I", legacy, "INVOICE")).toBe("SRL-121494I");
+    expect(parseDocumentRevision("SRL-121494I", "SRL-121494", "INVOICE")).toBe(1);
+    expect(parseDocumentRevision("121494I", "SRL-121494", "INVOICE")).toBe(1);
+    expect(formatSupplementalNumber("SRL-121494", "TONU")).toBe("SRL-121494S");
+  });
+
+  it("allocates in the digits form and does not count retired-form numbers", async () => {
+    const client = makeClient([{ srlDocNumber: "SRL-121494I" }, { srlDocNumber: "SRL-121494I2" }]);
+    expect(await nextDocumentNumber("INVOICE", "SRL-121494", client as any)).toBe("121494I");
+    expect(client.wheres[0]).toEqual({
+      OR: [{ srlDocNumber: "121494I" }, { srlDocNumber: { startsWith: "121494I-" } }],
+    });
+    const issued = makeClient([{ srlDocNumber: "121494I" }]);
+    expect(await nextDocumentNumber("INVOICE", "SRL-121494", issued as any)).toBe("121494I-2");
+  });
+
+  it("no newly generated core number carries SRL-, and a legacy load's digits never meet a new load's", () => {
+    for (const stem of ["121498", "5001", "SRL-121472", "SRL-121494", "SRL-121497"]) {
+      for (const kind of ["BOL", "RATE_CONFIRMATION", "INVOICE", "SETTLEMENT"] as const) {
+        for (const rev of [1, 2]) expect(formatDocumentNumber(stem, kind, rev)).not.toContain("SRL-");
+        expect(documentNumberFor(null, { loadNumber: stem }, kind)).not.toContain("SRL-");
+      }
+    }
+    expect(Number(documentDigits("SRL-121497"))).toBeLessThan(LOAD_NUMBER_FLOOR);
   });
 });
 

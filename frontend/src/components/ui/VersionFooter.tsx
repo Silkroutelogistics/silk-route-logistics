@@ -19178,6 +19178,9 @@
 // v3.8.bkb — an invoice on a bare load number prints the number plus I (121498I, 5001I);
 // its re-issue hangs off that (121498I-2). Load, BOL, rate con and settlement keep the
 // bare number. Invoices already issued keep theirs.
+// v3.8.bkd — a new document for a legacy SRL- load prints its digits: 121494 for a
+// BOL, rate con or settlement, 121494I for an invoice. Issued numbers keep theirs; a
+// legacy supplemental keeps its S (open decision).
 export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {

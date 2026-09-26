@@ -37,16 +37,20 @@ import { prisma } from "../config/database";
  * pickup detention. That constant is the ONLY place a letter is assigned; a
  * second assignment site is how two types come to share a letter.
  *
- * ─── Legacy numbers are never rewritten ────────────────────────────────────
+ * ─── Issued numbers are never rewritten ────────────────────────────────────
  *
- * Loads issued before the amendment keep their SRL-1214xx stems AND their
- * B/R/I/S/P suffixes, so SRL-121485R still renders as SRL-121485R. Everything
- * below branches on isLegacyStem() rather than on a date or a feature flag: the
- * stem itself says which scheme it belongs to, which is the only signal that
- * cannot drift out of step with the data.
+ * Loads issued before the amendment keep their SRL-1214xx stems, and a document
+ * already issued on one keeps its number: SRL-121485R is persisted and renders
+ * as SRL-121485R. A NEW document for such a load prints its digits — 121485, or
+ * 121485I for an invoice — so nothing generated from 2026-09-26 carries SRL-.
+ * documentDigits() decides that from the stem itself, never a date or a flag.
  *
- * The two namespaces cannot collide. The legacy one is prefixed and the new one
- * is not, so a new 5001B and a legacy SRL-121495B are distinct strings.
+ * Two things keep the retired suffixes: a legacy load's supplementals
+ * (SRL-121485S; supplemental numbering is an open decision) and a stem with no
+ * number in it (a cuid, an RFQ- stamp), which has no digits to print.
+ *
+ * The namespaces cannot collide: a legacy load's digits are 121472..121497, and
+ * the sequence continues at 121498 (generateLoadNumber).
  *
  * ─── Re-issues, and why a core re-issue needs a separator ──────────────────
  *
@@ -172,12 +176,18 @@ export function isLegacyStem(stem: string): boolean {
 }
 
 /**
- * The digits a core document on this stem prints, or null for a stem that keeps
- * the retired suffix scheme. Today that is the bare stem itself.
+ * The digits a NEW core document on this stem prints: a bare stem as it is, a
+ * legacy SRL-<digits> stem without its prefix (SRL-121494's next invoice is
+ * 121494I). Null for a stem with no number in it — a cuid, an RFQ- stamp — which
+ * keeps the retired suffix scheme. Issued numbers are persisted and never
+ * re-derived, so this decides only what is allocated from 2026-09-26 on.
  */
 export function documentDigits(stem: string | null | undefined): string | null {
   const s = String(stem ?? "").trim();
-  return s && isBareStem(s) ? s : null;
+  if (!s) return null;
+  if (isBareStem(s)) return s;
+  const rest = s.toUpperCase().startsWith(LEGACY_PREFIX) ? s.slice(LEGACY_PREFIX.length) : "";
+  return rest && isBareStem(rest) ? rest : null;
 }
 
 /** A core document's number at revision 1: the digits, plus "I" for an invoice.
@@ -263,6 +273,15 @@ export interface LoadStemSource {
 export function resolveLoadStem(load: LoadStemSource | null | undefined): string | null {
   const stem = load?.loadNumber || load?.referenceNumber;
   return stem ? String(stem).trim() || null : null;
+}
+
+/** The load number a NEW document prints when it names the freight: the digits
+ *  when the load has them, else the stem. So a rate confirmation generated now
+ *  for SRL-121494 names the load 121494, the number on its BOL and rate con.
+ *  Allocation still keys on resolveLoadStem. */
+export function printedLoadNumber(load: LoadStemSource | null | undefined): string | null {
+  const stem = resolveLoadStem(load);
+  return stem ? documentDigits(stem) ?? stem : null;
 }
 
 /**

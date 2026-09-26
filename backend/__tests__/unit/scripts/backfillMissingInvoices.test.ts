@@ -71,8 +71,8 @@ describe("backfill write plan: --execute, and --target=prod for production", () 
 });
 
 describe("backfill invoice number follows the load", () => {
-  it("a legacy load keeps the legacy form", () => {
-    expect(invoiceNumberFor({ loadNumber: "SRL-121492", referenceNumber: "SRL-121492" })).toBe("SRL-121492I");
+  it("a legacy load's invoice drops SRL-: 121492I, the number delivered to Beekeepers", () => {
+    expect(invoiceNumberFor({ loadNumber: "SRL-121492", referenceNumber: "SRL-121492" })).toBe("121492I");
   });
   it("a new load's invoice is its number plus I", () => {
     expect(invoiceNumberFor({ loadNumber: "121498", referenceNumber: "121498" })).toBe("121498I");
