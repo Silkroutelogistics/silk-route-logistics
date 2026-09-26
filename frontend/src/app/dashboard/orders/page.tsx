@@ -7,8 +7,9 @@ import { api } from "@/lib/api";
 import {
   Search, ClipboardEdit, AlertTriangle, CheckCircle,
   Plus, X, Send, Save, Flame, FileText,
-  // v3.8.akl §13.3 Items 180.1 + 180.5 — Duplicate button + Preview button.
-  Copy, Eye,
+  // v3.8.akl §13.3 Item 180.1 — Duplicate button. (Eye went with the separate
+  // Preview button in v3.8.bkn: the quote review is reached from Send.)
+  Copy,
   // v3.8.akm §13.3 Item 180.2 — Save-as-template + Template picker icons.
   BookmarkPlus, Bookmark, Trash2,
 } from "lucide-react";
@@ -424,42 +425,62 @@ export default function OrderBuilderPage() {
   }, [form.customerId, form.originCity, form.destCity, orderId]);
 
   // ─── Quote send ───────────────────────────────────────────
-  const [quoteResult, setQuoteResult] = useState<string | null>(null);
-  const sendQuote = useMutation({
-    mutationFn: async () => {
-      // v3.8.c — ALWAYS flush the latest form state before reading on the
-      // backend. The 30s autosave timer means client edits can drift ahead
-      // of the persisted draft. Without this, the quote email would render
-      // stale formData. Same race condition root cause as the createLoad
-      // freight-data-loss bug; same fix here.
-      const saveRes = await saveDraft.mutateAsync();
-      const targetId = orderId ?? saveRes?.order?.id ?? null;
-      if (!targetId) throw new Error("Could not create order");
-      return (await api.post(`/orders/${targetId}/send-quote`)).data;
-    },
-    onSuccess: (data) => {
-      setQuoteResult(data?.order?.orderNumber ?? "Quote sent");
-    },
-  });
-
   // v3.8.akl §13.3 Item 180.5 — Quote preview. Fetches the exact HTML
   // + subject the send-quote endpoint would dispatch, without sending
-  // or mutating order.status. AE opens preview in a modal before
-  // clicking Send to catch typos / rate errors before they reach the
-  // customer inbox. Flushes draft first so preview reflects latest
-  // edits, same pattern as sendQuote above.
-  const [quotePreview, setQuotePreview] = useState<{ subject: string; html: string; lane: string; recipientEmail: string | null; recipientName: string | null; orderNumber: string } | null>(null);
+  // or mutating order.status. Flushes draft first so preview reflects
+  // latest edits.
+  // v3.8.bkn — the preview is now the ONLY way to send: it names the
+  // recipient, picked from the customer's contact list (the server offers only
+  // contacts with an email who are not Do Not Contact), and Send carries that
+  // contact's id. There is no fallback to the customer record's email.
+  const [quoteResult, setQuoteResult] = useState<string | null>(null);
+  const [quotePreview, setQuotePreview] = useState<{
+    subject: string;
+    html: string;
+    lane: string;
+    recipients: { id: string; name: string; email: string; isPrimary: boolean; title: string | null }[];
+    selectedContactId: string | null;
+    recipientEmail: string | null;
+    recipientName: string | null;
+    orderNumber: string;
+  } | null>(null);
   const previewQuote = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (contactId?: string) => {
       const saveRes = await saveDraft.mutateAsync();
       const targetId = orderId ?? saveRes?.order?.id ?? null;
       if (!targetId) throw new Error("Could not create order");
-      return (await api.get(`/orders/${targetId}/quote-preview`)).data;
+      const qs = contactId ? `?contactId=${encodeURIComponent(contactId)}` : "";
+      return (await api.get(`/orders/${targetId}/quote-preview${qs}`)).data;
     },
     onSuccess: (data) => {
       setQuotePreview(data);
     },
   });
+  const sendQuote = useMutation({
+    mutationFn: async (contactId: string) => {
+      // v3.8.c — ALWAYS flush the latest form state before reading on the
+      // backend. The 30s autosave timer means client edits can drift ahead
+      // of the persisted draft. Without this, the quote email would render
+      // stale formData.
+      const saveRes = await saveDraft.mutateAsync();
+      const targetId = orderId ?? saveRes?.order?.id ?? null;
+      if (!targetId) throw new Error("Could not create order");
+      return (await api.post(`/orders/${targetId}/send-quote`, { contactId })).data;
+    },
+    onSuccess: (data) => {
+      // Only a send the server confirmed reaches here, and it says who got it.
+      const who = data?.sentTo ? `${data.sentTo.name} <${data.sentTo.email}>` : "the customer";
+      setQuoteResult(`Quote ${data?.order?.orderNumber ?? ""} sent to ${who}.`);
+      setQuotePreview(null);
+    },
+  });
+  const openQuoteReview = (contactId?: string) => {
+    sendQuote.reset();
+    previewQuote.mutate(contactId);
+  };
+  const sendQuoteError: string | null = sendQuote.isError
+    ? ((sendQuote.error as any)?.response?.data?.error ?? "The quote was not sent. Try again.")
+    : null;
 
   // v3.8.akm §13.3 Item 180.2 — Named, reusable Order templates.
   // Templates persist indefinitely (different from Item 180.1
@@ -899,7 +920,7 @@ export default function OrderBuilderPage() {
 
       {quoteResult && (
         <div className="mb-3 p-2 rounded-lg bg-[#E6F0E9] border border-[#2F7A4F]/30 text-xs text-[#2F7A4F]">
-          ✓ Quote {quoteResult} sent to customer.
+          ✓ {quoteResult}
         </div>
       )}
       {showErrors && !isValid && (
@@ -1670,25 +1691,18 @@ export default function OrderBuilderPage() {
             <BookmarkPlus className="w-3 h-3" /> Save as template
           </button>
         )}
-        {/* v3.8.akl §13.3 Item 180.5 — Quote preview before send. Opens a
-            modal with the exact HTML the customer will receive so AE can
-            catch typos / rate errors before clicking Send. */}
+        {/* v3.8.akl §13.3 Item 180.5 — Quote preview before send.
+            v3.8.bkn — one button: it opens the review, where the AE picks
+            the recipient from the contact list and sends. A second "Send"
+            that skipped the review had nowhere to learn who to send to. */}
         <button
-          onClick={() => previewQuote.mutate()}
+          onClick={() => openQuoteReview()}
           disabled={!form.customerId || previewQuote.isPending}
-          title={form.customerId ? "Preview the quote email before sending" : "Pick a customer first"}
+          title={form.customerId ? "Choose the recipient and review the quote before sending" : "Pick a customer first"}
           className="flex items-center gap-1 px-3 py-1.5 bg-[#F5EEE0] hover:bg-[#EFE6D3] border border-slate-200 text-xs rounded-lg disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
           style={{ color: "#0A2540" }}
         >
-          <Eye className="w-3 h-3" /> {previewQuote.isPending ? "Loading…" : "Preview quote"}
-        </button>
-        <button
-          onClick={() => sendQuote.mutate()}
-          disabled={!form.customerId || sendQuote.isPending}
-          className="flex items-center gap-1 px-3 py-1.5 bg-[#F5EEE0] hover:bg-[#EFE6D3] border border-slate-200 text-xs rounded-lg disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
-          style={{ color: "#0A2540" }}
-        >
-          <Send className="w-3 h-3" /> {sendQuote.isPending ? "Sending…" : "Send quote"}
+          <Send className="w-3 h-3" /> {previewQuote.isPending && !quotePreview ? "Loading…" : "Send quote…"}
         </button>
         {/* Sprint 59.b (v3.8.act) Item 176 — 4-button dispatch picker.
             Primary: Tender to carrier (opens drawer). Secondary 3:
@@ -1857,16 +1871,30 @@ export default function OrderBuilderPage() {
           >
             <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-slate-200">
               <div className="min-w-0">
-                <h2 className="text-base font-semibold text-[#0A2540]">Quote preview</h2>
-                <p className="text-[11px] text-[#6B7685] mt-0.5 truncate">
-                  To: {quotePreview.recipientName ?? "—"}
-                  {quotePreview.recipientEmail && (
-                    <span className="text-[#6B7685]"> &lt;{quotePreview.recipientEmail}&gt;</span>
-                  )}
-                  {!quotePreview.recipientEmail && (
-                    <span className="text-[#B07A1A]"> · No email on customer — send will be a no-op</span>
-                  )}
-                </p>
+                <h2 className="text-base font-semibold text-[#0A2540]">Review quote before sending</h2>
+                {quotePreview.recipients.length === 0 ? (
+                  <p className="text-[11px] text-[#B07A1A] mt-0.5">
+                    No contact on this customer&apos;s list can receive a quote. Each needs an email and must not
+                    be Do Not Contact. Add one on the CRM Contacts tab.
+                  </p>
+                ) : (
+                  <label className="flex items-center gap-2 text-[11px] text-[#6B7685] mt-1">
+                    To:
+                    <select
+                      aria-label="Quote recipient"
+                      value={quotePreview.selectedContactId ?? ""}
+                      onChange={(e) => openQuoteReview(e.target.value)}
+                      disabled={previewQuote.isPending || sendQuote.isPending}
+                      className="min-w-0 max-w-full px-2 py-1 text-[11px] text-[#0A2540] bg-white border border-slate-200 rounded"
+                    >
+                      {quotePreview.recipients.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {`${c.name} <${c.email}>${c.isPrimary ? " · primary" : ""}`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 <p className="text-[11px] text-[#6B7685] mt-0.5">
                   Subject: <span className="text-[#0A2540]">{quotePreview.subject}</span>
                 </p>
@@ -1888,6 +1916,11 @@ export default function OrderBuilderPage() {
               />
             </div>
             <div className="px-5 py-3 border-t border-slate-200 flex items-center justify-end gap-2">
+              {/* The modal stays open on a failed send and says why; it used to
+                  close first and send after, so a failure had nowhere to show. */}
+              {sendQuoteError && (
+                <p role="alert" className="mr-auto text-[11px] text-[#9B2C2C]">{sendQuoteError}</p>
+              )}
               <button
                 onClick={() => setQuotePreview(null)}
                 className="px-4 py-1.5 text-xs text-slate-700 hover:bg-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
@@ -1896,13 +1929,12 @@ export default function OrderBuilderPage() {
               </button>
               <button
                 onClick={() => {
-                  setQuotePreview(null);
-                  sendQuote.mutate();
+                  if (quotePreview.selectedContactId) sendQuote.mutate(quotePreview.selectedContactId);
                 }}
-                disabled={sendQuote.isPending}
+                disabled={!quotePreview.selectedContactId || sendQuote.isPending || previewQuote.isPending}
                 className="flex items-center gap-1 px-4 py-1.5 text-xs font-semibold text-white bg-[#BA7517] hover:bg-[#8f5a11] rounded-lg disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
               >
-                <Send className="w-3 h-3" /> Send now
+                <Send className="w-3 h-3" /> {sendQuote.isPending ? "Sending…" : "Send now"}
               </button>
             </div>
           </div>

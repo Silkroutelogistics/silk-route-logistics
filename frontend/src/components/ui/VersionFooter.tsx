@@ -19354,6 +19354,12 @@
 // Shipper). Finance stops billing a cancelled load's linehaul, fuel or accessorials
 // and prices a TONU as its TONU charge only; the RC total no longer raises a false
 // divergence. Check Calls offers no "Log call" and counts nothing due on a closed load.
+// v3.8.bkn — A quote goes to a contact the AE picks, and is recorded only once sent.
+//   send-quote marked the order quote_sent and logged "Quote sent" before emailing,
+// mailed Customer.email (Beekeepers' AP address) and swallowed failures. Now the
+// recipient is chosen from the contact list by the portal-invite rule
+// (lib/listedContact, no fallback to Customer.email), the email goes first, and the
+// status and activity follow only a send that returned a message id.
 export const SRL_VERSION = "3.8.bme";
 
 export function VersionFooter({ className }: { className?: string }) {

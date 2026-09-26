@@ -13,6 +13,7 @@ import { logCustomerActivity } from "../services/customerActivityService";
 import { caseInsensitiveEmailFilter } from "../lib/emailNormalization";
 import { censusCustomerReferences, describeReferences, referenceTotal } from "../lib/customerReferences";
 import { recordLifecycleEvent } from "../lib/lifecycleAudit";
+import { resolveListedContact } from "../lib/listedContact";
 import { log } from "../lib/logger";
 
 // Required-checks gate for customer onboarding approval. Each entry is
@@ -496,40 +497,14 @@ export async function sendPortalInvite(req: AuthRequest, res: Response) {
   // address (§13.3 Item 8.3) and that deleting a contact never touches — so a
   // contact removed from the list kept receiving portal invites. There is no
   // fallback to Customer.email by design: no contact on the list, no invite.
-  const contactId = typeof req.body?.contactId === "string" ? req.body.contactId.trim() : "";
-  if (!contactId) {
-    res.status(400).json({
-      error: "Choose a contact from this customer's contact list to receive the invite.",
-      code: "CONTACT_REQUIRED",
-    });
+  // v3.8.bkn — the checks live in lib/listedContact, shared with quotes.
+  const picked = await resolveListedContact(prisma, customer.id, req.body?.contactId, "invite");
+  if (!picked.ok) {
+    res.status(picked.status).json({ error: picked.error, code: picked.code });
     return;
   }
-  const contact = await prisma.customerContact.findFirst({
-    where: { id: contactId, customerId: customer.id },
-    select: { id: true, name: true, email: true, doNotContact: true },
-  });
-  if (!contact) {
-    res.status(404).json({
-      error: "That contact is not on this customer's contact list. No invite was sent.",
-      code: "CONTACT_NOT_ON_LIST",
-    });
-    return;
-  }
-  if (contact.doNotContact) {
-    res.status(409).json({
-      error: `${contact.name} is marked Do Not Contact. No invite was sent.`,
-      code: "CONTACT_DO_NOT_CONTACT",
-    });
-    return;
-  }
-  const email = contact.email?.trim();
-  if (!email) {
-    res.status(400).json({
-      error: `${contact.name} has no email on file. Add one on the Contacts tab first.`,
-      code: "CONTACT_NO_EMAIL",
-    });
-    return;
-  }
+  const { contact } = picked;
+  const email = contact.email;
   // If a login already exists for this email, self-registration would collide.
   // Surface it rather than sending an invite that will fail at registration.
   const existingUser = await prisma.user.findFirst({ where: caseInsensitiveEmailFilter(email) });

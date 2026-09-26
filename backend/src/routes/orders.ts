@@ -15,6 +15,7 @@ import { buildWaterfall, startWaterfall } from "../services/waterfallEngineServi
 import { createCheckCallSchedule } from "../services/checkCallAutomation";
 import { buildLineItems, LineItemCreateInput } from "../controllers/loadController";
 import { log } from "../lib/logger";
+import { listEligibleContacts, resolveListedContact } from "../lib/listedContact";
 import { buildQuoteApprovalUrl } from "./quoteApprove"; // v3.8.akn §13.3 Item 180.4
 
 const router = Router();
@@ -259,8 +260,8 @@ async function buildQuoteEmail(order: {
   pickupDate: Date | null;
   deliveryDate: Date | null;
   customerRate: number | null;
-  customer: { name: string | null; contactName: string | null; email: string | null } | null;
-}): Promise<{ subject: string; html: string; lane: string }> {
+  customer: { name: string | null } | null;
+}, greetName: string | null): Promise<{ subject: string; html: string; lane: string }> {
   const { wrap } = await import("../services/emailService");
   const lane = `${order.originCity ?? "—"}, ${order.originState ?? ""} → ${order.destCity ?? "—"}, ${order.destState ?? ""}`;
   // v3.8.akn §13.3 Item 180.4 — Magic-link approval URL. JWT-signed,
@@ -270,7 +271,7 @@ async function buildQuoteEmail(order: {
   const approvalUrl = buildQuoteApprovalUrl(order.id);
   const html = wrap(`
     <h2 style="color:#0A2540;margin-top:0">Freight Quote · ${order.orderNumber}</h2>
-    <p>Hello ${order.customer?.contactName ?? order.customer?.name ?? "there"},</p>
+    <p>Hello ${greetName ?? order.customer?.name ?? "there"},</p>
     <p>Thank you for the opportunity. Please find our quote below.</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
       <tr><td style="padding:8px 12px;border-bottom:1px solid #E2EAF2;color:#64748b;width:160px">Lane</td><td style="padding:8px 12px;border-bottom:1px solid #E2EAF2">${lane}</td></tr>
@@ -291,43 +292,66 @@ async function buildQuoteEmail(order: {
   return { subject: `Quote ${order.orderNumber} · ${lane}`, html, lane };
 }
 
+// v3.8.bkn — a quote goes to a contact the AE picked from the customer's
+// live contact list, and is recorded as sent only when it was.
+//
+// This used to mark the order quote_sent and log "Quote sent" BEFORE trying to
+// email, then mail Customer.email — for Beekeepers the AP address — and swallow
+// any failure. So a quote could read as sent to an address nobody chose, or as
+// sent when no email left at all. Now: the contact is resolved by the same rule
+// as portal invites (lib/listedContact, no fallback to Customer.email); the
+// email is sent first; the status and the activity row follow only a send that
+// returned a message id.
 router.post("/:id/send-quote", authorize(...AE_ROLES) as any, async (req: AuthRequest, res: Response) => {
   try {
     const order = await prisma.order.findUnique({
       where: { id: req.params.id },
-      include: { customer: { select: { id: true, name: true, email: true, contactName: true } } },
+      include: { customer: { select: { id: true, name: true } } },
     });
     if (!order) return res.status(404).json({ error: "Order not found" });
     if (!order.customerId) return res.status(400).json({ error: "Order has no customer" });
 
-    const now = new Date();
-    const updated = await prisma.order.update({
-      where: { id: order.id },
-      data: { status: "quote_sent", quoteSentAt: now },
-    });
+    const picked = await resolveListedContact(prisma, order.customerId, req.body?.contactId, "quote");
+    if (!picked.ok) return res.status(picked.status).json({ error: picked.error, code: picked.code });
+    const { contact } = picked;
 
-    // Email the customer contact (best-effort)
+    const { subject, html } = await buildQuoteEmail(order, contact.name);
+    let messageId: string | undefined;
     try {
       const { sendEmail } = await import("../services/emailService");
-      if (order.customer?.email) {
-        const { subject, html } = await buildQuoteEmail(order);
-        await sendEmail(order.customer.email, subject, html);
-      }
+      messageId = await sendEmail(contact.email, subject, html);
     } catch (err) {
       log.error({ err, orderId: order.id }, "[Orders] quote email failed");
+      return res.status(502).json({
+        error: "The quote email could not be sent. The order was not marked as quoted; try again.",
+        code: "QUOTE_EMAIL_FAILED",
+      });
     }
+    // sendEmail returns no id when mail is not configured on this server. That
+    // is not a send, and must not be recorded as one.
+    if (!messageId) {
+      return res.status(503).json({
+        error: "Email is not configured on this server, so the quote was not sent.",
+        code: "EMAIL_NOT_CONFIGURED",
+      });
+    }
+
+    const updated = await prisma.order.update({
+      where: { id: order.id },
+      data: { status: "quote_sent", quoteSentAt: new Date() },
+    });
 
     await logCustomerActivity({
       customerId: order.customerId,
       eventType: "quote_sent",
-      description: `Quote ${order.orderNumber} sent${order.customerRate ? ` at $${order.customerRate.toLocaleString()}` : ""}`,
+      description: `Quote ${order.orderNumber} sent to ${contact.name} <${contact.email}>${order.customerRate ? ` at $${order.customerRate.toLocaleString()}` : ""}`,
       actorType: "USER",
       actorId: req.user?.id,
       actorName: req.user?.email,
-      metadata: { orderId: order.id },
+      metadata: { orderId: order.id, contactId: contact.id, messageId },
     });
 
-    res.json({ order: updated });
+    res.json({ order: updated, sentTo: { name: contact.name, email: contact.email } });
   } catch (err) {
     log.error({ err }, "[Orders] send-quote error");
     res.status(500).json({ error: "Failed to send quote" });
@@ -343,18 +367,27 @@ router.get("/:id/quote-preview", authorize(...AE_ROLES) as any, async (req: Auth
   try {
     const order = await prisma.order.findUnique({
       where: { id: req.params.id },
-      include: { customer: { select: { id: true, name: true, email: true, contactName: true } } },
+      include: { customer: { select: { id: true, name: true } } },
     });
     if (!order) return res.status(404).json({ error: "Order not found" });
     if (!order.customerId) return res.status(400).json({ error: "Order has no customer — set customer before previewing quote" });
 
-    const { subject, html, lane } = await buildQuoteEmail(order);
+    // v3.8.bkn — the preview names a real recipient from the contact list and
+    // offers the others; it used to show Customer.email, which send also used.
+    // Selection: the contact asked for, else the primary, else the first.
+    const recipients = await listEligibleContacts(prisma, order.customerId);
+    const asked = typeof req.query.contactId === "string" ? req.query.contactId : "";
+    const selected = recipients.find((r) => r.id === asked) ?? recipients[0] ?? null;
+
+    const { subject, html, lane } = await buildQuoteEmail(order, selected?.name ?? null);
     res.json({
       subject,
       html,
       lane,
-      recipientEmail: order.customer?.email ?? null,
-      recipientName: order.customer?.contactName ?? order.customer?.name ?? null,
+      recipients,
+      selectedContactId: selected?.id ?? null,
+      recipientEmail: selected?.email ?? null,
+      recipientName: selected?.name ?? null,
       orderNumber: order.orderNumber,
     });
   } catch (err) {
