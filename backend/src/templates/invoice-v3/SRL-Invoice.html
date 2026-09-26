@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Invoice · Silk Route Logistics Inc.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#0A2540;--gold:#C5A572;--gold-dark:#BA7517;--cream:#FBF7F0;--cream-2:#F5EEE0;--ink:#1D2939;--ink-2:#3A4A5F;--ink-3:#6B7685;--rule:rgba(10,37,64,.12);--rule-2:rgba(10,37,64,.18);--display:'Playfair Display',Georgia,serif;--body:'DM Sans',-apple-system,'Segoe UI',sans-serif}
+  @page{size:letter;margin:0.5in}
+  html,body{margin:0;padding:0;background:#DDD9D2;font-family:var(--body);color:var(--ink);-webkit-print-color-adjust:exact;print-color-adjust:exact;font-variant-numeric:tabular-nums}
+  a{color:var(--gold-dark);text-decoration:none}a:hover{text-decoration:underline}
+  .page{width:8.5in;height:11in;background:#fff;margin:24px auto;padding:0.5in;box-sizing:border-box;position:relative;box-shadow:0 8px 24px rgba(10,37,64,.10);display:grid;grid-template-rows:auto auto auto auto auto auto auto auto 1fr auto;row-gap:0;overflow:hidden}
+  .page>*{min-width:0}
+  p{margin:0}
+  .k{font-size:6.5pt;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-dark);font-weight:500}
+  .v{font-size:9pt;color:var(--navy);font-weight:500;letter-spacing:.01em}
+  .sec{display:flex;justify-content:space-between;align-items:baseline;font-size:7pt;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--navy);margin:0 0 7px}
+  .sec .r{font-weight:400;color:var(--ink-3);letter-spacing:.06em;white-space:nowrap}
+  .specimen{display:inline-block;font-size:6.5pt;letter-spacing:.16em;text-transform:uppercase;font-weight:600;color:var(--gold-dark);border:1px solid var(--gold);padding:3px 8px;justify-self:start;margin:8px 0 10px}
+  .blk{margin-bottom:9px}
+
+  .lh{display:grid;grid-template-columns:auto 1fr auto;column-gap:14px;align-items:start;padding-bottom:10px;border-bottom:1.5pt solid var(--gold)}
+  .lh .ref{align-self:start;display:grid;grid-template-columns:auto auto;column-gap:28px;row-gap:9px;justify-content:end;padding-top:4px}
+  .lh .ref .rc{display:flex;flex-direction:column;align-items:flex-end;min-width:1.05in}
+  .lh .ref .k{margin-bottom:2px}
+  .lh .ref .v{font-size:9.5pt;line-height:1.2;white-space:nowrap}
+  .lh .ref .v.due{font-weight:700}
+  .lh .compass{width:72px;height:72px;display:block}
+  .lh .co{font-family:var(--display);font-size:17pt;font-weight:700;color:var(--navy);line-height:1;letter-spacing:-.015em;text-transform:uppercase}
+  .lh .meta{font-size:7.75pt;color:var(--ink-2);letter-spacing:.02em;line-height:1.55;margin-top:5px}
+  .lh .meta b{color:var(--navy);font-weight:600}
+  .lh .co-tag{font-style:italic;font-weight:400;font-size:9pt;color:var(--gold-dark);margin-top:4px;letter-spacing:.01em}
+
+  .title-row{display:flex;justify-content:space-between;align-items:flex-end;margin:14px 0 6px}
+  .title-row h1{font-family:var(--display);font-weight:700;font-size:24pt;line-height:1;color:var(--navy);margin:0;letter-spacing:-.012em}
+  .title-row .sub{font-size:7.5pt;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-dark);font-weight:500}
+  .meta-row{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--rule-2)}
+  .meta-row .cell{padding:6px 12px;border-right:1px solid var(--rule-2)}
+  .meta-row .cell:last-child{border-right:0}
+  .meta-row .k{margin-bottom:3px;display:block}
+  .meta-row .v{font-size:9.5pt}
+  .meta-row .v.due{font-weight:700}
+
+  .panel{background:var(--cream);border:1px solid var(--rule-2);padding:8px 12px 7px}
+  .fg{display:grid;column-gap:16px;row-gap:7px}
+  .fg .fd .k{margin-bottom:3px;display:block}
+  .fg .fd .fv{border-bottom:1px solid var(--navy);min-height:15px;font-size:9pt;color:var(--navy);font-weight:500;padding-bottom:2px;line-height:1.25}
+  .bill{grid-template-columns:1.5fr 1fr 1fr 1fr}
+  .bill .co{font-size:10.5pt;font-weight:700}
+
+  .stops2{display:grid;grid-template-columns:1fr 1fr;column-gap:0;background:var(--cream);border:1px solid var(--rule-2);border-bottom:0;margin-bottom:0}
+  .stops2 .st{padding:6px 12px;display:flex;flex-direction:column;gap:2px;line-height:1.3}
+  .stops2 .st+.st{border-left:1px solid var(--rule-2)}
+  .stops2 .st .k{margin-bottom:2px}
+  .stops2 .st b{font-size:9.5pt;color:var(--navy);font-weight:700}
+  .stops2 .st span:not(.k){font-size:8.5pt;color:var(--ink)}
+  .stops2 .st small{font-size:7.5pt;color:var(--ink-2);margin-top:1px}
+  tfoot tr.sub td{background:#fff;border-top:1px solid var(--rule);border-bottom:0;padding:4px 8px}
+  tfoot tr.sub td:first-child{font-size:7pt;letter-spacing:.12em;text-transform:uppercase;font-weight:500;color:var(--ink-2)}
+  tfoot tr.sub td.num{font-size:9.5pt;font-weight:500;color:var(--navy)}
+  .strip{display:grid;grid-template-columns:1fr 1.1fr 1.5fr 1fr 1.1fr .8fr;background:var(--cream);border:1px solid var(--rule-2)}
+  .strip .c{padding:6px 12px;border-right:1px solid var(--rule-2)}
+  .strip .c:last-child{border-right:0}
+  .strip .k{margin-bottom:3px;display:block}
+  .strip .v{font-size:9.5pt}
+  .strip .v small{display:block;font-size:6.5pt;color:var(--ink-3);font-weight:400;letter-spacing:.04em;margin-top:1px}
+  .box{display:inline-block;width:9px;height:9px;border:1px solid var(--navy);vertical-align:-1px;margin-right:5px;background:#fff;position:relative}
+  .box.on::after{content:'';position:absolute;left:1px;top:1px;width:5px;height:5px;background:var(--navy)}
+
+  table{width:100%;border-collapse:collapse}
+  thead th{background:var(--navy);color:var(--cream);text-align:left;padding:6px 8px;font-size:6.5pt;letter-spacing:.1em;text-transform:uppercase;font-weight:500;border-right:1px solid rgba(197,165,114,.25)}
+  thead th:last-child{border-right:0}
+  thead th.num{text-align:right}
+  tbody td{vertical-align:top;padding:6px 8px;border-bottom:1px solid var(--rule);font-size:9pt;line-height:1.4;color:var(--ink)}
+  tbody td.num{text-align:right;color:var(--navy);font-weight:500}
+  tbody td small{display:block;color:var(--ink-3);font-size:7.5pt;margin-top:1px}
+  tbody td.d{color:var(--ink-2)}
+  .frame{border:1px solid var(--navy)}
+  tfoot td{background:var(--cream-2);border-top:1.5px solid var(--navy);border-bottom:1px solid var(--gold);padding:7px 8px;vertical-align:middle}
+  tfoot td:first-child{font-size:7.5pt;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--navy)}
+  tfoot td.due{font-size:7.5pt;color:var(--ink-2);letter-spacing:.02em}
+  tfoot td.num{text-align:right;font-size:17pt;font-weight:700;color:var(--navy);letter-spacing:-.01em}
+
+  .pay{display:grid;grid-template-columns:1fr 1fr;column-gap:14px}
+  .pay .panel .row{display:grid;grid-template-columns:auto 1fr;column-gap:12px;align-items:baseline;padding:4px 0;border-bottom:1px solid var(--rule)}
+  .pay .panel .row:first-child{padding-top:0}
+  .pay .panel .row:last-child{border-bottom:0}
+  .pay .row .k{white-space:nowrap}
+  .pay .row .v{text-align:right;line-height:1.3}
+  .pay .note{font-size:8pt;color:var(--ink);line-height:1.55;padding-top:2px}
+  .pay .note b{color:var(--navy);font-weight:600}
+
+  .run-foot{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding-top:8px;border-top:1px solid var(--gold);font-size:7pt;color:var(--ink-3)}
+  .run-foot>:last-child{justify-self:end}
+  .run-foot .tag{justify-self:center;font-style:italic;color:var(--gold-dark);font-size:8pt}
+
+  @media print{
+    html,body{background:#fff!important}
+    .page{width:7.5in!important;height:10in!important;margin:0!important;padding:0!important;box-shadow:none!important}
+  }
+
+  /* premium open layout */
+  .blk{margin-bottom:14px}
+  .two{display:grid;grid-template-columns:1fr 1fr;column-gap:40px;padding-top:14px;border-top:1px solid var(--gold)}
+  .two .sec{margin-bottom:8px}
+  .party-name{font-size:11pt;font-weight:700;color:var(--navy);line-height:1.2;margin-bottom:2px}
+  .party-addr{font-size:9pt;color:var(--ink);line-height:1.4;margin-bottom:6px}
+  .kv{display:grid;grid-template-columns:auto 1fr;column-gap:14px;row-gap:2px;font-size:8.5pt;color:var(--ink);align-items:baseline}
+  .kv .k{white-space:nowrap}
+  .sum{display:grid;grid-template-columns:repeat(5,auto);justify-content:space-between;column-gap:18px;padding:9px 0 10px;border-top:1px solid var(--gold);border-bottom:1px solid var(--rule);margin-bottom:14px}
+  .sum div{display:flex;flex-direction:column;gap:3px}
+  .sum .v{font-size:9pt;white-space:nowrap}
+  table.ld tbody td{padding:6px 8px;font-size:8.5pt;white-space:nowrap;line-height:1.35}
+  table.ld td.fac{font-weight:600;color:var(--navy)}
+  table.ld td.num{text-align:right;color:var(--ink-2);font-weight:400}
+  table.ch tbody td{padding:6px 8px}
+  table.ch tfoot td{background:#fff;border:0;padding:5px 8px;color:var(--ink-2);font-size:8.5pt}
+  table.ch tfoot tr.sub td:nth-child(2){text-align:right;letter-spacing:.02em}
+  table.ch tfoot tr.sub td.num{color:var(--navy);font-weight:500;font-size:9.5pt}
+  table.ch tfoot tr.sub:first-child td{border-top:1px solid var(--gold);padding-top:8px}
+  table.ch tfoot tr.bal td{background:var(--cream-2);border-top:1.5px solid var(--navy);border-bottom:1px solid var(--gold);padding:10px 8px;color:var(--navy)}
+  table.ch tfoot tr.bal td:nth-child(2){text-align:right;font-size:7.5pt;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+  table.ch tfoot tr.bal td:nth-child(2) span{letter-spacing:.02em;text-transform:none;font-weight:400;color:var(--ink-2);font-size:7.5pt;margin-left:4px}
+  table.ch tfoot tr.bal td.num{font-size:17pt;font-weight:700;letter-spacing:-.01em}
+  .times{display:flex;gap:48px;align-items:baseline;font-size:9pt;color:var(--navy);font-weight:500;padding:7px 0;border-top:1px solid var(--gold)}
+  .times span{white-space:nowrap}
+  .times .k{margin-right:8px}
+  .fine{font-size:7.5pt;line-height:1.5;color:var(--ink-3);padding-top:10px;border-top:1px solid var(--rule)}
+
+  .stops{border-top:0;padding-top:0}
+  .stops .col>.k{margin-bottom:6px;display:block}
+  .stops .party-name{font-size:10.5pt}
+  .stops .kv{margin-top:6px}
+  .sum{margin-bottom:16px}
+
+  .route{display:grid;grid-template-columns:1fr auto 1fr;column-gap:24px;align-items:start;padding:16px 0 4px}
+  .rp{display:flex;flex-direction:column;gap:3px}
+  .rp.end{text-align:right;align-items:flex-end}
+  .rp b{font-size:14pt;color:var(--navy);font-weight:700;line-height:1.1;margin:2px 0 1px}
+  .rp span:not(.k){font-size:8.5pt;color:var(--ink);line-height:1.4}
+  .rp small{font-size:7.5pt;color:var(--ink-2)}
+  .rl{display:flex;align-items:center;gap:8px;padding-top:26px;min-width:1.6in}
+  .rl i{width:7px;height:7px;border-radius:50%;background:var(--navy);flex:none}
+  .rl em{flex:1;font-style:normal;font-size:7pt;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-dark);text-align:center;border-top:1px solid var(--gold);padding-top:4px;line-height:1}
+  .cgrid{display:grid;grid-template-columns:1fr 2.4in;column-gap:28px;align-items:start}
+  table.ch.open thead th{background:transparent;color:var(--gold-dark);border-right:0;padding:0 0 6px;border-bottom:1px solid var(--gold);font-weight:500}
+  table.ch.open thead th.num{text-align:right}
+  table.ch.open tbody td{padding:8px 0;font-size:9.5pt;color:var(--navy)}
+  table.ch.open tbody td small{display:block;color:var(--ink-2);font-size:8pt;margin-top:2px}
+  table.ch.open tbody tr:last-child td{border-bottom:1px solid var(--gold)}
+  .card{background:var(--cream);border:1px solid var(--rule-2);padding:14px 16px 12px;margin-top:22px}
+  .card .big{font-size:24pt;font-weight:700;color:var(--navy);letter-spacing:-.015em;line-height:1;margin:6px 0 12px;font-variant-numeric:tabular-nums}
+  .card .crow{display:flex;justify-content:space-between;font-size:8.5pt;color:var(--ink-2);padding:5px 0;border-top:1px solid var(--rule);white-space:nowrap}
+  .card .crow span:last-child{color:var(--navy);font-weight:500}
+  .card .crow.due{border-top:1px solid var(--gold);color:var(--navy);font-weight:500}
+
+  .divided{column-gap:0}
+  .divided .col{padding-right:28px}
+  .divided .col+.col{border-left:1px solid var(--gold);padding-left:28px;padding-right:0}
+
+  /* navy section tabs, matching the RC */
+  .sec{display:inline-flex;align-items:baseline;gap:8px;background:var(--navy);color:var(--cream);padding:3px 10px 2px;font-size:6.5pt;letter-spacing:.2em;margin:0 0 8px}
+  .sec .r{color:var(--gold);font-weight:400;letter-spacing:.06em}
+  .card{border-top:1.5px solid var(--navy)}
+  .two .col>.k{display:inline-block;background:var(--navy);color:var(--gold);padding:3px 10px 2px;font-size:6.5pt;letter-spacing:.2em;margin-bottom:8px}
+
+  /* v3 type refinement: one tab style, unified scale for AP readability */
+  html,body{font-feature-settings:"tnum" 1,"lnum" 1;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .k{font-size:7pt;letter-spacing:.12em;font-weight:600}
+  .v{font-size:10pt}
+  .sec,.two .col>.k{display:inline-flex;align-items:center;gap:8px;background:var(--navy);color:var(--cream);font-family:var(--body);font-size:7pt;font-weight:600;letter-spacing:.18em;text-transform:uppercase;line-height:1;padding:5px 11px 4px;margin:0 0 10px;border:0}
+  .lh .ref .k{font-size:6.75pt}
+  .lh .ref .v{font-size:10pt;font-weight:600}
+  .lh .meta{font-size:8pt}
+  .title-row{margin:16px 0 10px}
+  .title-row h1{font-size:26pt;font-weight:600;letter-spacing:.005em}
+  .title-row .sub{font-size:7.5pt;font-weight:600}
+  .party-name{font-size:11.5pt;font-weight:600;letter-spacing:.005em}
+  .stops .party-name{font-size:11pt}
+  .party-addr{font-size:9.5pt;line-height:1.45;color:var(--ink-2)}
+  .kv{font-size:9pt;row-gap:4px;column-gap:16px}
+  .kv .k{font-size:6.75pt}
+  .sum .v{font-size:10pt}
+  .sum div{gap:4px}
+  table.ch.open thead th{font-size:7pt;font-weight:600;letter-spacing:.12em;padding:0 0 7px}
+  table.ch.open tbody td{font-size:10pt;padding:9px 0;font-weight:500}
+  table.ch.open tbody td.num{font-weight:600}
+  table.ch.open tbody td small{font-size:8.25pt;font-weight:400;color:var(--ink-2)}
+  .card{padding:16px 18px 14px}
+  .card .big{font-size:26pt;font-weight:700;letter-spacing:-.01em;margin:8px 0 14px}
+  .card .crow{font-size:9pt;padding:6px 0}
+  .card .crow span:last-child{font-weight:600}
+  .fine{font-size:7.75pt;line-height:1.55;color:var(--ink-2)}
+  .run-foot{font-size:7.25pt}
+
+  /* v4 common: larger type, tighter rhythm to keep one page */
+  .k{font-size:7.5pt}
+  .v{font-size:10.5pt}
+  .lh{padding-bottom:9px}
+  .lh .compass{width:66px;height:66px}
+  .lh .co{font-size:18pt}
+  .lh .meta{font-size:8.5pt;line-height:1.5}
+  .lh .co-tag{font-size:9.5pt}
+  .lh .ref{row-gap:7px}
+  .lh .ref .k{font-size:7pt}
+  .lh .ref .v{font-size:10.5pt}
+  .title-row{margin:12px 0 8px}
+  .title-row h1{font-size:28pt}
+  .title-row .sub{font-size:8pt}
+  .blk{margin-bottom:11px}
+  .two{padding-top:11px}
+  .sec,.two .col>.k{font-size:7.5pt;padding:5px 11px 4px;margin:0 0 8px}
+  .party-name{font-size:12.5pt}
+  .stops .party-name{font-size:12pt}
+  .party-addr{font-size:10pt;line-height:1.4;margin-bottom:7px}
+  .kv{font-size:9.5pt;row-gap:4px}
+  .kv .k{font-size:7pt}
+  .sum{padding:8px 0 9px;margin-bottom:12px}
+  .sum .v{font-size:10.5pt}
+  table.ch.open thead th{font-size:7.5pt}
+  table.ch.open tbody td{font-size:10.5pt;padding:8px 0}
+  table.ch.open tbody td small{font-size:8.75pt}
+  .card{margin-top:20px}
+  .card .big{font-size:28pt}
+  .card .crow{font-size:9.5pt;padding:5px 0}
+  .fine{font-size:8.25pt;line-height:1.5;padding-top:9px}
+  .run-foot{font-size:7.75pt}
+  .run-foot .tag{font-size:8.5pt}
+
+  /* v4A Classic: cream panel with gold top rule on payment details */
+  .pay-kv{background:var(--cream-2);border-top:2px solid var(--gold);padding:8px 12px 8px;margin-top:2px}
+  .pay-kv .k{color:var(--gold-dark)}
+  .pay-kv span:not(.k){color:var(--navy);font-weight:500}
+
+  /* v4 fit */
+  .blk{margin-bottom:8px}
+  .sum{margin-bottom:8px}
+  .title-row{margin:10px 0 6px}
+  .party-addr{margin-bottom:5px}
+  table.ch.open tbody td{padding-top:7px;padding-bottom:7px}
+  .fine{padding-top:7px}
+  .card{margin-top:18px}
+  .two:not(.stops) .col{display:flex;flex-direction:column}
+  .two:not(.stops) .pay-kv{flex:1;align-content:start}
+
+  .two .col>.sec{align-self:flex-start}
+
+  /* gold-on-navy tabs */
+  .sec,.two .col>.k{color:var(--gold);font-weight:700;letter-spacing:.2em}
+
+  /* no navy boxes: bold gold text headers */
+  .sec,.two .col>.k{background:transparent;color:var(--gold-dark);font-weight:700;font-size:8pt;letter-spacing:.2em;padding:0;margin:0 0 9px}
+
+  /* larger logo, gold reduced to accents */
+  .lh .compass{width:88px;height:88px}
+  .lh{column-gap:16px}
+  .k,.kv .k,.pay-kv .k,.lh .ref .k,.card .k{color:var(--ink-3)}
+  .sec,.two .col>.k{color:var(--navy)}
+  .title-row .sub{color:var(--ink-3)}
+  table.ch.open thead th{color:var(--ink-3);border-bottom:1px solid var(--navy)}
+  table.ch.open tbody tr:last-child td{border-bottom:1px solid var(--rule-2)}
+  .two{border-top:1px solid var(--rule-2)}
+  .sum{border-top:1px solid var(--rule-2)}
+  .pay-kv{border-top:2px solid var(--navy)}
+  .divided .col+.col{border-left:1px solid var(--rule-2)}
+  .card .crow.due{border-top:1px solid var(--navy)}
+
+  /* one colour rule: section header = gold bold, field label = grey, value = navy */
+  .sec,.two .col>.k,.card>.k{color:var(--gold-dark);font-weight:700;font-size:8pt;letter-spacing:.2em}
+  .k,.kv .k,.pay-kv .k,.lh .ref .k,table.ch.open thead th,.title-row .sub{color:var(--ink-3)}
+  .v,.kv span:not(.k),.pay-kv span:not(.k),.party-addr,.lh .ref .v,table.ch.open tbody td,.card .crow span{color:var(--navy)}
+  table.ch.open tbody td small{color:var(--ink-3)}
+  .card .crow span:first-child{color:var(--ink-3)}
+  .pay-kv{border-top:2px solid var(--gold)}
+
+  /* single ink: labels and values both navy, labels differ by size/case/weight */
+  .k,.kv .k,.pay-kv .k,.lh .ref .k,table.ch.open thead th,.title-row .sub,.card .crow span:first-child,table.ch.open tbody td small,.lh .meta,.fine,.run-foot{color:var(--navy)}
+  .k,.kv .k,.pay-kv .k,.lh .ref .k,table.ch.open thead th{font-weight:500}
+  table.ch.open tbody td small,.card .crow span:first-child{font-weight:400}
+
+  /* label bold, value regular (like facility name / address) */
+  .k,.kv .k,.pay-kv .k,.lh .ref .k,table.ch.open thead th,.sum .k{font-weight:700}
+  .v,.lh .ref .v,.lh .ref .v.due,.sum .v,.kv span:not(.k),.pay-kv span:not(.k),.card .crow span,.card .crow span:last-child,table.ch.open tbody td,table.ch.open tbody td.num{font-weight:400}
+  table.ch.open tbody td:first-child{font-weight:600}
+  table.ch.open tbody td small{font-weight:400}
+
+  /* final touches */
+  .two.stops{border-top:0;padding-top:0}
+  .pay-kv{grid-template-columns:.9in 1fr}
+  .fraud{margin-top:4px;font-size:8.25pt;line-height:1.45;color:var(--navy);background:var(--cream-2);border-top:2px solid var(--gold);padding:6px 12px;margin-bottom:8px}
+  .fraud b{font-weight:700;letter-spacing:.02em}
+  .fine{border-top:0;padding-top:0}
+  .lh .co-tag,.run-foot .tag{font-family:Georgia,'Times New Roman',serif;font-style:italic;color:var(--gold-dark)}
+
+  .title-row{margin:8px 0 6px}.fraud{margin-top:2px}.lh{padding-bottom:7px}.sum{padding-bottom:8px}
+
+  /* labels read bold at a glance */
+  .k,.kv .k,.pay-kv .k,.lh .ref .k,.sum .k,table.ch.open thead th{font-size:7.75pt;font-weight:700;letter-spacing:.09em}
+
+  /* shipment: 3 columns aligned to the two-column grid below */
+  .sum{grid-template-columns:1fr 1fr 1fr;justify-content:stretch;column-gap:0}
+  .sum>div{padding:0 0 0 14px;border-left:1px solid var(--rule-2)}
+  .sum>div:first-child{padding-left:0;border-left:0}
+
+  /* balance card aligned with charges: same header row, same top and bottom */
+  .cgrid{align-items:stretch}
+  .cgrid>div:first-child,.bcol{display:flex;flex-direction:column}
+  .bcol>.sec{align-self:flex-start}
+  .bcol .card{flex:1;margin-top:0;display:flex;flex-direction:column;padding-top:12px}
+  .bcol .card .big{margin-top:0}
+  .bcol .card .big+.crow{margin-top:auto}
+
+  .blk.stops{margin-bottom:14px}
+
+  /* terms block */
+  .terms{padding-top:2px}
+  .terms ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;column-gap:28px;row-gap:4px;counter-reset:t}
+  .terms li{counter-increment:t;position:relative;padding-left:14px;font-size:7.75pt;line-height:1.42;color:var(--navy)}
+  .terms li::before{content:counter(t);position:absolute;left:0;top:0;font-weight:700;color:var(--gold-dark)}
+  .terms li b{font-weight:700}
+  .terms-foot{font-size:7.75pt;line-height:1.4;color:var(--navy);margin-top:5px;padding-top:5px;border-top:1px solid var(--rule-2)}
+  .fraud{margin-bottom:9px}
+
+  /* fit */
+  table.ch.open tbody td{padding-top:6px;padding-bottom:6px}
+  .blk.stops{margin-bottom:10px}
+  .fraud{padding:5px 12px;margin-bottom:7px}
+  .terms .sec{margin-bottom:6px}
+  .terms-foot{margin-top:4px;padding-top:4px}
+
+  /* fit 2 */
+  .sec,.two .col>.k{margin-bottom:6px}
+  .two{padding-top:9px}
+  .title-row{margin:8px 0 5px}
+  .title-row h1{font-size:25pt}
+  .kv{row-gap:3px}
+  table.ch.open tbody td{padding-top:5px;padding-bottom:5px}
+  .blk.stops{margin-bottom:8px}
+  .terms li{font-size:7.6pt;line-height:1.4}
+  .terms ol{row-gap:3px}
+
+  /* fit 3 */
+  .sum{margin-bottom:0}
+  .blk{margin-bottom:7px}
+  .blk.stops{margin-bottom:8px}
+  .stops .kv{margin-top:3px}
+  .lh .compass{width:82px;height:82px}
+  table.ch.open thead th{padding-bottom:5px}
+  table.ch.open tbody td small{margin-top:1px}
+  .fraud{margin-bottom:5px}
+
+  .terms ol{grid-template-columns:1fr;row-gap:2px}
+</style>
+
+
+</head>
+<body>
+<!--
+  SRL Invoice template. Edit the JSON in <script id="invoice-data"> below, save, open in a browser,
+  then print to PDF (Letter, margins: None or Default, Background graphics: ON).
+-->
+<script id="invoice-data" type="application/json">
+{
+  "invoice_number": "SRL-50001",
+  "date_issued": "Sep 9, 2026",
+  "customer_no": "GRANPEAKUSA",
+  "due_date": "Oct 9, 2026",
+  "terms": "Net-30",
+  "bill_to": {
+    "name": "Granite Peak Organics, Inc.",
+    "address": ["Accounts Payable", "10 Burton Drive", "Lebanon, NH 03766"],
+    "ap_contact": "Dana Park",
+    "email": "ap@granitepeak.example",
+    "po_number": "GP-10922"
+  },
+  "shipment": {
+    "mode": "FTL",
+    "equipment": "53' Reefer · 34°F continuous",
+    "weight": "38,420 lb · 22 pallets"
+  },
+  "pickup": {
+    "name": "Granite Peak Cold Storage",
+    "address": ["10 Burton Drive", "Lebanon, NH 03766"],
+    "date": "Sep 4, 2026",
+    "reference": "PU-448213"
+  },
+  "delivery": {
+    "name": "North Lake Distribution Center",
+    "address": ["2801 Cleveland Gibbs Road", "North Lake, TX 76247"],
+    "date": "Sep 7, 2026",
+    "reference": "DL-771904"
+  },
+  "charges": [
+    { "description": "Line haul", "note": "Lebanon, NH to North Lake, TX · 1,932 mi · refrigerated food", "amount": 5940.00 },
+    { "description": "Fuel", "note": "Included in line haul", "amount": 0 },
+    { "description": "Accessorial · lumper", "note": "Pre-approved · Stop 2 · at cost, receipt provided separately", "amount": 186.00 }
+  ],
+  "amount_received": 0
+}
+</script>
+
+<section class="page" data-screen-label="Invoice">
+  <header class="lh">
+    <img class="compass" src="assets/srl-compass.png" alt="Silk Route Logistics compass mark">
+    <div>
+      <div class="co">Silk Route Logistics Inc.</div>
+      <div class="meta">2317 S 35th St, Galesburg, MI 49053<br>accounting@silkroutelogistics.ai</div>
+      <div class="co-tag">Where Trust Travels.</div>
+    </div>
+    <div class="ref">
+      <div class="rc" style="grid-column:1;grid-row:1"><span class="k">Invoice number</span><span class="v" data-f="invoice_number"></span></div>
+      <div class="rc" style="grid-column:1;grid-row:2"><span class="k">Terms</span><span class="v" data-f="terms"></span></div>
+      <div class="rc" style="grid-column:2;grid-row:1"><span class="k">Date issued</span><span class="v" data-f="date_issued"></span></div>
+      <div class="rc" style="grid-column:2;grid-row:2"><span class="k">Due date</span><span class="v due" data-f="due_date"></span></div>
+      <div class="rc" style="grid-column:2;grid-row:3"><span class="k">Customer no.</span><span class="v" data-f="customer_no"></span></div>
+    </div>
+  </header>
+
+  <div class="title-row"><h1>Invoice</h1><span class="sub">Freight transportation services</span></div>
+
+  <div class="blk two">
+    <div class="col">
+      <div class="sec">Billed to</div>
+      <div class="party-name" data-f="bill_to.name"></div>
+      <div class="party-addr" data-lines="bill_to.address"></div>
+      <div class="kv pay-kv">
+        <span class="k">AP contact</span><span data-f="bill_to.ap_contact"></span>
+        <span class="k">Email</span><span data-f="bill_to.email"></span>
+        <span class="k">PO number</span><span data-f="bill_to.po_number"></span>
+      </div>
+    </div>
+    <div class="col">
+      <div class="sec">Remit to</div>
+      <div class="party-name">Silk Route Logistics Inc.</div>
+      <div class="party-addr">Accounts Receivable<br>2317 S 35th St<br>Galesburg, MI 49053</div>
+      <div class="kv pay-kv">
+        <span class="k">Bank</span><span>JPMorgan Chase Bank, N.A.</span>
+        <span class="k">Routing</span><span>072000326</span>
+        <span class="k">Account</span><span>001984412</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="blk">
+    <div class="sec">Shipment</div>
+    <div class="sum">
+      <div><span class="k">Mode</span><span class="v" data-f="shipment.mode"></span></div>
+      <div><span class="k">Equipment</span><span class="v" data-f="shipment.equipment"></span></div>
+      <div><span class="k">Weight</span><span class="v" data-f="shipment.weight"></span></div>
+    </div>
+  </div>
+
+  <div class="blk two stops divided">
+    <div class="col">
+      <div class="k">Pickup · Stop 1</div>
+      <div class="party-name" data-f="pickup.name"></div>
+      <div class="party-addr" data-lines="pickup.address"></div>
+      <div class="kv"><span class="k">Shipped</span><span data-f="pickup.date"></span><span class="k">Reference</span><span data-f="pickup.reference"></span></div>
+    </div>
+    <div class="col">
+      <div class="k">Delivery · Stop 2</div>
+      <div class="party-name" data-f="delivery.name"></div>
+      <div class="party-addr" data-lines="delivery.address"></div>
+      <div class="kv"><span class="k">Delivered</span><span data-f="delivery.date"></span><span class="k">Reference</span><span data-f="delivery.reference"></span></div>
+    </div>
+  </div>
+
+  <div class="blk cgrid">
+    <div>
+      <div class="sec">Charges</div>
+      <table class="ch open">
+        <thead><tr><th>Description</th><th class="num">Amount</th></tr></thead>
+        <tbody id="charges"></tbody>
+      </table>
+    </div>
+    <div class="bcol">
+      <div class="sec">Balance due</div>
+      <div class="card">
+        <div class="big" id="balance"></div>
+        <div class="crow"><span>Amount received</span><span id="received"></span></div>
+        <div class="crow due"><span>Due date</span><span id="due-line"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="fraud"><b>Payment security.</b> SRL never changes bank details by email. Confirm any new account by phone with your SRL representative.</p>
+  <div class="terms">
+    <div class="sec">Terms and conditions</div>
+    <ol>
+      <li><b>Services.</b> All services are provided under the signed Silk Route Logistics Inc. shipper agreement and the referenced bill of lading.</li>
+      <li><b>Payment.</b> <span data-f="terms"></span> in US dollars, by electronic ACH payment only to the account under Remit to. Checks are not accepted.</li>
+      <li><b>Remittance.</b> Reference the invoice number and email remittance to accounting@silkroutelogistics.ai. Signed BOL and POD sent separately.</li>
+      <li><b>No offsets.</b> Deductions, short payments or offsets for cargo claims are not accepted without prior written approval from SRL.</li>
+    </ol>
+  </div>
+
+  <div></div>
+
+  <footer class="run-foot">
+    <span>Silk Route Logistics Inc. &nbsp;·&nbsp; Invoice <span data-f="invoice_number"></span></span>
+    <span></span>
+    <span>Page 1 of 1</span>
+  </footer>
+</section>
+
+<script>
+(function(){
+  var d = JSON.parse(document.getElementById('invoice-data').textContent);
+  function get(p){ return p.split('.').reduce(function(o,k){ return o == null ? '' : o[k]; }, d); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function usd(n){ return '$' + Number(n || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+  document.querySelectorAll('[data-f]').forEach(function(el){ el.textContent = get(el.getAttribute('data-f')); });
+  document.querySelectorAll('[data-lines]').forEach(function(el){ el.innerHTML = (get(el.getAttribute('data-lines')) || []).map(esc).join('<br>'); });
+  var total = 0;
+  document.getElementById('charges').innerHTML = (d.charges || []).map(function(c){
+    total += Number(c.amount || 0);
+    return '<tr><td>' + esc(c.description) + (c.note ? '<small>' + esc(c.note) + '</small>' : '') + '</td><td class="num">' + usd(c.amount) + '</td></tr>';
+  }).join('');
+  document.getElementById('balance').textContent = usd(total - Number(d.amount_received || 0));
+  document.getElementById('received').textContent = usd(d.amount_received);
+  document.getElementById('due-line').textContent = d.due_date + ' · ' + d.terms;
+  document.title = 'Invoice ' + d.invoice_number + ' · Silk Route Logistics Inc.';
+})();
+</script>
+</body></html>
