@@ -19217,7 +19217,9 @@
 // the customer, so the invoice stays DRAFT until an email or mark-sent records a delivery.
 // v3.8.blh — load numbers are fail-safe: max(sequence, highest load held, 121497) + 1; never 5003, never refused.
 // v3.8.blj — /api/health reports the load number the generator will issue: next 121498, LIFT PENDING until the first load.
-export const SRL_VERSION = "3.8.blj";
+// v3.8.bll — an invoice can record the SHA-256 of the file the customer received and link its stored copy.
+// Migration 20260926140000 amended before release: deliveredFileHash + archivedDocumentId (UNIQUE, RESTRICT).
+export const SRL_VERSION = "3.8.bll";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

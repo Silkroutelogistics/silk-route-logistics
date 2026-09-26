@@ -2494,6 +2494,13 @@ model Invoice {
   deliveryChannel InvoiceDeliveryChannel?
   deliveredAt     DateTime?
   deliveredById   String?
+  // The delivered file (RECONCILE 3d). deliveredFileHash is the SHA-256 of the
+  // exact bytes the customer received; archivedDocumentId is the stored copy of
+  // those bytes. RESTRICT: the archive is the evidence of what was delivered, so
+  // it cannot be deleted while an invoice names it.
+  deliveredFileHash  String?
+  archivedDocumentId String?   @unique
+  archivedDocument   Document? @relation("InvoiceArchivedDocument", fields: [archivedDocumentId], references: [id], onDelete: Restrict)
 
   // Reminder tracking
   reminderSent31   Boolean   @default(false)
@@ -2514,7 +2521,7 @@ model Invoice {
   createdById String?
   createdBy   User?   @relation("InvoiceCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
-  documents Document[]
+  documents Document[] @relation("InvoiceDocuments")
   lineItems InvoiceLineItem[]
 
   deletedAt DateTime?
@@ -2783,7 +2790,8 @@ model Document {
   loadId        String?
   load          Load?               @relation(fields: [loadId], references: [id], onDelete: Cascade)
   invoiceId     String?
-  invoice       Invoice?            @relation(fields: [invoiceId], references: [id])
+  invoice       Invoice?            @relation("InvoiceDocuments", fields: [invoiceId], references: [id])
+  archivedForInvoice Invoice?       @relation("InvoiceArchivedDocument")
   exceptionId   String?             @map("exception_id")
   exception     LoadException?      @relation("ExceptionDocs", fields: [exceptionId], references: [id], onDelete: SetNull)
   // v3.8.aji — Attachment linkage to InfoRequest. When a carrier resolves
