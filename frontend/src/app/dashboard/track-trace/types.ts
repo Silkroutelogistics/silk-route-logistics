@@ -3,7 +3,8 @@ export type BoardTab =
   | "tendered"
   | "active"
   | "delivered"
-  | "closed";
+  | "closed"
+  | "history";
 
 export type QuickFilter =
   | "all"

@@ -19342,6 +19342,12 @@
 // all-time sum "Revenue YTD": Beekeepers read $43,450 / 9 loads against $3,700 / 4
 // earned. Both now read lib/customerLoadStats, the drawer's calculation, batched
 // for the list, with YTD from Jan 1 Eastern (financePeriods.etStartOfYear).
+// v3.8.bkg — Track & Trace gains a History tab: every load, whatever its status.
+//   The board's five tabs each map to a status set, so a COMPLETED, CANCELLED or
+// TONU load had nowhere to be listed; the CRM's "View all" landed on the bare board
+// and showed none of them. History applies no status filter (named explicitly —
+// an unknown tab also applied none, which a guard now pins), and the CRM link
+// arrives as ?tab=history&customer=<id>. Finished loads report GPS "none", not stale.
 export const SRL_VERSION = "3.8.bme";
 
 export function VersionFooter({ className }: { className?: string }) {

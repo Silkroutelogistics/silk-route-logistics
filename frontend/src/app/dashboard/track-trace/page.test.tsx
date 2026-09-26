@@ -51,3 +51,40 @@ describe("Track & Trace deep link", () => {
     expect((await screen.findByTestId("drawer")).textContent).toBe("closed");
   });
 });
+
+describe("Track & Trace History deep link (v3.8.bkg)", () => {
+  beforeEach(() => window.history.replaceState(null, "", "/dashboard/track-trace"));
+
+  const boardCalls = async () => {
+    const { api } = await import("@/lib/api");
+    return (api.get as any).mock.calls.filter((c: any[]) => c[0] === "/track-trace/loads").map((c: any[]) => c[1].params);
+  };
+
+  it("?tab=history&customer=<id> asks the board for that customer's History, then strips both", async () => {
+    const { api } = await import("@/lib/api");
+    (api.get as any).mockClear();
+    window.history.replaceState(null, "", "/dashboard/track-trace?tab=history&customer=cust-bee");
+    mount();
+    await vi.waitFor(async () => {
+      const calls = await boardCalls();
+      expect(calls.some((p: any) => p.tab === "history" && p.shipperId === "cust-bee")).toBe(true);
+    });
+    expect(window.location.search).toBe("");
+    expect((await screen.findByTestId("drawer")).textContent).toBe("closed");
+  });
+
+  it("an unknown ?tab= is ignored — the board stays on Active rather than passing it through", async () => {
+    const { api } = await import("@/lib/api");
+    (api.get as any).mockClear();
+    window.history.replaceState(null, "", "/dashboard/track-trace?tab=everything");
+    mount();
+    await vi.waitFor(async () => expect((await boardCalls()).length).toBeGreaterThan(0));
+    const calls = await boardCalls();
+    expect(calls.every((p: any) => p.tab === "active")).toBe(true);
+  });
+
+  it("the History tab is on the board", async () => {
+    mount();
+    expect(await screen.findByRole("button", { name: /history/i })).toBeTruthy();
+  });
+});

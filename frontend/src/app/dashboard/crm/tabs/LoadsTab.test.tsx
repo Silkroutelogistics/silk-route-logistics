@@ -42,6 +42,8 @@ describe("LoadsTab", () => {
     expect(screen.getByText("$3,700")).toBeTruthy();
     expect(screen.getByText(/avg \$2,550/)).toBeTruthy();
     expect(screen.getByText(/excludes cancelled/i)).toBeTruthy();
+    // v3.8.bkg — View all lands on this customer's full History, not the bare board.
+    expect(screen.getByText(/view all/i).closest("a")!.getAttribute("href")).toBe("/dashboard/track-trace?tab=history&customer=cust-bee");
   });
 
   it("renders a dash for a null margin and a null lane average", async () => {

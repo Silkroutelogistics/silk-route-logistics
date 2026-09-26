@@ -103,6 +103,12 @@ router.get(
         });
       } else if (tab === "closed") {
         andClauses.push({ status: "COMPLETED" });
+      } else if (tab === "history") {
+        // v3.8.bkg — every live load, whatever its status. The four tabs
+        // above leave CANCELLED, TONU, DRAFT/PLANNED/POSTED and fully closed-out
+        // delivered loads on NO tab, and search only looks inside the current
+        // tab, so a cancelled load number could not be found anywhere. Named
+        // here so it is a decision, not the accident of an unmatched tab value.
       }
 
       // Filters
@@ -227,7 +233,10 @@ router.get(
         const gpsStatus = (() => {
           if (!latestEvent?.latitude) return "none";
           const age = now - new Date(latestEvent.createdAt).getTime();
-          if (DELIVERED_STATUSES.includes(load.status as any)) return "none";
+          // v3.8.bkg — a finished load has no live position to report. The
+          // History tab lists COMPLETED, CANCELLED and TONU loads, which would
+          // otherwise show a "live" or "stale" GPS badge off their last ping.
+          if (DELIVERED_STATUSES.includes(load.status as any) || ["COMPLETED", "CANCELLED", "TONU"].includes(load.status)) return "none";
           return age > 30 * 60 * 1000 ? "stale" : "live";
         })();
 

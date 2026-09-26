@@ -21,6 +21,10 @@ const TABS: { id: BoardTab; label: string; badge?: boolean }[] = [
   { id: "active",          label: "Active" },
   { id: "delivered",       label: "Delivered" },
   { id: "closed",          label: "Closed" },
+  // v3.8.bkg — every live load whatever its status: the only board view that
+  // lists CANCELLED, TONU, POSTED and fully closed-out delivered loads, and the
+  // only one where search can find them.
+  { id: "history",         label: "History" },
 ];
 
 const QUICK_PILLS: { id: QuickFilter; label: string }[] = [
@@ -87,13 +91,27 @@ export default function TrackTracePage() {
   // (static export: useSearchParams needs a Suspense boundary), then stripped so
   // a refresh after closing the drawer does not reopen it. Same pattern as
   // carrier/dashboard/my-loads.
+  //
+  // v3.8.bkg — the same effect reads `?tab=` and `?customer=`, so CRM's
+  // "View all" lands on one customer's full History (every status, cancelled
+  // and TONU included) instead of the all-shipper Active board. An unknown tab
+  // is ignored rather than passed on: the server would otherwise answer with no
+  // status filter by accident rather than by name.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get("load");
-    if (!id) return;
-    setDrawerTab("details");
-    setSelectedLoadId(id);
+    const wantedTab = params.get("tab");
+    const customer = params.get("customer");
+    if (!id && !wantedTab && !customer) return;
+    if (id) {
+      setDrawerTab("details");
+      setSelectedLoadId(id);
+    }
+    if (wantedTab && TABS.some((t) => t.id === wantedTab)) setTab(wantedTab as BoardTab);
+    if (customer) setShipperId(customer);
     params.delete("load");
+    params.delete("tab");
+    params.delete("customer");
     const rest = params.toString();
     window.history.replaceState(window.history.state, "", window.location.pathname + (rest ? `?${rest}` : ""));
   }, []);
