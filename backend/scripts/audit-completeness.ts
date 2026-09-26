@@ -781,7 +781,7 @@ function main() {
  * later edit to the matcher cannot quietly reopen either.
  */
 function selfTest(): void {
-  const fail = (msg: string) => { console.error("self-test FAILED — " + msg); process.exit(1); };
+  function fail(msg: string): never { console.error("self-test FAILED — " + msg); process.exit(1); }
   const seg = toSegments;
 
   // (1) a bare /:id route has no literal evidence: never EXACT.
