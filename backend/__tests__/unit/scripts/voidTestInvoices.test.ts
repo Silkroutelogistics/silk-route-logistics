@@ -7,6 +7,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
+import { spawnSync } from "child_process";
 import { join } from "path";
 import { planVoid, voidData, REMINDER_FLAGS, VOID_REASON } from "../../../scripts/void-test-invoices";
 
@@ -52,5 +53,41 @@ describe("void-test-invoices update", () => {
     const columns = model.match(/reminderSent\w+/g) ?? [];
     expect(columns.length).toBeGreaterThan(0);
     expect(new Set(columns)).toEqual(new Set(REMINDER_FLAGS));
+  });
+});
+
+/**
+ * The script reaches a database only through scripts/_prodTarget.ts. These run
+ * the real entry point against a host that cannot resolve (.invalid), so a gate
+ * that failed to refuse would die on DNS with exit 1 rather than touch anything;
+ * exit 2 plus the refusal's own words is the gate speaking.
+ */
+describe("void-test-invoices refuses a production write the rail has not cleared", () => {
+  const BACKEND = join(__dirname, "../../..");
+  const FAKE_PROD = "postgresql://u:p@db.invalid:5432/db";
+  const run = (extra: Record<string, string>) => {
+    const env: Record<string, string | undefined> = {
+      ...process.env, DATABASE_URL: FAKE_PROD, DIRECT_URL: FAKE_PROD,
+      RESEND_API_KEY: "", OPENPHONE_API_KEY: "", QUO_API_KEY: "", ...extra,
+    };
+    if (!("PRISMA_TARGET" in extra)) delete env.PRISMA_TARGET;
+    const r = spawnSync("npx", ["tsx", "scripts/void-test-invoices.ts", "--ids=inv-x", "--execute", "--target=prod"], {
+      cwd: BACKEND, encoding: "utf8", env, shell: process.platform === "win32",
+    });
+    return { status: r.status, out: `${r.stdout}\n${r.stderr}` };
+  };
+
+  it("without PRISMA_TARGET=production: exit 2 before the performer lookup", { timeout: 120_000 }, () => {
+    const r = run({});
+    expect(r.out, r.out).toContain("PRISMA_TARGET=production");
+    expect(r.out).not.toContain("[void] performer");
+    expect(r.status, r.out).toBe(2);
+  });
+
+  it("with PRISMA_TARGET=production but an outbound key set: exit 2, nothing sent or read", { timeout: 120_000 }, () => {
+    const r = run({ PRISMA_TARGET: "production", RESEND_API_KEY: "re_not_empty" });
+    expect(r.out, r.out).toContain("RESEND_API_KEY is set");
+    expect(r.out).not.toContain("[void] performer");
+    expect(r.status, r.out).toBe(2);
   });
 });

@@ -3,7 +3,13 @@
  *
  *   npx tsx scripts/void-test-invoices.ts --ids=<id>,<id>                          # DRY RUN
  *   npx tsx scripts/void-test-invoices.ts --ids=<id>,<id> --execute                # LOCAL host
- *   npx tsx scripts/void-test-invoices.ts --ids=<id>,<id> --execute --target=prod  # production
+ *   PRISMA_TARGET=production RESEND_API_KEY= OPENPHONE_API_KEY= QUO_API_KEY= \
+ *     npx tsx scripts/void-test-invoices.ts --ids=<id>,<id> --env-file=<file> --execute --target=prod
+ *
+ * Reaches a database only through scripts/_prodTarget.ts, the gate every other
+ * production write script uses: a non-local write needs --execute, --target=prod
+ * AND PRISMA_TARGET=production; the URL can come from an explicit --env-file; any
+ * outbound key that is set refuses the run; the host is printed masked.
  *
  * WHY: INV-1001 (Gail & Rice) and INV-1002 (Graphic Packaging) are test entries
  * (ruled 2026-09-26) that sat OVERDUE and were dunned. Nothing in the console
@@ -24,8 +30,7 @@
  * Refuses a PAID invoice (a void is not a credit memo) and an id it cannot find.
  * Skips one already VOID. Ids only — never a search, never a pattern.
  */
-import { hostOf } from "./prisma-target-guard";
-import { planWrite } from "./backfill-missing-invoices";
+import { openTarget } from "./_prodTarget";
 
 export const VOID_REASON = "test entry";
 
@@ -70,14 +75,8 @@ async function main() {
     process.exit(2);
   }
   const by = arg("by") ?? "whaider@silkroutelogistics.ai";
-  const url = process.env.DATABASE_URL ?? "";
-  const host = url ? hostOf(url) : "(unset)";
-  const plan = planWrite(process.argv, host);
-  if (plan.refuse && process.argv.includes("--execute")) {
-    console.error(`[void] REFUSED: ${plan.refuse}`);
-    process.exit(2);
-  }
-  console.log(`[void] target ${host} · mode ${plan.write ? "EXECUTE" : "DRY RUN"} · by ${by}`);
+  const plan = openTarget("void");
+  console.log(`[void] performer ${by}`);
 
   const { prisma } = await import("../src/config/database");
   try {
