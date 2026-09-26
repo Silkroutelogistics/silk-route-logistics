@@ -1,13 +1,46 @@
 "use client";
 
 import { formatStopDate, formatStopWindow, formatActualDatetime } from "@/lib/stopDate";
+import { loadClosure } from "../loadClosure";
 
 export function DetailsTab({ load }: { load: any }) {
   const pickup = load.loadStops?.find((s: any) => s.stopType === "PICKUP") ?? {};
   const delivery = [...(load.loadStops ?? [])].reverse().find((s: any) => s.stopType === "DELIVERY") ?? {};
+  const closure = loadClosure(load);
 
   return (
     <div className="space-y-6 text-sm">
+      {/* v3.8.bki — a cancelled or TONU load said nothing about why it stopped
+          or whose fault it was; the reason and the fault party were on the row
+          and no tab read them. "Not recorded" means the column is empty, which
+          on a load cancelled before coded reasons existed is the truth. */}
+      {closure && (
+        <div
+          role="note"
+          aria-label={closure.kind === "CANCELLED" ? "Cancellation" : "Truck ordered, not used"}
+          className={`border rounded-lg p-4 ${closure.kind === "CANCELLED" ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}
+        >
+          <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${closure.kind === "CANCELLED" ? "text-red-800" : "text-amber-900"}`}>
+            {closure.kind === "CANCELLED" ? "Cancelled" : "Truck ordered, not used (TONU)"}
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+            {closure.kind === "CANCELLED" && (
+              <Field label="Reason" value={closure.reason ?? "Not recorded"} />
+            )}
+            <Field label="Fault" value={closure.fault ?? "Not recorded"} />
+            <Field
+              label={closure.kind === "CANCELLED" ? "Cancelled at" : "Recorded at"}
+              value={formatActualDatetime(closure.at) ?? "Not recorded"}
+            />
+            {closure.kind === "CANCELLED" && closure.note && (
+              <div className="col-span-2">
+                <Field label="Note" value={closure.note} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <Section title="Shipment info">
         <Field label="Load #"       value={load.loadNumber ?? load.referenceNumber} />
         <Field label="PO #"         value={(load.poNumbers || []).join(", ") || "—"} />

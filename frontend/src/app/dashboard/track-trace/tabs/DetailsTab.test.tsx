@@ -69,6 +69,57 @@ describe("T&T DetailsTab — the BOL number the driver is holding", () => {
   });
 });
 
+describe("T&T DetailsTab — why a load stopped (v3.8.bki)", () => {
+  it("a coded cancellation names its reason, its fault party, its note and when", () => {
+    render(
+      <DetailsTab
+        load={{
+          ...load121497,
+          status: "CANCELLED",
+          cancellationReasonCode: "SHIPPER_FREIGHT_NOT_READY",
+          cancellationFaultParty: "SHIPPER",
+          cancellationReason: "Dock said the pallets were not wrapped.",
+          cancelledAt: "2026-09-18T18:16:00.000Z",
+        }}
+      />,
+    );
+    const banner = screen.getByRole("note", { name: "Cancellation" });
+    expect(banner.textContent).toContain("Shipper: freight not ready");
+    expect(valueFor("Fault")).toBe("Shipper");
+    expect(valueFor("Note")).toBe("Dock said the pallets were not wrapped.");
+    expect(valueFor("Cancelled at")).toMatch(/Sep 18, 2026/);
+  });
+
+  it("a cancellation from before coded reasons says so rather than inventing one", () => {
+    render(
+      <DetailsTab
+        load={{ ...load121497, status: "CANCELLED", cancellationReason: "customer cancelled po", cancelledAt: null }}
+      />,
+    );
+    expect(valueFor("Reason")).toBe("Not recorded");
+    expect(valueFor("Fault")).toBe("Not recorded");
+    expect(valueFor("Note")).toBe("customer cancelled po");
+  });
+
+  it("a TONU names the fault side in the cancel modal's words — CUSTOMER is the Shipper", () => {
+    render(
+      <DetailsTab
+        load={{ ...load121497, status: "TONU", tonuFaultSide: "CUSTOMER", statusUpdatedAt: "2026-09-23T15:00:00.000Z" }}
+      />,
+    );
+    expect(screen.getByRole("note", { name: "Truck ordered, not used" })).toBeTruthy();
+    expect(valueFor("Fault")).toBe("Shipper");
+    expect(valueFor("Recorded at")).toMatch(/Sep 23, 2026/);
+    // A TONU is not a coded cancellation: no Reason row to leave empty.
+    expect(screen.queryByText("Reason")).toBeNull();
+  });
+
+  it("a load in motion carries no banner", () => {
+    render(<DetailsTab load={{ ...load121497, status: "IN_TRANSIT" }} />);
+    expect(screen.queryByRole("note")).toBeNull();
+  });
+});
+
 describe("T&T DetailsTab — stop dates and windows (C1, rendered)", () => {
   it("renders the stored calendar date, not the reader's previous day", () => {
     render(<DetailsTab load={load121497} />);

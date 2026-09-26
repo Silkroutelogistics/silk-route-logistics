@@ -19348,6 +19348,12 @@
 // and showed none of them. History applies no status filter (named explicitly —
 // an unknown tab also applied none, which a guard now pins), and the CRM link
 // arrives as ?tab=history&customer=<id>. Finished loads report GPS "none", not stale.
+// v3.8.bki — The Track & Trace drawer on a load that stopped.
+//   Details now says why a load was cancelled, whose fault it was, the note and
+// when (a TONU names its fault side in the cancel modal's words, CUSTOMER being the
+// Shipper). Finance stops billing a cancelled load's linehaul, fuel or accessorials
+// and prices a TONU as its TONU charge only; the RC total no longer raises a false
+// divergence. Check Calls offers no "Log call" and counts nothing due on a closed load.
 export const SRL_VERSION = "3.8.bme";
 
 export function VersionFooter({ className }: { className?: string }) {

@@ -37,48 +37,85 @@ export function FinanceTab({
   const rows: AccessorialRow[] = load.loadAccessorials ?? [];
   const acc = splitAccessorials(rows);
 
-  const fuelSurcharge = num(load.fuelSurcharge);
+  // v3.8.bki — a load that stopped does not earn its linehaul. The cancel
+  // reversal (integrationService.onLoadCancelledOrTONU) voids the settlement and
+  // the invoice, so a CANCELLED load bills and pays nothing at all; a TONU raises
+  // only its TONU charge through the accessorial ledger, on an invoice and a
+  // payable that carry no linehaul and no fuel. This tab priced both as though
+  // the truck had run.
+  const cancelled = load.status === "CANCELLED";
+  const tonu = load.status === "TONU";
+  const noLinehaul = cancelled || tonu;
+  const accCustomerTotal = cancelled ? 0 : acc.customerTotal;
+  const accCarrierTotal = cancelled ? 0 : acc.carrierTotal;
+  const accReimbursements = cancelled ? 0 : acc.reimbursements;
+
+  const fuelSurcharge = noLinehaul ? 0 : num(load.fuelSurcharge);
 
   // Customer side. invoiceService bills customerRate + FSC + approved
   // pass-through accessorials, and refuses to invoice at all when the customer
   // rate is unset rather than falling back to the carrier's rate.
   const customerRateSet = load.customerRate != null;
-  const customerLinehaul = num(load.customerRate);
-  const customerTotal = round2(customerLinehaul + fuelSurcharge + acc.customerTotal);
+  const customerLinehaul = noLinehaul ? 0 : num(load.customerRate);
+  const customerTotal = round2(customerLinehaul + fuelSurcharge + accCustomerTotal);
 
   // Carrier side. `rate` is the carrier's accepted rate; carrierRate overrides it.
-  const carrierLinehaul = carrierPay(load) ?? 0;
-  const carrierGross = round2(carrierLinehaul + fuelSurcharge + acc.carrierTotal);
+  const carrierLinehaul = noLinehaul ? 0 : carrierPay(load) ?? 0;
+  const carrierGross = round2(carrierLinehaul + fuelSurcharge + accCarrierTotal);
 
   // The Quick Pay fee is never charged on an at-cost reimbursement, so the base
   // is gross less those lines.
   const feePercent = num(load.quickPayFeePercent);
-  const feeBase = Math.max(0, round2(carrierGross - acc.reimbursements));
+  const feeBase = Math.max(0, round2(carrierGross - accReimbursements));
   const feeAmount = round2(feeBase * (feePercent / 100));
   const carrierNet = round2(carrierGross - feeAmount);
 
   const margin = round2(customerTotal - carrierGross);
-  const marginPct = customerTotal > 0 ? (margin / customerTotal) * 100 : 0;
+  const marginPct = customerTotal > 0 ? (margin / customerTotal) * 100 : null;
 
   // A settlement already written for this load. Shown against the computed
   // figure instead of replacing it, because a divergence is the thing worth
-  // seeing.
+  // seeing. Load.totalCarrierPay is the RATE CONFIRMATION's total, so on a load
+  // that stopped it no longer describes anything payable — comparing it would
+  // raise a divergence alarm against a settlement that was voided.
   const recordedCarrierPay = load.totalCarrierPay != null ? num(load.totalCarrierPay) : null;
   const carrierDivergence =
-    recordedCarrierPay !== null && Math.abs(recordedCarrierPay - carrierGross) >= 0.01
+    !noLinehaul && recordedCarrierPay !== null && Math.abs(recordedCarrierPay - carrierGross) >= 0.01
       ? round2(recordedCarrierPay - carrierGross)
       : null;
 
   const distance = num(load.distance);
-  const perMile = (n: number) => (distance > 0 ? `${money(n / distance)}/mi` : "—");
+  const perMile = (n: number) => (!noLinehaul && distance > 0 ? `${money(n / distance)}/mi` : "—");
 
   return (
     <div className="space-y-4 text-sm">
       <div className="grid grid-cols-3 gap-3">
         <Card label="Customer billed" value={money(customerTotal)} subtitle={perMile(customerTotal)} />
         <Card label="Carrier gross" value={money(carrierGross)} subtitle={perMile(carrierGross)} />
-        <Card label="Margin" value={money(margin)} subtitle={`${marginPct.toFixed(1)}%`} tone={margin >= 0 ? "green" : "red"} />
+        <Card
+          label="Margin"
+          value={money(margin)}
+          subtitle={marginPct == null ? "—" : `${marginPct.toFixed(1)}%`}
+          tone={margin >= 0 ? "green" : "red"}
+        />
       </div>
+
+      {cancelled && (
+        <Notice tone="amber">
+          This load was cancelled. Nothing is billed to the customer or paid to the carrier: any invoice or
+          settlement was voided at cancellation.
+          {acc.carrierLines.length > 0 && " Approved accessorials listed under claims are not raised on a cancelled load."}
+          {recordedCarrierPay !== null && ` The rate confirmation total of ${money(recordedCarrierPay)} no longer applies.`}
+        </Notice>
+      )}
+
+      {tonu && (
+        <Notice tone="amber">
+          Truck ordered, not used. Linehaul and fuel surcharge are neither billed nor paid; only the TONU charge
+          and any other approved accessorials are.
+          {recordedCarrierPay !== null && ` The rate confirmation total of ${money(recordedCarrierPay)} no longer applies.`}
+        </Notice>
+      )}
 
       {acc.pending.length > 0 && (
         <Notice tone="amber">
@@ -101,7 +138,7 @@ export function FinanceTab({
         </Notice>
       )}
 
-      {!customerRateSet && (
+      {!customerRateSet && !noLinehaul && (
         <Notice tone="red">
           No customer rate is set on this load, so no invoice will generate. The customer column below counts
           fuel surcharge and accessorials only.
@@ -123,24 +160,42 @@ export function FinanceTab({
           {/* Customer */}
           <div>
             <div className="text-[11px] uppercase text-gray-500 mb-1">Customer side</div>
-            <Line label="Linehaul" value={customerRateSet ? money(customerLinehaul) : "not set"} muted={!customerRateSet} />
-            <Line label="Fuel surcharge" value={money(fuelSurcharge)} />
-            {acc.customerLines.map((l) => (
+            {noLinehaul ? (
+              <>
+                <Line label="Linehaul" value="not billed" muted />
+                <Line label="Fuel surcharge" value="not billed" muted />
+              </>
+            ) : (
+              <>
+                <Line label="Linehaul" value={customerRateSet ? money(customerLinehaul) : "not set"} muted={!customerRateSet} />
+                <Line label="Fuel surcharge" value={money(fuelSurcharge)} />
+              </>
+            )}
+            {!cancelled && acc.customerLines.map((l) => (
               <Line key={l.id} label={accessorialLabel(l.type)} value={money(num(l.amount))} indent />
             ))}
-            {acc.customerLines.length === 0 && <Line label="Accessorials" value={money(0)} indent muted />}
+            {(cancelled || acc.customerLines.length === 0) && <Line label="Accessorials" value={money(0)} indent muted />}
             <Line label="Invoice total" value={money(customerTotal)} bold />
           </div>
 
           {/* Carrier */}
           <div>
             <div className="text-[11px] uppercase text-gray-500 mb-1">Carrier side</div>
-            <Line label="Linehaul" value={money(carrierLinehaul)} />
-            <Line label="Fuel surcharge" value={money(fuelSurcharge)} />
-            {acc.carrierLines.map((l) => (
+            {noLinehaul ? (
+              <>
+                <Line label="Linehaul" value="not paid" muted />
+                <Line label="Fuel surcharge" value="not paid" muted />
+              </>
+            ) : (
+              <>
+                <Line label="Linehaul" value={money(carrierLinehaul)} />
+                <Line label="Fuel surcharge" value={money(fuelSurcharge)} />
+              </>
+            )}
+            {!cancelled && acc.carrierLines.map((l) => (
               <Line key={l.id} label={accessorialLabel(l.type)} value={money(num(l.amount))} indent />
             ))}
-            {acc.carrierLines.length === 0 && <Line label="Accessorials" value={money(0)} indent muted />}
+            {(cancelled || acc.carrierLines.length === 0) && <Line label="Accessorials" value={money(0)} indent muted />}
             <Line label="Settlement gross" value={money(carrierGross)} bold />
             {feePercent > 0 && (
               <>
@@ -148,9 +203,9 @@ export function FinanceTab({
                   label={`Quick Pay fee (${feePercent}% on ${money(feeBase)})`}
                   value={`− ${money(feeAmount)}`}
                 />
-                {acc.reimbursements > 0 && (
+                {accReimbursements > 0 && (
                   <div className="text-[11px] text-gray-500 pl-1 -mt-0.5">
-                    {money(acc.reimbursements)} of at-cost reimbursement held out of the fee base
+                    {money(accReimbursements)} of at-cost reimbursement held out of the fee base
                   </div>
                 )}
                 <Line label="Net to carrier" value={money(carrierNet)} bold />
@@ -159,7 +214,7 @@ export function FinanceTab({
           </div>
         </div>
 
-        {acc.carrierLines.length > 0 && (
+        {!cancelled && acc.carrierLines.length > 0 && (
           <p className="text-[11px] text-gray-500 border-t border-gray-100 pt-2">
             Accessorials appear on both sides on purpose. They pass through to the customer at cost, so SRL bills
             exactly what the carrier is owed and takes no margin on them.
@@ -181,8 +236,10 @@ export function FinanceTab({
       {/* ─── Status ─────────────────────────────────────────────────────── */}
       <div className="border border-gray-200 rounded-lg bg-white p-4 space-y-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Invoice status</h3>
-        <StatusRow label="Customer invoice" ok={load.customerInvoiced} yes="Invoiced" no="Pending" />
-        <StatusRow label="Carrier settlement" ok={load.carrierSettled} yes="Settled" no="Pending" />
+        {/* "Pending" on a cancelled load promised an invoice and a settlement
+            that the cancellation voided. */}
+        <StatusRow label="Customer invoice" ok={load.customerInvoiced} yes="Invoiced" no={cancelled ? "Not billed" : "Pending"} />
+        <StatusRow label="Carrier settlement" ok={load.carrierSettled} yes="Settled" no={cancelled ? "Not paid" : "Pending"} />
         <StatusRow label="POD verified" ok={load.podVerified} yes="Yes" no="No" />
         {load.carrierPaymentTier && (
           <div className="flex justify-between">

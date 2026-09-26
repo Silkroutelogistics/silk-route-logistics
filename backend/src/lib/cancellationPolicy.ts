@@ -23,6 +23,7 @@ import type { TonuFaultSide } from "./tonuPolicy";
 import {
   CANCELLATION_REASONS as SHARED_REASONS,
   REASON_FAULT_PARTY as SHARED_REASON_FAULT_PARTY,
+  TONU_SIDE_TO_FAULT_PARTY as SHARED_TONU_SIDE_TO_FAULT_PARTY,
   MIN_CANCELLATION_NOTE_LENGTH,
   isCancellationReason as sharedIsCancellationReason,
   requiresNote as sharedRequiresNote,
@@ -46,12 +47,13 @@ export const CANCELLATION_REASONS: readonly CancellationReason[] = SHARED_REASON
  */
 export const REASON_FAULT_PARTY: Readonly<Record<CancellationReason, FaultParty>> = SHARED_REASON_FAULT_PARTY;
 
-/** Load.tonuFaultSide vocabulary → FaultParty. CUSTOMER ≡ SHIPPER. */
-export const TONU_SIDE_TO_FAULT_PARTY: Readonly<Record<TonuFaultSide, FaultParty>> = {
-  CUSTOMER: "SHIPPER",
-  CARRIER: "CARRIER",
-  BROKER: "BROKER",
-};
+/**
+ * Load.tonuFaultSide vocabulary → FaultParty. CUSTOMER ≡ SHIPPER. v3.8.bki —
+ * moved to shared so the Track & Trace drawer names the same party the server
+ * records; re-exported under the Prisma and tonuPolicy types, so a side the
+ * schema lacks fails to compile here.
+ */
+export const TONU_SIDE_TO_FAULT_PARTY: Readonly<Record<TonuFaultSide, FaultParty>> = SHARED_TONU_SIDE_TO_FAULT_PARTY;
 
 export { MIN_CANCELLATION_NOTE_LENGTH };
 

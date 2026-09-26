@@ -99,6 +99,19 @@ export const FAULT_PARTY_CONSEQUENCE: Readonly<Record<FaultParty, string>> = {
   NONE: "Nobody is marked.",
 };
 
+/**
+ * Load.tonuFaultSide vocabulary → FaultParty. CUSTOMER is the same party as
+ * SHIPPER: tonuFaultSide predates the FaultParty enum and keeps its own words
+ * until its migration lands (§13.3 Item 277). The bridge lives here so the
+ * server (lib/cancellationPolicy) and the Track & Trace drawer read one map.
+ */
+export type TonuFaultSideValue = "CUSTOMER" | "CARRIER" | "BROKER";
+export const TONU_SIDE_TO_FAULT_PARTY: Readonly<Record<TonuFaultSideValue, FaultParty>> = {
+  CUSTOMER: "SHIPPER",
+  CARRIER: "CARRIER",
+  BROKER: "BROKER",
+};
+
 export const MIN_CANCELLATION_NOTE_LENGTH = 10;
 
 export function isCancellationReason(v: unknown): v is CancellationReason {

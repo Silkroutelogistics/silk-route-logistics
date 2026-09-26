@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { PhoneCall, Plus, X } from "lucide-react";
+import { checkCallsClosed } from "../loadClosure";
 
 interface Props {
   load: any;
@@ -29,6 +30,12 @@ export function CheckCallsTab({ load, loadId, onChange }: Props) {
   const schedules: any[] = load.checkCallSchedules ?? [];
   const now = Date.now();
 
+  // v3.8.bki — a cancelled, TONU or completed load is not running. "Log call"
+  // posted status IN_TRANSIT against it (the server refuses the status move and
+  // keeps the call, so nothing broke, but the button invited a record that could
+  // not be true), and schedules the reversal had not yet reached counted as due.
+  const closed = checkCallsClosed(load.status);
+
   const completed = calls.length;
   const total = schedules.length || completed;
   const due = schedules.filter((s) => ["PENDING", "SENT"].includes(s.status) && new Date(s.scheduledTime).getTime() < now).length;
@@ -47,11 +54,17 @@ export function CheckCallsTab({ load, loadId, onChange }: Props) {
     <div className="space-y-4 text-sm">
       <div className="grid grid-cols-3 gap-3">
         <Card tone="green" label="Completed" value={`${completed}${total ? `/${total}` : ""}`} />
-        <Card tone="amber" label="Due now"   value={due} />
-        <Card tone="gray"  label="Upcoming"  value={upcoming} />
+        <Card tone="amber" label="Due now"   value={closed ? "—" : due} />
+        <Card tone="gray"  label="Upcoming"  value={closed ? "—" : upcoming} />
       </div>
 
-      {!showForm && (
+      {closed && (
+        <p className="text-xs text-gray-500">
+          This load is {load.status === "TONU" ? "a TONU" : String(load.status).toLowerCase()}. No check calls are due, and none can be logged.
+        </p>
+      )}
+
+      {!closed && !showForm && (
         <button
           onClick={() => setShowForm(true)}
           className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-gray-300 text-gray-500 hover:text-[#BA7517] hover:border-[#BA7517] rounded-lg transition"
@@ -60,7 +73,7 @@ export function CheckCallsTab({ load, loadId, onChange }: Props) {
         </button>
       )}
 
-      {showForm && (
+      {!closed && showForm && (
         <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="font-medium">New check call</h4>
