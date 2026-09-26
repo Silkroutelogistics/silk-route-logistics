@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import fs from "fs";
 import path from "path";
 import { loadNumberSeqInfo, resetLoadNumberSeqCache } from "../../../src/lib/loadNumberSeqInfo";
-import { LOAD_NUMBER_FLOOR } from "../../../src/lib/documentNumber";
+import { HIGHEST_LOAD_NUMBER_SQL, LOAD_NUMBER_FLOOR } from "../../../src/lib/documentNumber";
 
 // WHY AN INJECTED STORE AND NOT A REAL DATABASE. The backend CI job has no
 // postgres `services:` container -- its DATABASE_URL points at a localhost where
@@ -12,19 +12,26 @@ import { LOAD_NUMBER_FLOOR } from "../../../src/lib/documentNumber";
 // never runs. The store is injected instead, the classification runs for real,
 // and the live query + the GRANT were proven against production in v3.8.biq.
 //
-// THE MEANING INVERTED on 2026-09-26 (§21.2 corrected): loads continue from the
-// last legacy number, so 121498 and upward is the healthy state and the retired
-// 5001 series is the flagged one. The first case is production as it stands.
+// FAIL-SAFE (2026-09-26): `next` is the number the generator will issue, never a
+// refusal. The first case is production as it stands. `held` is what
+// HIGHEST_LOAD_NUMBER_SQL answers: the highest load number at or above the floor.
 
-const store = (rows: unknown) => ({ $queryRawUnsafe: async () => rows as any });
+const store = (rows: unknown, held: number | null = null) => ({
+  $queryRawUnsafe: async (sql: string) => (sql === HIGHEST_LOAD_NUMBER_SQL ? [{ max: held === null ? null : BigInt(held) }] : rows) as any,
+});
 const throwing = { $queryRawUnsafe: async () => { throw new Error("permission denied for sequence load_number_seq"); } };
 
 describe("loadNumberSeqInfo", () => {
   beforeEach(() => resetLoadNumberSeqCache());
 
-  it("ADVERSARIAL: production after 5001 and 5002 (last_value 5002, spent) is flagged BELOW FLOOR, not passed", async () => {
-    const r = await loadNumberSeqInfo(store([{ last_value: 5002n, is_called: true }]), 1_000);
-    expect(r).toMatchObject({ next: 5003, range: "BELOW FLOOR", unexpected: true });
+  it("ADVERSARIAL: production (5001-5003 issued, sequence spent at 5003) reports next 121498 via a lift, never 5004", async () => {
+    const r = await loadNumberSeqInfo(store([{ last_value: 5003n, is_called: true }]), 1_000);
+    expect(r).toMatchObject({ next: 121498, range: "LIFT PENDING", unexpected: false });
+  });
+
+  it("a load already holding the sequence's next number is unexpected, and next skips past it", async () => {
+    const r = await loadNumberSeqInfo(store([{ last_value: 121497n, is_called: true }], 121500), 1_000);
+    expect(r).toMatchObject({ next: 121501, range: "LIFT PENDING", unexpected: true });
   });
 
   it("the state the restart script leaves (121497, spent) reports 121498 as continuing", async () => {
@@ -43,7 +50,7 @@ describe("loadNumberSeqInfo", () => {
     expect(at.range).toBe("continuing");
     resetLoadNumberSeqCache();
     const below = await loadNumberSeqInfo(store([{ last_value: BigInt(LOAD_NUMBER_FLOOR - 1), is_called: false }]), 1);
-    expect(below).toMatchObject({ next: LOAD_NUMBER_FLOOR - 1, range: "BELOW FLOOR", unexpected: true });
+    expect(below).toMatchObject({ next: LOAD_NUMBER_FLOOR, range: "LIFT PENDING", unexpected: false });
     resetLoadNumberSeqCache();
     const spent = await loadNumberSeqInfo(store([{ last_value: BigInt(LOAD_NUMBER_FLOOR - 1), is_called: true }]), 1);
     expect(spent).toMatchObject({ next: LOAD_NUMBER_FLOOR, range: "continuing", unexpected: false });
@@ -56,6 +63,13 @@ describe("loadNumberSeqInfo", () => {
     expect(r.unexpected).toBeNull();
     expect(r.range).not.toBe("continuing"); // the whole point: no evidence != the safe answer
     expect(r.error).toContain("permission denied");
+  });
+
+  it("a failed read of the loads is unknown too, never the sequence alone", async () => {
+    const seqOnly = { $queryRawUnsafe: async (sql: string) => { if (sql === HIGHEST_LOAD_NUMBER_SQL) throw new Error("loads unreadable"); return [{ last_value: 121497n, is_called: true }] as any; } };
+    const r = await loadNumberSeqInfo(seqOnly, 1_000);
+    expect(r).toMatchObject({ next: null, range: null, unexpected: null });
+    expect(r.error).toContain("loads unreadable");
   });
 
   it("an empty result is unknown, not continuing", async () => {

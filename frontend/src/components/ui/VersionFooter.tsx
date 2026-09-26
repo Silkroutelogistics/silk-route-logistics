@@ -19216,7 +19216,8 @@
 // v3.8.blf — a POD upload no longer marks the load's invoice SENT; it delivers nothing to
 // the customer, so the invoice stays DRAFT until an email or mark-sent records a delivery.
 // v3.8.blh — load numbers are fail-safe: max(sequence, highest load held, 121497) + 1; never 5003, never refused.
-export const SRL_VERSION = "3.8.blh";
+// v3.8.blj — /api/health reports the load number the generator will issue: next 121498, LIFT PENDING until the first load.
+export const SRL_VERSION = "3.8.blj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -11,16 +11,17 @@
 // GRANT of v3.8.biq (§13.3 Item 303.2: the default ACL covers tables, not
 // sequences).
 //
-// WHAT "EXPECTED" MEANS NOW (§21.2, corrected 2026-09-26). Loads continue from
-// the last legacy number, so the next load is 121498 and upward. A next value
-// below LOAD_NUMBER_FLOOR is the state the generator REFUSES to issue from: the
-// retired 5001 series, where production's sequence sits (after 5001 and 5002)
-// until scripts/restart-load-number-sequence.ts is run. Health says so before
-// an AE finds out by failing to create a load.
+// WHAT IT REPORTS (FAIL-SAFE, ruled 2026-09-26). The generator issues
+// max(sequence, highest load held at or above the floor, 121497) + 1 and never
+// refuses, so health reports that same number without drawing one: "continuing"
+// when nextval() is the answer, "LIFT PENDING" when the next creation moves the
+// sequence first. Production sits in LIFT PENDING, next 121498, from the deploy
+// until its first new load. `unexpected` is true only when a load already holds
+// the number the sequence would issue: something numbered a load outside it.
 //
-// The meaning inverted with the correction. Until then a next value at or above
-// 121472 was the flagged state ("LEGACY RANGE") and a bare 5001-series value was
-// the healthy one.
+// The meaning has turned over twice. Until 2026-09-26 a next value at or above
+// 121472 was flagged ("LEGACY RANGE"); until the fail-safe, one below the floor
+// was ("BELOW FLOOR", which the generator then refused).
 //
 // NULL MEANS UNKNOWN, NEVER "continuing" — the same rule status_machine states.
 // A failed read reports nulls and the error. Reporting the safe-looking value
@@ -31,7 +32,7 @@
 // creation, and it is moved by a script while the process runs, so a short TTL
 // is both accurate and enough to keep a load-balancer poll off the database.
 
-import { LOAD_NUMBER_FLOOR } from "./documentNumber";
+import { highestLoadNumberAtOrAboveFloor, LOAD_NUMBER_FLOOR } from "./documentNumber";
 
 const TTL_MS = 60_000;
 
@@ -42,9 +43,9 @@ export interface SeqStore {
 export interface LoadNumberSeqInfo {
   /** The number the next load will be issued, or null if unknown. */
   next: number | null;
-  /** "continuing": the generator will issue `next`. "BELOW FLOOR": it will refuse. */
-  range: "continuing" | "BELOW FLOOR" | null;
-  /** True when the next number is below the floor. Null = unknown. */
+  /** "continuing": nextval() is `next`. "LIFT PENDING": the next creation moves the sequence to `next` first. */
+  range: "continuing" | "LIFT PENDING" | null;
+  /** True when a load already holds the number the sequence would issue. Null = unknown. */
   unexpected: boolean | null;
   checkedAt: string | null;
   error?: string;
@@ -76,13 +77,14 @@ export async function loadNumberSeqInfo(db: SeqStore, nowMs: number = Date.now()
     // the next number. Inverting this reports the state off by one — exactly at
     // the floor, where it matters.
     const lastValue = Number(row.last_value);
-    const next = row.is_called ? lastValue + 1 : lastValue;
-    const below = next < LOAD_NUMBER_FLOOR;
+    const seqNext = row.is_called ? lastValue + 1 : lastValue;
+    const held = await highestLoadNumberAtOrAboveFloor(db); // 0 when none
+    const next = Math.max(seqNext, held + 1, LOAD_NUMBER_FLOOR);
 
     const value: LoadNumberSeqInfo = {
       next,
-      range: below ? "BELOW FLOOR" : "continuing",
-      unexpected: below,
+      range: next === seqNext ? "continuing" : "LIFT PENDING",
+      unexpected: held >= seqNext,
       checkedAt: new Date(nowMs).toISOString(),
     };
     cache = { at: nowMs, value };
