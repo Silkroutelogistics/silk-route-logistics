@@ -19124,7 +19124,14 @@
 // in scope (the last also needs a current expiry on SRL's record), never an archived
 // carrier, and a person's lift during the FMCSA call wins. Manual suspensions are never
 // lifted automatically, so the Suspend modal says so again.
-export const SRL_VERSION = "3.8.bkj";
+// v3.8.bkk — The load-compliance scan alerts once per load, and never on deleted or test records (Item 320).
+//   The 2-hourly scan selected by status alone and wrote a new ComplianceAlert and
+// notification on every run: a load soft-deleted in July produced 320 of each, and
+// a real load's warning repeated until it read as noise. Deleted and test loads and
+// carriers are now fenced out; one open alert per load (any status but RESOLVED, so
+// a DISMISS holds) — a repeat at the same severity is silent, a severity change
+// updates the row and notifies once, and a load that clears resolves its alert.
+export const SRL_VERSION = "3.8.bkk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

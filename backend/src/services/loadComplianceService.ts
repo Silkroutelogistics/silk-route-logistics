@@ -228,14 +228,26 @@ export async function checkLoadCompliance(
 
 /**
  * Batch check all loads with an active transit status.
- * For non-compliant loads: creates ComplianceAlert and notifies
- * the load poster and DISPATCH users.
+ * For non-compliant loads: opens ONE ComplianceAlert per load and notifies the
+ * load poster and DISPATCH users when it opens or its severity changes.
+ *
+ * §13.3 Item 320 — this ran every two hours with no fence and no dedupe, so a
+ * load soft-deleted in July (carrier also deleted and a test account) produced
+ * 320 identical alerts and notifications, and a real load's genuine warning
+ * repeated until it read as noise. Now: deleted and test loads and carriers are
+ * out of scope, and the dedupe key is load + LOAD_COMPLIANCE + any status that
+ * is not RESOLVED — a human's DISMISS or SNOOZE suppresses repeats too, or the
+ * next run would overrule it. A load that comes back CLEAR resolves its open
+ * alert, so a later recurrence alerts again.
  */
 export async function checkAllActiveLoadCompliance(): Promise<BatchComplianceStats> {
   const activeLoads = await prisma.load.findMany({
     where: {
       status: { in: ACTIVE_LOAD_STATUSES as any },
       carrierId: { not: null },
+      deletedAt: null,
+      isTestAccount: false,
+      carrier: { carrierProfile: { deletedAt: null, isTestAccount: false } },
     },
     select: { id: true, referenceNumber: true, posterId: true, carrierId: true },
   });
@@ -249,9 +261,14 @@ export async function checkAllActiveLoadCompliance(): Promise<BatchComplianceSta
 
   for (const load of activeLoads) {
     const result = await checkLoadCompliance(load.id);
+    const alertKey = { type: "LOAD_COMPLIANCE", entityType: "LOAD", entityId: load.id, status: { not: "RESOLVED" } };
 
     if (result.severity === "CLEAR") {
       stats.compliant++;
+      await prisma.complianceAlert.updateMany({
+        where: alertKey,
+        data: { status: "RESOLVED", resolvedAt: new Date() },
+      });
       continue;
     }
 
@@ -261,18 +278,28 @@ export async function checkAllActiveLoadCompliance(): Promise<BatchComplianceSta
       stats.critical++;
     }
 
-    // Create ComplianceAlert for non-compliant loads
-    await prisma.complianceAlert.create({
-      data: {
-        type: "LOAD_COMPLIANCE",
-        entityType: "LOAD",
-        entityId: load.id,
-        entityName: load.referenceNumber ?? load.id,
-        expiryDate: new Date(), // alert is immediate
-        status: "ACTIVE",
-        severity: result.severity,
-      },
-    });
+    const open = await prisma.complianceAlert.findFirst({ where: alertKey, orderBy: { createdAt: "desc" } });
+    if (open && open.severity === result.severity) continue; // already alerted at this level
+
+    if (open) {
+      await prisma.complianceAlert.update({
+        where: { id: open.id },
+        data: { severity: result.severity, notifiedAt: new Date() },
+      });
+    } else {
+      await prisma.complianceAlert.create({
+        data: {
+          type: "LOAD_COMPLIANCE",
+          entityType: "LOAD",
+          entityId: load.id,
+          entityName: load.referenceNumber ?? load.id,
+          expiryDate: new Date(), // alert is immediate
+          status: "ACTIVE",
+          severity: result.severity,
+          notifiedAt: new Date(),
+        },
+      });
+    }
 
     // Build notification message
     const issuesSummary = result.issues.join("; ");
