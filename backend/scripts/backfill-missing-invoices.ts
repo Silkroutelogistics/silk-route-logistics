@@ -29,9 +29,10 @@
  * the customer's rate card, Customer.defaultAccessorialRates.TONU — $250 for
  * Beekeepers — falling back to the default. Nothing here prices a TONU.
  *
- * THE NUMBER FOLLOWS THE LOAD. A legacy load keeps the legacy form (SRL-121492
- * -> SRL-121492I); a 50001-series load prints the bare shared number. The dry
- * run prints the number each invoice would take; the service assigns it.
+ * THE NUMBER FOLLOWS THE LOAD: its digits plus I, a legacy load's included
+ * (SRL-121492 -> 121492I, 121498 -> 121498I). An invoice already issued keeps
+ * its number. The dry run prints the number each invoice would take; the
+ * service assigns it.
  */
 import { hostOf, isLocalHost } from "./prisma-target-guard";
 import { resolveTonuBilling } from "../src/lib/tonuPolicy";
@@ -73,7 +74,7 @@ export function planWrite(argv: string[], host: string): { write: boolean; refus
   return { write: true };
 }
 
-/** Pure: the number an invoice on this load takes — legacy form or bare. */
+/** Pure: the number an invoice on this load takes — its digits plus I. */
 export function invoiceNumberFor(load: { loadNumber?: string | null; referenceNumber?: string | null }): string | null {
   const stem = resolveLoadStem(load);
   return stem ? formatDocumentNumber(stem, "INVOICE") : null;
