@@ -19219,7 +19219,9 @@
 // v3.8.blj — /api/health reports the load number the generator will issue: next 121498, LIFT PENDING until the first load.
 // v3.8.bll — an invoice can record the SHA-256 of the file the customer received and link its stored copy.
 // Migration 20260926140000 amended before release: deliveredFileHash + archivedDocumentId (UNIQUE, RESTRICT).
-export const SRL_VERSION = "3.8.bll";
+// v3.8.blm — an invoice with an archived delivered file downloads as that file, hash-checked, never a re-render.
+// A failed read or a hash mismatch is a refusal (503/500) that says so.
+export const SRL_VERSION = "3.8.blm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

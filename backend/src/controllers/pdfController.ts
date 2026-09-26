@@ -5,6 +5,7 @@ import { generateBOLFromLoad, generateEnhancedRateConfirmation, generateShipperL
 import { generateBOLPrintToken } from "../services/shipperTrackingTokenService";
 import { resolveStopContacts } from "../lib/stopContact";
 import { log } from "../lib/logger";
+import { readArchivedInvoice } from "../lib/invoiceArchive";
 import {
   documentFilename,
   documentNumberFor,
@@ -186,7 +187,18 @@ export async function downloadInvoicePDF(req: AuthRequest, res: Response) {
       (invoice.load.customer?.userId === req.user!.id || invoice.load.posterId === req.user!.id);
     if (!isOwner && !isEmployee && !isShipperOwner) { res.status(403).json({ error: "Not authorized" }); return; }
 
-    const doc = generateInvoicePDF(invoice);
+    // RECONCILE 3d: an invoice whose delivered file is archived returns THOSE bytes,
+    // never a re-render, and a failed read is a refusal (lib/invoiceArchive.ts).
+    const archived = invoice.archivedDocumentId
+      ? await readArchivedInvoice({ archivedDocumentId: invoice.archivedDocumentId, deliveredFileHash: invoice.deliveredFileHash })
+      : null;
+    if (archived && !archived.ok) {
+      log.error({ err: archived.detail, invoiceId: invoice.id }, `[PDF] ${archived.code}: refused rather than re-rendered`);
+      res.status(archived.status).json({ error: archived.error, code: archived.code });
+      return;
+    }
+    const doc = archived ? null : generateInvoicePDF(invoice);
+    // One name either way: the archive downloads under the name the invoice always had.
     const filename = documentFilename(
       documentNumberFor(invoice.srlDocNumber, invoice.load, "INVOICE") ?? invoice.invoiceNumber,
       DOCUMENT_FILENAME_LABEL.INVOICE,
@@ -194,7 +206,12 @@ export async function downloadInvoicePDF(req: AuthRequest, res: Response) {
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    doc.pipe(res);
+    if (archived) {
+      res.setHeader("X-SRL-Content-Hash", archived.hash);
+      res.send(archived.bytes);
+      return;
+    }
+    doc!.pipe(res);
   } catch (e: any) {
     log.error({ err: e }, "[PDF] Invoice generation error:");
     res.status(500).json({ error: "Failed to generate invoice PDF" });
