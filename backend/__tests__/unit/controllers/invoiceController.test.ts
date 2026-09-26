@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { prisma } from "../../../src/config/database";
+import { formatDocumentNumber } from "../../../src/lib/documentNumber";
 
 // Mock dependent services
 vi.mock("../../../src/services/pdfService", () => ({
@@ -100,15 +101,19 @@ describe("invoiceController", () => {
     await createInvoice(req, res);
 
     const data = (mockPrisma.invoice.create as any).mock.calls[0][0].data;
-    expect(data.invoiceNumber).toBe("5001");
-    expect(data.srlDocNumber).toBe("5001");
+    // WHAT the rule prints is pinned once, in documentNumberBareScheme.test.ts.
+    // Here the point is that the handler takes the number from the load,
+    // through that rule, rather than from an INV- sequence.
+    expect(data.invoiceNumber).toBe(formatDocumentNumber("5001", "INVOICE"));
     // The mirror itself: one string, not two columns that happen to agree.
     expect(data.invoiceNumber).toBe(data.srlDocNumber);
     expect(data.invoiceNumber).not.toMatch(/^INV-/);
   });
 
-  it("createInvoice — a LEGACY load keeps its suffixed scheme", async () => {
-    // An old load is not renumbered. SRL-5001 takes the I suffix it always did.
+  it("createInvoice — a LEGACY load's invoice takes its number through the same rule", async () => {
+    // The load keeps its number. Its invoice is numbered by the shared rule like
+    // any other load's; what that prints for an SRL- load is pinned in
+    // documentNumberBareScheme.test.ts.
     mockPrisma.load.findUnique.mockResolvedValue({ status: "DELIVERED", tonuFaultSide: null, deletedAt: null, loadNumber: null, referenceNumber: "SRL-5001" } as any);
     mockPrisma.invoice.findMany.mockResolvedValue([] as any);
     mockPrisma.invoice.create.mockResolvedValue({ id: "inv-10" } as any);
@@ -119,8 +124,8 @@ describe("invoiceController", () => {
     await createInvoice(req, res);
 
     const data = (mockPrisma.invoice.create as any).mock.calls[0][0].data;
-    expect(data.invoiceNumber).toBe("SRL-5001I");
-    expect(data.srlDocNumber).toBe("SRL-5001I");
+    expect(data.invoiceNumber).toBe(formatDocumentNumber("SRL-5001", "INVOICE"));
+    expect(data.srlDocNumber).toBe(data.invoiceNumber);
   });
 
   // ── getInvoices ─────────────────────────────────────────

@@ -12,8 +12,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { prisma } from "../../../src/config/database";
 
 import { autoGenerateInvoice } from "../../../src/services/invoiceService";
+import { formatDocumentNumber } from "../../../src/lib/documentNumber";
 
 const mockPrisma = vi.mocked(prisma, true);
+
+// The load's invoice number, by the shared rule. What it prints is pinned in
+// documentNumberBareScheme.test.ts; these cases assert the invoice takes it.
+const INV_NO = formatDocumentNumber("SRL-5001", "INVOICE");
 
 function makeLoad(overrides: Record<string, any> = {}) {
   return {
@@ -85,14 +90,14 @@ describe("autoGenerateInvoice — DELIVERED -> shipper-AR draft", () => {
     (mockPrisma.invoice.findFirst as any).mockResolvedValue(null); // dup guard
     (mockPrisma.invoice.findMany as any).mockResolvedValue([{ invoiceNumber: "INV-1042" }]); // must be ignored
     (mockPrisma.load.findUnique as any).mockResolvedValue(makeLoad({ customerRate: 2400 }));
-    (mockPrisma.invoice.create as any).mockResolvedValue({ id: "inv-1", invoiceNumber: "SRL-5001I", amount: 2400 });
+    (mockPrisma.invoice.create as any).mockResolvedValue({ id: "inv-1", invoiceNumber: INV_NO, amount: 2400 });
 
     const result = await autoGenerateInvoice("load-1");
 
     expect(mockPrisma.invoice.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          invoiceNumber: "SRL-5001I", // mirrors the load, does NOT take INV-1043
+          invoiceNumber: INV_NO, // mirrors the load, does NOT take INV-1043
           amount: 2400, // customer rate, NOT a carrier rate
           lineHaulAmount: 2400,
           status: "DRAFT",
@@ -107,7 +112,7 @@ describe("autoGenerateInvoice — DELIVERED -> shipper-AR draft", () => {
     expect(mockPrisma.notification.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ userId: "ae-1", title: "Shipper invoice drafted" }) }),
     );
-    expect(result).toEqual({ id: "inv-1", invoiceNumber: "SRL-5001I", amount: 2400 });
+    expect(result).toEqual({ id: "inv-1", invoiceNumber: INV_NO, amount: 2400 });
   });
 
   it("adds the load fuel surcharge to the total", async () => {
@@ -131,12 +136,12 @@ describe("autoGenerateInvoice — DELIVERED -> shipper-AR draft", () => {
     (mockPrisma.invoice.findFirst as any).mockResolvedValue(null);
     (mockPrisma.invoice.findMany as any).mockResolvedValue([]); // would be INV-1001
     (mockPrisma.load.findUnique as any).mockResolvedValue(makeLoad({ customerRate: 500 }));
-    (mockPrisma.invoice.create as any).mockResolvedValue({ id: "inv-3", invoiceNumber: "SRL-5001I" });
+    (mockPrisma.invoice.create as any).mockResolvedValue({ id: "inv-3", invoiceNumber: INV_NO });
 
     await autoGenerateInvoice("load-1");
 
     expect(mockPrisma.invoice.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ invoiceNumber: "SRL-5001I", srlDocNumber: "SRL-5001I", amount: 500 }) }),
+      expect.objectContaining({ data: expect.objectContaining({ invoiceNumber: INV_NO, srlDocNumber: INV_NO, amount: 500 }) }),
     );
   });
 });

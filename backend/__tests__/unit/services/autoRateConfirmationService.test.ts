@@ -20,6 +20,7 @@ import {
 } from "../../../src/services/autoRateConfirmationService";
 import { quickPayDueDate } from "../../../src/services/integrationService";
 import { standardNetDays } from "../../../src/lib/quickPayPricing";
+import { formatDocumentNumber } from "../../../src/lib/documentNumber";
 
 const mockPrisma = vi.mocked(prisma, true) as any;
 
@@ -203,7 +204,7 @@ describe("autoGenerateRateConfirmation — drafting freezes nothing", () => {
     const { rc } = await runAutoRc(makeLoad(), makeTender("SILVER"));
     // A null here is invisible to the allocator's startsWith scan and to the
     // @unique column, so a re-issue silently reused this same number.
-    expect(rc.rateConNumber).toBe("SRL-121485R");
+    expect(rc.rateConNumber).toBe(formatDocumentNumber("SRL-121485", "RATE_CONFIRMATION"));
   });
 
   it("takes the next revision when a number is already allocated for the load", async () => {
@@ -211,11 +212,11 @@ describe("autoGenerateRateConfirmation — drafting freezes nothing", () => {
     mockPrisma.load.findUnique.mockResolvedValue(makeLoad());
     mockPrisma.loadTender.findUnique.mockResolvedValue(makeTender("SILVER"));
     mockPrisma.rateConfirmation.findFirst.mockResolvedValue(null);
-    mockPrisma.rateConfirmation.findMany.mockResolvedValue([{ rateConNumber: "SRL-121485R" }]);
+    mockPrisma.rateConfirmation.findMany.mockResolvedValue([{ rateConNumber: formatDocumentNumber("SRL-121485", "RATE_CONFIRMATION") }]);
     mockPrisma.rateConfirmation.create.mockImplementation(async ({ data }: any) => ({ id: "rc-2", ...data }));
 
     const rc: any = await autoGenerateRateConfirmation("load-1", "tender-1", "ae-1");
-    expect(rc.rateConNumber).toBe("SRL-121485R2");
+    expect(rc.rateConNumber).toBe(formatDocumentNumber("SRL-121485", "RATE_CONFIRMATION", 2));
   });
 });
 
