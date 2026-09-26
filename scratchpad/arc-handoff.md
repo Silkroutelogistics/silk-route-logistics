@@ -5,7 +5,88 @@ Nothing below is a regression introduced by the arc it sits under.
 
 ---
 
-## Item 290 arc — v3.8.bjy (2026-09-26), `fix/item-290`, NOT pushed
+## Notifications arc — v3.8.bkk / bkl / bkm (2026-09-26), `fix/notifications-r3`, NOT pushed
+
+Five commits on `9d41c997`: `954b5920` bkk (320), `02bc3f4a` bkl (321),
+`cc0c6438` bkm (322 code), `f2d921d8` (the data-step script, unversioned), and this
+docs commit. **The original build, `fix/notifications` at `61f21332`, is kept as the
+backup.** It was built as bjz/bka/bkb on `2434c765`.
+
+**Why it was rebuilt, twice.** origin/main moved twice before the push. First it went
+to `985e43c5`, where another session landed lift suspension as v3.8.bke and bkf and
+took Item 323. Then it went to `9d41c997`, v3.8.bkj (the auto-reversal fix), which
+closed Item 323 and added 324-325. That session and this one agreed by message: it
+took bkj, and this arc took **bkk/bkl/bkm and Item 326**. Two other unpushed
+worktrees hold more letters (`arc/invoicing-audit`: bjz, bka, bkb, bkd, bkh;
+`fix/crm-history-outbound`: bkc, bkg, bki). Each rebuild cherry-picked the commits
+and rebuilt the footer on origin's with the asserted-anchor helper. Each code commit
+is identical to its original apart from the footer marker; the script differs by
+one letter in its header comment. `fix/notifications-r2` (`87aa0db5`, on `985e43c5`)
+is superseded, and is kept only until this lands. The duplicate claim with
+`arc/invoicing-audit` is gone: this arc no longer holds bjz/bka/bkb.
+
+**Size — the 100-LOC halt rule.** By files, every commit is within 4 (3/4/3/2). By
+lines, counting tests and the footer: bkk +140/−15, bkl +51/−11, bkm +90/−25, script
++143. Source alone, bkk is +41/−14. The script is 141 lines of source, over the
+threshold, and I did not halt on it. **Ruled 2026-09-26: accepted as a one-off,
+because the script is not deployed. The halt rule stands for app code.**
+
+**Phase A, as measured (production, `srl_readonly`).**
+- 320: `L9180992591` has 320 alerts and 319 notifications (181 + 138, one per
+  severity title). Real loads: SRL-121494 ×20, SRL-121497 ×9, SRL-121489 ×5.
+- 321: 519 of 630 notifications disagree between `read` and `readAt`, all on AE
+  accounts. **0 portal rows are stuck**, so the JETEX claim in Item 321 was wrong
+  and is corrected there.
+- 322: the old read branch deletes 0 today and the new one 5; the unread branch
+  deletes 0 either way.
+
+**Data step.** Dry-run before the push, 2026-09-26: 351 alerts and 350 notifications
+to delete, 0 `readAt` backfilled, 2 alerts resolved. The credential copy was removed
+afterwards. `--commit` is Wasi's run, from his own terminal, after the fix is live
+and a post-deploy dry-run shows no increase. **Ruled: the reason `record deleted or
+test` stays in SystemLog (kept 90 days, Item 270). No column, no migration.**
+
+**Gates at the rebuilt tip (`6dd74bff`, r3)** — logs under `.logs/` in the worktree.
+- btsc 0; ftsc 0; build ok.
+- Backend 3195/3199 with 1 failure: `executionEvidence`, timed out. **It also fails
+  alone**, and fails alone on `2434c765` too, so it is pre-existing (recorded in the
+  Item 300.1 addendum). CI's Linux runner passes it. **Under the push rule it halts
+  the push.**
+- Frontend 378/378.
+- E2E: 2 passed on a FRESH container (`srl-e2e-notif3`, PG 55499), 0 sends, no
+  retries.
+- r2 (`985e43c5`), for the record: E2E failed 1 of 2 on the reused container
+  `srl-e2e-notif`. The accept-on-behalf 500 was `Unique constraint failed on
+  shipmentNumber`, and the retry got `SESSION_REPLACED`. The fresh container passed,
+  which is the Item 304.1 rule firing a fourth time.
+E2E runs on **3120/4120**. :3110 is still held by PID 23976 (a stale `ts-node-dev`
+from the main checkout); it was not touched.
+
+### Carried, deliberately not built
+
+1. **Item 326:** overbooking-check, ai-compliance-forecast and ofac-rescan notify
+   with no dedupe key. Ruled to stay in the backlog; the entry carries a size
+   estimate. Their `link` targets are not covered by the `actionUrl` guard.
+2. **`read` is deprecated, not dropped.** Dropping it is a `hold/` migration. The
+   unread retention branch still keys on `read: false`, which stays correct for as
+   long as nothing writes `read`.
+3. **The frontend contention failures** (`browserTargetHosts`, `FacilitiesTab`) match
+   the Item 300.1 pattern and are recorded in its addendum, not as a new item.
+4. **Cleanup after landing:** containers `srl-e2e-290` and `srl-e2e-notif`, the
+   worktrees `srl-290` and `srl-notif`, and the branches `fix/notifications` and
+   `fix/notifications-r2`.
+5. **`/clear` and `/compact` are user commands** and were not run.
+6. **`nextShipmentNumber` can collide, and not only in tests.** It takes the most
+   recently *created* shipment (`orderBy: createdAt desc`), not the highest number,
+   adds 1, and keeps a module-level counter (`shipmentController.ts:8-17`). Rows that
+   share a `createdAt`, or two accepts at once, can produce a number already taken
+   — and `shipmentNumber` is unique, so the accept path 500s (`tenderController.ts:288`).
+   It surfaced in the r2 E2E. It is not banked with a number yet, because item numbers
+   collided twice today; assign one when it is banked.
+
+---
+
+## Item 290 arc — v3.8.bjy (2026-09-26), pushed `4e8b1e1a` + docs `2434c765`, live (backend sha 2434c765, Pages check PASS)
 
 Customer credits are priced from the stamped invoice's own lines keyed to the row
 (the document as issued), never the carrier amount and never today's rate card. No
