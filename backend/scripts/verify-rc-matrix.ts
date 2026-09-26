@@ -18,7 +18,7 @@
  */
 import * as fs from "fs";
 import * as path from "path";
-import { generateEnhancedRateConfirmation } from "../src/services/pdfService";
+import { generateEnhancedRateConfirmation, RC_AGREEMENT_TO_BE_BOUND } from "../src/services/pdfService";
 import { buildRcCountersign } from "../src/lib/rcCountersign";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
@@ -49,10 +49,16 @@ const EXPECTED_PAGES: Record<string, number> = {
   "qp fee without speed": 3,
   "qp standard label with fee": 3,
   "qp with accessorials": 3,
-  // Issued, so the acceptance strip carries the marker, the ISO date and the
-  // drawn statement. The worst-case variant is the one that matters: it is the
-  // tightest fixture in the matrix, and the statement is the only thing this
-  // arc adds to page 3.
+  // Issued, so the closing section carries the Agreement to be Bound clause
+  // and SRL's countersignature statement. The worst-case variant is the one
+  // that matters: it is the tightest fixture in the matrix.
+  //
+  // v3.8.bls — still 3 across the matrix, for a measured reason. The signature
+  // strip is gone, and the closing section is 47.9pt (heading 17.1 + clause
+  // 30.8) against the 45.8pt page 2 leaves on the baseline fixture; an issued
+  // copy adds the 42.2pt statement. So page 3 remains the closing page, now
+  // carrying the binding clause and the countersignature rather than ruled
+  // lines. A shorter load fits on two pages, as the pinned fixture does.
   "countersigned": 3,
   "countersigned worst case": 3,
 };
@@ -300,11 +306,11 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
       { rcCountersign: buildRcCountersign(new Date("2026-09-01T12:00:00.000Z")) },
       {
         expect: [
-          "Countersigned electronically",
           "applied automatically on issuance of this Rate Confirmation",
           "Countersigned at (UTC, ISO 8601): 2026-09-01T12:00:00.000Z",
-          "2026-09-01",
         ],
+        // v3.8.bls — the broker signature cell is gone with the strip.
+        forbid: ["Countersigned electronically"],
       },
     ],
     [
@@ -314,7 +320,7 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
         customTerms: "Extra handling required.",
         rcCountersign: buildRcCountersign(new Date("2026-09-01T12:00:00.000Z")),
       },
-      { expect: ["Countersigned electronically", "Countersigned for Silk Route Logistics Inc."] },
+      { expect: ["Countersigned for Silk Route Logistics Inc."], forbid: ["Countersigned electronically"] },
     ],
   ];
   let fails = 0;
@@ -417,6 +423,16 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
           + " shape is intended, then update EXPECTED_PAGES[\"" + name + "\"] in this file in the same commit.");
       }
       if (!sawBca) problems.push("BCA incorporation MISSING");
+
+      // (v3.8.bls) THE DOCUMENT CLOSES WITH ITS AGREEMENT TO BE BOUND, AND
+      // CARRIES NO SIGNATURE FIELDS. Held on every case, because a page that
+      // grows a pen line back is a page asking for a mark nothing collects.
+      // Compared against the exported clause, not a copy of it.
+      if (!hasText(allText, "AGREEMENT TO BE BOUND")) problems.push("AGREEMENT TO BE BOUND heading MISSING");
+      if (!hasText(allText, RC_AGREEMENT_TO_BE_BOUND)) problems.push("Agreement to be Bound clause MISSING or altered");
+      for (const pen of ["AUTHORIZED SIGNATORY", "Sign and return", "signature below"]) {
+        if (hasText(allText, pen)) problems.push('SIGNATURE FIELD PRESENT: "' + pen + '"');
+      }
       if (!sawInvoicing) problems.push("invoicing block MISSING");
       for (const want of texts?.expect ?? []) {
         if (!hasText(allText, want)) problems.push('MISSING TEXT: "' + want + '"');

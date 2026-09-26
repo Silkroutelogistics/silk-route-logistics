@@ -33,6 +33,13 @@ export async function extractPdfText(buffer: Buffer): Promise<string> {
  * RC PDF must NOT contain any of these post-Sprint-30 / Sprint-33.
  */
 export const RC_PDF_FORBIDDEN: string[] = [
+  // v3.8.bls — the Rate Confirmation has no signature fields. It closes with
+  // its Agreement to be Bound clause; a pen line coming back would ask for a
+  // mark this process never collects.
+  // (The signature LABELS render letter-spaced and pdf-parse would never
+  // match them, so they are held by verify:rc, which normalizes whitespace.)
+  "Sign and return this page",
+  "Countersigned electronically",
   // Sprint 30 — Houston template provenance
   "Westheimer",
   "Houston, TX 77063",
@@ -143,6 +150,11 @@ export const RC_PDF_FORBIDDEN: string[] = [
  * is unambiguously a regression even before Item 48 ships.
  */
 export const RC_PDF_REQUIRED: string[] = [
+  // v3.8.bls — the closing clause, and the sentence that makes the absence of
+  // a signature field deliberate rather than missing.
+  // Line 1 of the clause, so no wrap can split it; the heading renders
+  // letter-spaced and is held by verify:rc instead.
+  "Carrier has read this entire Rate Confirmation.",
   // Sprint 45-RC (v3.8.abd) — case change: pre-migration legacy chrome
   // rendered title case "Silk Route Logistics Inc."; post-migration skill
   // chrome renders BRAND.legalName all-caps in header per skill canonical

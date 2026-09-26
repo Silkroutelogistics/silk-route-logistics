@@ -44,35 +44,9 @@ export function buildRcCountersign(at: Date): RcCountersign {
   return { name: SIGNATORY_NAME, title: SIGNATORY_TITLE, at };
 }
 
-/**
- * What the broker SIGNATURE cell says.
- *
- * NOT a typed name. agreementPdfService's rule holds unchanged: the SIGNATURE
- * line is where a wet or drawn mark goes, and printing a name there would
- * assert a mark nobody made. This says what actually happened instead, and the
- * statement below the block says it in full.
- *
- * It also has to FIT. drawSignatureBlock renders a prefilled value with
- * lineBreak: false into CONTENT_W / 2 - 12 = 258pt, so an over-long string
- * overprints the cell rather than wrapping. Measured at FONT_BODY 8.5 this is
- * 113.0pt. Do not lengthen it without re-measuring; the detention label in
- * drawRateConTerms is the standing example of what happens when somebody does.
- */
-export const RC_COUNTERSIGN_MARKER = "Countersigned electronically";
-
-/**
- * The broker DATE cell: ISO, matching the BCA's signature block.
- *
- * Deliberately NOT the page-1 DATE ISSUED format ("Sep 22, 2026"). The two
- * registers differ and the signature block is the one that has to agree across
- * documents: a carrier holding a rate confirmation and a Broker-Carrier
- * Agreement should not find two conventions for the same act. ISO is also
- * unambiguous, which on a signed instrument is worth more than matching the
- * meta strip twelve inches above it.
- */
-export function rcCountersignDate(cs: RcCountersign): string {
-  return new Date(cs.at).toISOString().slice(0, 10);
-}
+// v3.8.bls — RC_COUNTERSIGN_MARKER and rcCountersignDate are gone with the
+// broker signature cell they filled. The Rate Confirmation has no signature
+// fields; the statement below is the whole record of SRL's countersignature.
 
 /**
  * The full statement, drawn below the acceptance block.

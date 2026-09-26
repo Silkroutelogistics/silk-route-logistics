@@ -19279,6 +19279,12 @@
 // Without one, the carrier column drops the EIN field rather than printing an
 // empty line. The AE identity route no longer returns the full number, and the
 // W-9 card stops claiming a parser that does not exist.
+// v3.8.bls — The Rate Confirmation closes with an Agreement to be Bound, and has no signature fields.
+//   The acceptance strip and "sign and return" line are gone: a carrier accepts
+// through the signing link or by moving the freight, and the closing clause now
+// says so, once, with "No signature on this document is required". SRL's
+// countersignature stays as its full statement. Terms version bumped; it also
+// carries the week's detention and layover figures, which moved without one.
 export const SRL_VERSION = "3.8.blv";
 
 export function VersionFooter({ className }: { className?: string }) {

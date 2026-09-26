@@ -51,8 +51,6 @@ import {
   drawCarrierRequirements,
   drawRateConTerms,
   drawSignatureBlock,
-  RATE_CON_SIGNATURE_ROLES,
-  roleFieldKey,
   drawFooter,
   drawContinuationHeader,
   drawPanel,
@@ -120,12 +118,8 @@ import {
   DOMAIN,
   MC_NUMBER,
   DOT_NUMBER,
-  SIGNATORY_NAME,
-  SIGNATORY_TITLE,
 } from "../config/authority";
 import {
-  RC_COUNTERSIGN_MARKER,
-  rcCountersignDate,
   rcCountersignStatement,
   type RcCountersign,
 } from "../lib/rcCountersign";
@@ -1636,6 +1630,16 @@ export function buildRateConOperationalTerms(
  * Item 8.8 leading-zero MC# inherited from skill BRAND verbatim per D7
  * carry-forward — dedicated sprint closes across all 14 surfaces.
  */
+/**
+ * The closing clause of every Rate Confirmation (v3.8.bls). Part of the terms:
+ * changing it is a terms-version bump in lib/agreementVersions.
+ */
+export const RC_AGREEMENT_TO_BE_BOUND =
+  "Carrier has read this entire Rate Confirmation. Carrier accepts it, and agrees to be bound by it and by the " +
+  "Broker-Carrier Agreement it incorporates, on the first of these: accepting it electronically through SRL's " +
+  "signing link, dispatching a unit, arriving at the pickup location, or beginning transport. No signature on this " +
+  "document is required. A carrier that does not agree to every term must decline the load before dispatching a unit.";
+
 export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formData: Record<string, any>): PDFDoc {
   const fd = formData || {};
   // v3.8.arq — the footer RULE is drawn at PAGE_H - MARGIN - 12 - 4, which is
@@ -2518,7 +2522,6 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     // statement; it is the cheapest compliance line available to us.
     "Silk Route Logistics Inc. is an FMCSA-licensed property broker (USDOT 4526880, MC# 1794414). SRL arranges transportation. SRL does not transport freight.",
     "This Rate Confirmation is governed by the Broker-Carrier Agreement between Silk Route Logistics Inc. and Carrier (the “BCA”). In the event of conflict, the BCA controls.",
-    "Acceptance: Carrier's signature below, or Carrier's dispatch of a unit, arrival at the pickup location, or commencement of transport, whichever occurs first, constitutes binding acceptance of this Rate Confirmation and the BCA.",
     // v3.8.arp — detention clock-start. "2 hrs free" never said free from WHAT,
     // which is the single largest money ambiguity on the document: a driver who
     // gates in four hours early could bill from arrival while SRL believed it
@@ -2641,7 +2644,12 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     // Schneider both require the document returned with the invoice. SRL printed
     // a signature block and never said where to send it, so it asked for a
     // signature it could not collect.
-    "Attach a signed copy of this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.",
+    //
+    // v3.8.bls — "a signed copy" named a document that no longer exists: the
+    // Rate Confirmation has no signature fields, and the carrier's signature is
+    // recorded electronically against the stored copy. The packet still carries
+    // the Rate Confirmation itself.
+    "Attach this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.",
     "Put the SRL load number on the invoice. One invoice per load; do not batch loads onto one invoice.",
     // v3.8.art — Steam: "Your invoice should match the final Rate Confirmation
     // sent from Steam. Any invoice that does not match ... may be disputed and
@@ -2748,125 +2756,46 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     y += bannerH + 12;
   }
 
-  // Signature — RATE_CON_SIGNATURE_ROLES (1 block: Carrier Acceptance only,
-  // not the BOL three-block pattern; skill canonical for Rate Cons)
-  // Sprint 48.c (Item 117) — pre-fill CARRIER LEGAL NAME / MC # / DOT # from
-  // the same hybrid sources used by the page-1 CARRIER · ASSIGNED block.
-  // Carrier writes only AUTHORIZED SIGNATORY / TITLE / SIGNATURE / DATE at
-  // signing time. Industry-standard RC pattern (CHR / Coyote / RXO).
-  // ── ACCEPTANCE STRIP, two columns per the locked design ──────────────────
+  // ── AGREEMENT TO BE BOUND (v3.8.bls) ──────────────────────────────────────
   //
-  // The carrier's identity is the party sub-line, not four more ruled rows: the
-  // CARRIER band above already states it, and seven rows is what kept pushing
-  // this block onto a third page carrying nothing else.
+  // Owner, 2026-09-26: the binding clause goes at the end of the Rate
+  // Confirmation "so no signature field for broker and carrier exists".
   //
-  // The BROKER column is prefilled on every render, ROLE-SCOPED. Both columns
-  // carry a field called TITLE and one called SIGNATURE; a bare key would print
-  // the broker's officer on the line the carrier signs.
-  const carrierIdentityLine = [
-    carrierName && carrierName !== "—" ? carrierName : null,
-    carrierMc && carrierMc !== "—" ? `MC ${carrierMc}` : null,
-    carrierDot && carrierDot !== "—" ? `DOT ${carrierDot}` : null,
-  ].filter(Boolean).join(" · ");
-
-  const rcRoles = RATE_CON_SIGNATURE_ROLES.map((r, i) =>
-    i === 0
-      ? { ...r, certification: carrierIdentityLine }
-      : { ...r, certification: `${COMPANY.address} · MC# ${MC_NUMBER} · USDOT# ${DOT_NUMBER}` },
-  );
-
-  // The countersignature, when this document has been issued. A DRAFT has
-  // not, so its broker date line stays open and no statement is drawn -- the
-  // same rule agreementPdfService applies to an unsigned specimen, and for the
-  // same reason: there is no date until there is an execution.
+  // The two-column acceptance strip is gone, and with it the return-by-email
+  // line. Neither was how an RC is accepted: a carrier accepts through the
+  // signing link (v3.8.axu, which records name, IP, user agent and time against
+  // the stored bytes) or by moving the freight. Ruled lines for a pen asked for
+  // a mark this process never collects, and made an unsigned page look like an
+  // unfinished one. The clause that governs acceptance used to sit in GOVERNING
+  // TERMS and point at "Carrier's signature below"; it now closes the document,
+  // once, and says a signature on the page is not required.
+  //
+  // SRL's countersignature stays as the full statement below the clause. It
+  // records who bound SRL, when, and on what act; it was never a mark.
   const countersign = (fd.rcCountersign ?? null) as RcCountersign | null;
-
-  const sigPrefill: Record<string, string> = {
-    [roleFieldKey(rcRoles[1].title, "PRINT NAME")]: SIGNATORY_NAME,
-    [roleFieldKey(rcRoles[1].title, "TITLE")]: SIGNATORY_TITLE,
-    ...(countersign
-      ? {
-          // NOT a typed name. The rule from agreementPdfService holds: the
-          // SIGNATURE line is where a drawn mark goes, and a name printed
-          // there asserts a mark nobody made. This states what happened.
-          [roleFieldKey(rcRoles[1].title, "SIGNATURE")]: RC_COUNTERSIGN_MARKER,
-          [roleFieldKey(rcRoles[1].title, "DATE")]: rcCountersignDate(countersign),
-        }
-      : {}),
-  };
-
-  // Measured, never estimated. The reserve below has to cover the statement
-  // too, or a countersigned document can put the block on one page and the
-  // sentence that qualifies it on the next.
   const csStatement = countersign ? rcCountersignStatement(countersign) : null;
+
+  // Measured, never estimated: the heading, the clause and the statement stay
+  // together, so the statement is never orphaned from the clause it follows.
+  // drawSectionHeading advances 15.1pt at its own font (measured on the
+  // matrix fixtures), and the section adds 2pt below it.
+  const RC_BOUND_HEADING_H = 17.2;
+  doc.font(FONT_BODY, 7.5);
+  const boundH = doc.heightOfString(RC_AGREEMENT_TO_BE_BOUND, { width: CONTENT_W, lineGap: 0.5 });
   const csStatementH = csStatement
     ? doc.font(FONT_BODY_ITALIC, 8).heightOfString(csStatement, { width: CONTENT_W, lineGap: 1 }) + 8
     : 0;
-
-  // v3.8.azu C11 — 210 -> 150. Four fields at 26pt is 104, plus the title row
-  // and the party sub-line. The reserve below it is the block plus the return
-  // instruction, and it is what keeps the strip off a page boundary: half a
-  // signature block at the foot of one page with the ruled fields on the next
-  // is how a returned copy comes back unsigned (v3.8.arp).
-  // Measured, not guessed: title at +0, party sub-line at +16, four field
-  // rows at 26pt starting +38, last underline at +136.
-  const RC_SIG_H = 140;
-  // The block plus the return instruction plus the countersign statement,
-  // none of which may be orphaned from the signature they belong to.
-  rcEnsureRoom(RC_SIG_H + 24 + csStatementH);
-  drawSignatureBlock(doc, y, {
-    roles: rcRoles,
-    height: RC_SIG_H,
-    prefilledValues: sigPrefill,
-  });
-
-  // v3.8.art — close the signature loop. SRL printed a 7-field acceptance block
-  // and gave no return channel, so it asked for a signature it had no way to
-  // collect, then fell back to arguing whether dispatch occurred. Greatwide:
-  // "Carrier must sign load confirmation and fax back to agency at ...". MoLo:
-  // "Please sign and return to MoLo". Allen Lund: "PRINT & SIGN THIS PAGE and
-  // then EMAIL to ...". 3 of 7 name a return channel; SRL named none.
-  //
-  // C3 — AND IT NO LONGER CONTRADICTS THE CLAUSE ABOVE IT. "before dispatch"
-  // read as a condition precedent, while GOVERNING TERMS on page 2 says in as
-  // many words that dispatching a unit, arriving at pickup or starting
-  // transport is itself binding acceptance, whichever comes first. One document
-  // told a carrier two different things about when it takes effect, and the
-  // instruction was the half that was wrong. It now states the return as what
-  // it is -- how to confirm -- and names the other routes rather than implying
-  // they do not exist.
-  //
-  // C3a — THE ADDRESS IS BACK, and dropping it in C3 was the regression. The
-  // whole point of v3.8.art was that SRL asked for a signature and named no
-  // way to return it. "Sign and return this page" with no destination is that
-  // defect again in nicer words. Measured before restoring: both wordings
-  // render at 20.5pt over two lines, so the return channel costs nothing.
-  //
-  // NOT a terms-version bump. The RC terms constant in lib/agreementVersions
-  // governs the governing clauses above (2392-2443) and this line is not one of
-  // them; the clause it defers to is unchanged. The constant is deliberately not
-  // named here: consentAndTermsVersion asserts this file never mentions it, so
-  // that the renderer cannot read today version over an older document, and that
-  // guard reads raw source including comments.
+  rcEnsureRoom(RC_BOUND_HEADING_H + boundH + csStatementH);
+  y = drawSectionHeading(doc, "AGREEMENT TO BE BOUND", MARGIN, y, { ref: "BCA Art. 8" }) + 2;
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
-  doc.text(
-    "Sign and return this page to operations@silkroutelogistics.ai to confirm acceptance. Dispatch of a unit, " +
-      "arrival at the pickup location, or commencement of transport also constitutes binding acceptance " +
-      "under Governing Terms.",
-    MARGIN, y + RC_SIG_H + 6, { width: CONTENT_W, lineGap: 0.5 },
-  );
+  doc.text(RC_AGREEMENT_TO_BE_BOUND, MARGIN, y, { width: CONTENT_W, lineGap: 0.5 });
+  y = doc.y;
 
-  // THE COUNTERSIGNATURE, DRAWN. The broker cell says "Countersigned
-  // electronically" in 258pt; this is the sentence that says by whom, when,
-  // and on what act. It is drawn full width because its first line measures
-  // 577.8pt at this font and cannot fit a cell.
-  //
-  // Below the return instruction rather than above it: v3.8.art put that line
-  // directly under the block on purpose, and nothing here moves it.
   if (csStatement) {
-    const csY = doc.y + 8;
+    const csY = y + 8;
     doc.font(FONT_BODY_ITALIC, 8).fillColor(TOKENS.fg2);
     doc.text(csStatement, MARGIN, csY, { width: CONTENT_W, lineGap: 1 });
+    y = doc.y;
   }
 
   // v3.8.aro — stamp every buffered page with a truthful "Page N of M". Before

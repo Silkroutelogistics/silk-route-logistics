@@ -50,7 +50,12 @@ export const CURRENT_VERSIONS: Record<string, string> = {
  * it carry NULL and render "unversioned", which is honest: the terms they were
  * issued under were never recorded and cannot be reconstructed.
  */
-export const RC_TERMS_VERSION = "2026-08-31-v1";
+//
+// v2 (2026-09-26, v3.8.bls) — the acceptance clause left GOVERNING TERMS and
+// became the closing Agreement to be Bound section; the signature strip is
+// gone. Detention, layover and TONU figures moved in the same week (v3.8.blk)
+// and are carried by this version as well.
+export const RC_TERMS_VERSION = "2026-09-26-v2";
 
 export type DocumentKey = keyof typeof CURRENT_VERSIONS;
 
