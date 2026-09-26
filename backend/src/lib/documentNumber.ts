@@ -485,22 +485,25 @@ export const DOCUMENT_FILENAME_LABEL: Record<Exclude<DocumentKind, "SUPPLEMENTAL
  * 5001 and 5002, issued in between, keep their numbers and have no bearing on
  * what comes next.
  *
- * START WITH only applies where the sequence does not exist yet (IF NOT
- * EXISTS): a fresh CI database, a local container. Production's sequence does
- * exist, and after 5001 and 5002 it sits at 5002, so it is moved by
- * scripts/restart-load-number-sequence.ts — a production write, run
- * deliberately. THIS FUNCTION NEVER MOVES THE SEQUENCE.
+ * FAIL-SAFE (ruled 2026-09-26). The number issued is
  *
- * FLOOR, NOT LIFT. A number below LOAD_NUMBER_FLOOR is refused, not issued. On a
- * database whose sequence was never moved that number would be 5003, and a load
- * number is printed on the BOL and the rate confirmation, where it cannot be
- * taken back once a carrier or shipper holds it. Refusing costs one failed load
- * creation with the fix named in the error; issuing costs a document number
- * outside the series, permanently. The refused draw burns its value, which was
- * below the floor and so could never be issued anyway.
+ *   max(the sequence, the highest load number at or above the floor,
+ *       LAST_LEGACY_LOAD_NUMBER) + 1
+ *
+ * so it is never below the floor and no load is refused, whether or not
+ * scripts/restart-load-number-sequence.ts has run. Below-floor numbers do not
+ * enter the max: 5001 and 5002, and 5003, which production issued on 2026-09-26
+ * before this shipped. "Highest load number" is HIGHEST_LOAD_NUMBER_SQL.
+ *
+ * THE LIFT. When the sequence is at or below that max, liftLoadNumberSeq moves
+ * it once, under an advisory lock. In the common case the sequence is ahead,
+ * nextval() is the answer, and there is no transaction and no lock. START WITH
+ * still applies only where the sequence does not exist yet (IF NOT EXISTS): a
+ * fresh CI database, a local container.
  *
  * nextval() is non-transactional by design, so a rolled-back create burns a
- * number. That is correct and deliberate — gaps are free, collisions are not.
+ * number. That is correct and deliberate — gaps are free, collisions are not. A
+ * draw at or below the max burns too; it could never have been issued.
  */
 export const LAST_LEGACY_LOAD_NUMBER = 121497;
 export const LOAD_NUMBER_FLOOR = LAST_LEGACY_LOAD_NUMBER + 1;
@@ -541,14 +544,27 @@ export async function generateLoadNumber(client: any = prisma): Promise<string> 
   // a test holds the two equal.
   await client.$executeRaw`CREATE SEQUENCE IF NOT EXISTS load_number_seq START WITH 121498`;
   const n = await drawLoadNumber(client);
-  if (n < LOAD_NUMBER_FLOOR) {
-    throw new Error(
-      `load_number_seq issued ${n}, below ${LOAD_NUMBER_FLOOR}. Loads continue from the last ` +
-        `legacy number (${LAST_LEGACY_LOAD_NUMBER}) and this database's sequence has not been moved: ` +
-        `run scripts/restart-load-number-sequence.ts. No load was created.`,
-    );
-  }
-  return String(n);
+  const taken = Math.max(await highestLoadNumberAtOrAboveFloor(client), LAST_LEGACY_LOAD_NUMBER);
+  if (n > taken) return String(n);
+  return liftLoadNumberSeq(client, taken);
+}
+
+/** pg_advisory_xact_lock key that serialises the lift. Nothing else takes it. */
+const LOAD_NUMBER_LIFT_LOCK = 2026092601;
+
+/** Move the sequence past `taken` once. Under the lock it draws again and sets the
+ *  sequence only if that draw is still at or below `taken`: a creator who waited on
+ *  the lock finds it moved and issues the next number. */
+async function liftLoadNumberSeq(client: any, taken: number): Promise<string> {
+  const run = async (tx: any): Promise<string> => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${LOAD_NUMBER_LIFT_LOCK}::bigint)`;
+    const n = await drawLoadNumber(tx);
+    if (n > taken) return String(n);
+    await tx.$executeRaw`SELECT setval('load_number_seq', ${taken + 1}::bigint, true)`;
+    return String(taken + 1);
+  };
+  // A transaction client has no $transaction: it is inside one, holding the lock until it ends.
+  return typeof client.$transaction === "function" ? client.$transaction(run, { timeout: 15_000 }) : run(client);
 }
 
 // ─── Allocation ─────────────────────────────────────────────────────────────

@@ -393,12 +393,26 @@ describe("loads continue from the last legacy number (§21.2, corrected 2026-09-
     expect(statements.join(" ")).not.toMatch(/\b5000?1\b/);
   });
 
-  it("5001 and 5002 do not change the next number: a sequence left at 5002 is refused, never lifted or issued", async () => {
-    const { client, statements, state } = sequence({ last: 5002, called: true });
-    await expect(generateLoadNumber(client as any)).rejects.toThrow(/issued 5003, below 121498/);
-    await expect(generateLoadNumber(client as any)).rejects.toThrow(/restart-load-number-sequence/);
-    expect(statements.some((s) => /setval|ALTER SEQUENCE/i.test(s))).toBe(false);
-    expect(state()!.last).toBeLessThan(LOAD_NUMBER_FLOOR);
+  it("FAIL-SAFE: a fresh deploy with the sequence at 5002 issues 121498; after 121498, the next is 121499", async () => {
+    // 5001-5003 exist below the floor and do not enter the max.
+    const { client, statements, loads } = sequence({ last: 5002, called: true }, ["5001", "5002", "5003", "SRL-121497"]);
+    expect(await generateLoadNumber(client)).toBe("121498");
+    loads.push("121498");
+    expect(await generateLoadNumber(client)).toBe("121499");
+    expect(statements.filter((s) => /setval/.test(s))).toHaveLength(1); // lifted once, then nextval alone
+    // Production as it stands: 5003 issued, the sequence past it.
+    expect(await generateLoadNumber(sequence({ last: 5003, called: true }, ["5001", "5002", "5003"]).client)).toBe("121498");
+  });
+
+  it("creators who all drew from the unmoved sequence never issue the same number", async () => {
+    const { client } = sequence({ last: 5002, called: true });
+    const got = await Promise.all([generateLoadNumber(client), generateLoadNumber(client), generateLoadNumber(client)]);
+    expect([...got].sort()).toEqual(["121498", "121499", "121500"]);
+  });
+
+  it("a number a load already holds is never issued again, bare or SRL-", async () => {
+    expect(await generateLoadNumber(sequence({ last: 121497, called: true }, ["121498", "121499", "121500"]).client)).toBe("121501");
+    expect(await generateLoadNumber(sequence({ last: 121497, called: true }, ["SRL-121498"]).client)).toBe("121499");
   });
 
   it("once the sequence sits at 121497, the next load is 121498 and it is not moved again", async () => {
@@ -416,9 +430,14 @@ describe("loads continue from the last legacy number (§21.2, corrected 2026-09-
     expect(at, "generateLoadNumber not found").toBeGreaterThan(-1);
     const body = src.slice(at, src.indexOf("\n}", at));
     expect(new Set(body.match(/\b\d{4,}\b/g) ?? [])).toEqual(new Set([String(LOAD_NUMBER_FLOOR)]));
-    // SQL shapes only: the refusal message names the restart SCRIPT, and a bare
-    // /RESTART/ matched that prose rather than a statement.
+    // The sequence moves in one place only, the lift, and only after its lock.
     expect(body).not.toMatch(/setval\s*\(|ALTER\s+SEQUENCE|RESTART\s+WITH/i);
+    const liftAt = src.indexOf("async function liftLoadNumberSeq");
+    expect(liftAt, "liftLoadNumberSeq not found").toBeGreaterThan(-1);
+    const lift = src.slice(liftAt, src.indexOf("\n}", liftAt));
+    expect(src.match(/setval\s*\(/g)).toHaveLength(1);
+    expect(lift.indexOf("pg_advisory_xact_lock")).toBeGreaterThan(-1);
+    expect(lift.indexOf("setval")).toBeGreaterThan(lift.indexOf("pg_advisory_xact_lock"));
     const { client } = sequence(null);
     expect(await generateLoadNumber(client as any)).not.toMatch(/SRL/);
   });

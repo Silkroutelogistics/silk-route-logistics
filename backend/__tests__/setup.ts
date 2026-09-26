@@ -417,6 +417,7 @@ vi.mock("../src/config/database", () => ({
     },
     $executeRaw: vi.fn(),
     $queryRaw: vi.fn(),
+    $queryRawUnsafe: vi.fn(),
     $transaction: vi.fn(),
   },
 }));
