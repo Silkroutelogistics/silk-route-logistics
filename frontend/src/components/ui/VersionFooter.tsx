@@ -19366,6 +19366,11 @@
 // address through the billing fallback. It now checks a switch first: the
 // `ar-reminder-emails` cron-registry row, created off at boot and never re-enabled
 // by a restart. ADMIN/CEO flip it from the AR aging page; accounting can see it.
+// v3.8.bkq — Editing a CRM customer's profile saves, and a refused save says why.
+//   The form held the credit limit as `?? 0` and sent 0, which the validator
+// refuses (it must be positive), so every edit on a customer without a limit
+// failed, and the form showed nothing. Blank now leaves the limit alone, a
+// non-positive one is caught before sending, and a server refusal names the field.
 export const SRL_VERSION = "3.8.bme";
 
 export function VersionFooter({ className }: { className?: string }) {

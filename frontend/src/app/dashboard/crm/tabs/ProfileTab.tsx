@@ -305,7 +305,10 @@ function EditProfileForm({
     city: customer.city ?? "",
     state: customer.state ?? "",
     zip: customer.zip ?? "",
-    creditLimit: customer.creditLimit ?? 0,
+    // v3.8.bkq — a string, blank when none is set. This was `?? 0` and was
+    // sent as 0, which the validator refuses (a credit limit must be positive),
+    // so saving ANY edit on a customer without a limit failed — silently.
+    creditLimit: customer.creditLimit ? String(customer.creditLimit) : "",
     paymentTerms: customer.paymentTerms ?? "Net 30",
     taxId: customer.taxId ?? "",
     accountRepId: customer.accountRepId ?? "",
@@ -324,6 +327,7 @@ function EditProfileForm({
     staleTime: 5 * 60_000,
   });
 
+  const [clientError, setClientError] = useState<string | null>(null);
   const save = useMutation({
     mutationFn: async () => {
       // Flatten AccessorialRow[] → Record<string,number>; drop empty type names
@@ -333,8 +337,11 @@ function EditProfileForm({
         const type = row.type.trim();
         if (type) ratesRecord[type] = Number.isFinite(row.rate) ? row.rate : 0;
       }
+      const { creditLimit: creditText, ...rest } = form;
+      const credit = creditLimitPayload(creditText);
       return (await api.patch(`/customers/${customer.id}`, {
-        ...form,
+        ...rest,
+        ...credit,
         accountRepId: form.accountRepId || null,
         minMarginPercent: form.minMarginPercent ?? null,
         defaultAccessorialRates: Object.keys(ratesRecord).length > 0 ? ratesRecord : null,
@@ -342,6 +349,13 @@ function EditProfileForm({
     },
     onSuccess: onSaved,
   });
+  const onSave = () => {
+    const bad = creditLimitProblem(form.creditLimit);
+    setClientError(bad);
+    if (!bad) save.mutate();
+  };
+  // v3.8.bkq — a refused save said nothing; the form just stayed open.
+  const saveError = clientError ?? (save.isError ? describeSaveError(save.error) : null);
 
   return (
     <div className="space-y-4 text-sm">
@@ -382,7 +396,7 @@ function EditProfileForm({
         <Input label="State" value={form.state} onChange={(v) => setForm({ ...form, state: v })} />
         <Input label="Zip"   value={form.zip} onChange={(v) => setForm({ ...form, zip: v })} />
       </div>
-      <Input label="Credit limit" value={String(form.creditLimit)} onChange={(v) => setForm({ ...form, creditLimit: Number(v) || 0 })} />
+      <Input label="Credit limit" value={form.creditLimit} onChange={(v) => setForm({ ...form, creditLimit: v })} />
       <Input label="Payment terms" value={form.paymentTerms} onChange={(v) => setForm({ ...form, paymentTerms: v })} />
       <Input label="Tax ID"       value={form.taxId} onChange={(v) => setForm({ ...form, taxId: v })} />
 
@@ -477,9 +491,14 @@ function EditProfileForm({
         ))}
       </div>
 
+      {saveError && (
+        <p role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+          {saveError}
+        </p>
+      )}
       <div className="flex gap-2">
         <button
-          onClick={() => save.mutate()}
+          onClick={onSave}
           disabled={save.isPending}
           className="flex-1 py-2 bg-[#BA7517] hover:bg-[#8f5a11] text-white text-sm font-medium rounded disabled:opacity-40"
         >
@@ -489,6 +508,33 @@ function EditProfileForm({
       </div>
     </div>
   );
+}
+
+/**
+ * v3.8.bkq — the credit limit field. Blank means "leave it as it is" and is
+ * omitted from the PATCH; a positive number is sent; anything else is caught
+ * here rather than refused by the server with no message.
+ */
+export function creditLimitProblem(text: string): string | null {
+  const t = text.replace(/[$,\s]/g, "");
+  if (t === "") return null;
+  const n = Number(t);
+  if (!Number.isFinite(n) || n <= 0) return "Credit limit must be more than $0, or left blank.";
+  return null;
+}
+
+export function creditLimitPayload(text: string): { creditLimit?: number } {
+  const t = text.replace(/[$,\s]/g, "");
+  return t === "" ? {} : { creditLimit: Number(t) };
+}
+
+function describeSaveError(err: unknown): string {
+  const data = (err as any)?.response?.data;
+  const details: { field?: string; message?: string }[] = Array.isArray(data?.details) ? data.details : [];
+  if (details.length > 0) {
+    return `Not saved: ${details.map((d) => (d.field ? `${d.field} — ${d.message}` : d.message)).join("; ")}`;
+  }
+  return `Not saved: ${data?.error ?? "the server refused the change."}`;
 }
 
 function Input({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
