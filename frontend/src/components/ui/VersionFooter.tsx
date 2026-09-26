@@ -19378,6 +19378,8 @@
 // names the document and the server's reason.
 // v3.8.bkv — The contact typed on a new customer goes on its contact list, and the CRM
 // row shows that contact instead of Customer.email (the AP / billing address).
+// v3.8.bky — An order starts only for an approved, active customer. The CRM Orders
+// tab's New order and the Order Builder's ?customerId= link now share one rule.
 export const SRL_VERSION = "3.8.bme";
 
 export function VersionFooter({ className }: { className?: string }) {

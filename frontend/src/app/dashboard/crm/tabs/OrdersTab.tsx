@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Plus } from "lucide-react";
 import { money, customerBilled } from "@/lib/rateDisplay";
+import { customerOrderBlock } from "@/lib/customerOrderGate";
 
 const FLOW = ["Quote", "Order", "Load", "Dispatch", "T&T", "Invoice"];
 
@@ -33,7 +34,15 @@ function statusBadge(status: string) {
   return <span className={`px-1.5 py-0.5 text-[10px] rounded ${cls}`}>{status.replace(/_/g, " ")}</span>;
 }
 
-export function OrdersTab({ customerId }: { customerId: string }) {
+export function OrdersTab({
+  customerId, onboardingStatus, isActive,
+}: {
+  customerId: string;
+  /** v3.8.bky — an order starts only for an approved, active customer. */
+  onboardingStatus?: string | null;
+  isActive?: boolean | null;
+}) {
+  const block = customerOrderBlock({ onboardingStatus, isActive });
   const q = useQuery<{ loads: any[] }>({
     queryKey: ["crm-orders", customerId],
     queryFn: async () => (await api.get(`/customers/${customerId}/loads`)).data,
@@ -46,12 +55,28 @@ export function OrdersTab({ customerId }: { customerId: string }) {
 
   return (
     <div className="space-y-4 text-sm">
-      <Link
-        href={`/dashboard/orders?customerId=${customerId}`}
-        className="inline-flex items-center gap-1 px-4 py-2 bg-[#BA7517] hover:bg-[#8f5a11] text-white text-sm font-medium rounded"
-      >
-        <Plus className="w-4 h-4" /> New order
-      </Link>
+      {block ? (
+        <div className="space-y-2">
+          <button
+            type="button"
+            disabled
+            title={block}
+            className="inline-flex items-center gap-1 px-4 py-2 bg-[#BA7517] text-white text-sm font-medium rounded opacity-50 cursor-not-allowed"
+          >
+            <Plus className="w-4 h-4" /> New order
+          </button>
+          <p role="note" className="text-xs px-3 py-2 rounded border border-[#B07A1A]/40 bg-[#FBEFD4] text-[#B07A1A]">
+            {block}
+          </p>
+        </div>
+      ) : (
+        <Link
+          href={`/dashboard/orders?customerId=${customerId}`}
+          className="inline-flex items-center gap-1 px-4 py-2 bg-[#BA7517] hover:bg-[#8f5a11] text-white text-sm font-medium rounded"
+        >
+          <Plus className="w-4 h-4" /> New order
+        </Link>
+      )}
 
       <div className="border border-gray-200 rounded-lg bg-white divide-y divide-gray-100">
         {loads.length === 0 && <div className="p-4 text-xs text-gray-700 text-center">No orders yet.</div>}

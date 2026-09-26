@@ -189,7 +189,7 @@ export function CustomerDrawer({
                 {tab === "facilities" && <FacilitiesTab customerId={customer.id} onChange={() => query.refetch()} />}
                 {tab === "notes"      && <NotesTab      customerId={customer.id} onChange={() => query.refetch()} />}
                 {tab === "docs"       && <DocsTab       customerId={customer.id} onChange={() => query.refetch()} />}
-                {tab === "orders"     && <OrdersTab     customerId={customer.id} />}
+                {tab === "orders"     && <OrdersTab     customerId={customer.id} onboardingStatus={customer.onboardingStatus} isActive={customer.isActive} />}
                 {tab === "activity"   && <ActivityTab   customerId={customer.id} />}
               </>
             )}

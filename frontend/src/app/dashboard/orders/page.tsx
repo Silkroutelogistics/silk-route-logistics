@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { customerOrderBlock } from "@/lib/customerOrderGate";
 import {
   Search, ClipboardEdit, AlertTriangle, CheckCircle,
   Plus, X, Send, Save, Flame, FileText,
@@ -67,6 +68,10 @@ interface Customer {
   // red alert chip (null = global 10% default).
   defaultAccessorialRates?: Record<string, number> | null;
   minMarginPercent?: number | null;
+  // v3.8.bky — read by the ?customerId= deep link, which skips the
+  // APPROVED-only search and so has to check the customer itself.
+  onboardingStatus?: string | null;
+  isActive?: boolean;
 }
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -83,6 +88,9 @@ export default function OrderBuilderPage() {
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [customerRateSource, setCustomerRateSource] = useState<"agreement" | "manual" | null>(null);
   const [autoFillBanner, setAutoFillBanner] = useState(false);
+  // v3.8.bky — set when ?customerId= names a customer an order may not be
+  // started for; the customer is not selected and this says why.
+  const [urlCustomerBlock, setUrlCustomerBlock] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   // v3.8.d.3 — track loadId so resumed drafts that have already been
@@ -224,6 +232,7 @@ export default function OrderBuilderPage() {
   });
 
   const selectCustomer = async (c: Customer) => {
+    setUrlCustomerBlock(null);
     setSelectedCustomer(c);
     setCustomerSearch(c.name);
     setShowCustomerDropdown(false);
@@ -261,7 +270,15 @@ export default function OrderBuilderPage() {
     const urlCustomerId = searchParams.get("customerId");
     if (urlCustomerId && !selectedCustomer) {
       api.get<Customer>(`/customers/${urlCustomerId}`).then((res) => {
-        if (res.data) selectCustomer(res.data);
+        if (!res.data) return;
+        // v3.8.bky — the customer search lists approved customers only;
+        // this link must not be a way around it.
+        const block = customerOrderBlock(res.data);
+        if (block) {
+          setUrlCustomerBlock(`${res.data.name}: ${block}`);
+          return;
+        }
+        selectCustomer(res.data);
       }).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1009,6 +1026,11 @@ export default function OrderBuilderPage() {
           <Section number={1} title="Customer" anchorId="req-customer">
             {!selectedCustomer ? (
               <div className="relative">
+                {urlCustomerBlock && (
+                  <div role="alert" className="mb-2 text-xs px-3 py-2 rounded border border-[#B07A1A]/40 bg-[#FBEFD4] text-[#B07A1A]">
+                    {urlCustomerBlock}
+                  </div>
+                )}
                 <div className="relative">
                   <Search className="absolute left-3 top-2.5 w-4 h-4 text-[#6B7685]" />
                   <input
