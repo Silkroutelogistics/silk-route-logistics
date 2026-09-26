@@ -8,6 +8,10 @@ import { prisma } from "../../../src/config/database";
 
 vi.mock("../../../src/services/emailService", () => ({ sendEmail: vi.fn().mockResolvedValue("resend-id"), wrap: (h: string) => h }));
 vi.mock("../../../src/services/customerRecipientResolver", () => ({ resolveBillingRecipients: vi.fn().mockResolvedValue([{ email: "ap@example.com" }]) }));
+// v3.8.bko — the job runs only while the reminder-email switch is on (it is off
+// by default). These cases are about what the job does when it runs, so the
+// switch is on here; the switch itself is tested in arReminderSwitch.test.ts.
+vi.mock("../../../src/lib/arReminderSwitch", () => ({ arReminderEmailsOn: vi.fn().mockResolvedValue(true) }));
 
 import { processArReminders } from "../../../src/services/arCollectionsService";
 import { sendEmail } from "../../../src/services/emailService";

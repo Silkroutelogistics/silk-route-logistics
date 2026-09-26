@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import cron from "node-cron";
 import { log } from "../lib/logger";
+import { AR_REMINDER_SWITCH, AR_REMINDER_SCHEDULE, AR_REMINDER_DESCRIPTION } from "../lib/arReminderSwitch";
 
 /**
  * Cron Registry Service
@@ -181,13 +182,16 @@ export async function seedCronRegistry() {
     { jobName: "ai-anomaly-scan", schedule: "15 */2 * * *", description: "AI anomaly detection scanner every 2 hours" },
     { jobName: "ai-full-training", schedule: "0 7 * * *", description: "Full AI model training cycle daily 2 AM ET" },
     { jobName: "ai-shipment-monitor", schedule: "20,50 * * * *", description: "AI shipment risk monitor every 30 minutes" },
+    // v3.8.bko — the payment-reminder email switch. Created OFF; the update
+    // clause below never writes `enabled`, so a restart cannot turn it back on.
+    { jobName: AR_REMINDER_SWITCH, schedule: AR_REMINDER_SCHEDULE, description: AR_REMINDER_DESCRIPTION, enabled: false },
   ];
 
-  for (const job of jobs) {
+  for (const { enabled = true, ...job } of jobs as Array<{ jobName: string; schedule: string; description: string; enabled?: boolean }>) {
     await prisma.cronRegistry.upsert({
       where: { jobName: job.jobName },
       update: { schedule: job.schedule, description: job.description },
-      create: { ...job, enabled: true, nextRun: getNextRunTime(job.schedule) },
+      create: { ...job, enabled, nextRun: getNextRunTime(job.schedule) },
     }).catch(err => log.error({ err: err }, '[CronRegistry] Error:'));
   }
 

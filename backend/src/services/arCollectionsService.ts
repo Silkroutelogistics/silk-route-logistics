@@ -2,6 +2,7 @@ import { prisma } from "../config/database";
 import { resolveBillingRecipients } from "./customerRecipientResolver";
 import { sendEmail, wrap } from "./emailService";
 import { log } from "../lib/logger";
+import { arReminderEmailsOn } from "../lib/arReminderSwitch";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -209,6 +210,14 @@ export function generateReminderEmail(
  * escalating reminder emails based on aging.
  */
 export async function processArReminders(): Promise<{ processed: number; remindersSent: number; errors: number }> {
+  // v3.8.bko — reminder emails are OFF until an admin turns them on
+  // (lib/arReminderSwitch). Checked here, the only sender, before the invoice
+  // query, so any caller of this function inherits it.
+  if (!(await arReminderEmailsOn())) {
+    log.info("[AR Collections] Payment reminder emails are switched off; nothing sent.");
+    return { processed: 0, remindersSent: 0, errors: 0 };
+  }
+
   const now = new Date();
   const unpaidStatuses: string[] = ["SUBMITTED", "SENT", "UNDER_REVIEW", "APPROVED", "FUNDED", "OVERDUE", "PARTIAL"];
 

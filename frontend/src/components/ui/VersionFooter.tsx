@@ -19360,6 +19360,12 @@
 // recipient is chosen from the contact list by the portal-invite rule
 // (lib/listedContact, no fallback to Customer.email), the email goes first, and the
 // status and activity follow only a send that returned a message id.
+// v3.8.bko — Payment reminder emails are off until an admin turns them on.
+//   arCollectionsService.processArReminders, the only code that emails customers
+// about unpaid invoices, ran every morning unconditionally and could reach the AP
+// address through the billing fallback. It now checks a switch first: the
+// `ar-reminder-emails` cron-registry row, created off at boot and never re-enabled
+// by a restart. ADMIN/CEO flip it from the AR aging page; accounting can see it.
 export const SRL_VERSION = "3.8.bme";
 
 export function VersionFooter({ className }: { className?: string }) {

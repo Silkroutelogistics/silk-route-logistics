@@ -61,11 +61,31 @@ import {
   getQuickPayHealth,
   getQuickPayRevenue,
 } from "../controllers/accountingController";
+import { auditLog } from "../middleware/audit";
+import type { AuthRequest } from "../middleware/auth";
+import type { Response } from "express";
+import { getArReminderSwitch, setArReminderSwitch } from "../lib/arReminderSwitch";
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+// --- Payment reminder emails (v3.8.bko) ---
+// The switch for the only code that emails customers about unpaid invoices.
+// OFF until an admin turns it on; accounting can see it, only ADMIN/CEO flip it.
+router.get("/reminder-emails", authorize("ADMIN", "CEO", "ACCOUNTING"), async (_req: AuthRequest, res: Response) => {
+  res.json(await getArReminderSwitch());
+});
+router.put(
+  "/reminder-emails",
+  authorize("ADMIN", "CEO"),
+  validateBody(z.object({ enabled: z.boolean() })),
+  auditLog("UPDATE", "ArReminderSwitch"),
+  async (req: AuthRequest, res: Response) => {
+    res.json(await setArReminderSwitch(req.body.enabled === true));
+  },
+);
 
 // --- Dashboard ---
 router.get("/summary", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getAccountingSummary);

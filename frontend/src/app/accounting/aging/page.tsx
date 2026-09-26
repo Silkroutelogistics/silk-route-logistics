@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Clock, AlertTriangle, DollarSign, TrendingUp } from "lucide-react";
+import { ReminderEmailSwitch } from "@/components/accounting/ReminderEmailSwitch";
 
 interface AgingBucket {
   label: string;
@@ -114,6 +115,9 @@ export default function AgingReportPage() {
         <h1 className="text-2xl font-bold text-white">Aging Report</h1>
         <p className="text-sm text-slate-400 mt-1">Accounts Receivable aging analysis</p>
       </div>
+
+      {/* v3.8.bko — whether customers are being emailed about these invoices. */}
+      <ReminderEmailSwitch />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-4 mb-8">
