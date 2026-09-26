@@ -117,7 +117,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   const mustEnroll = !!activationData?.requiresTotpEnrollment;
 
   const notifications = Array.isArray(notifData) ? notifData : [];
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.readAt).length; // Item 321: readAt is canonical; `read` is never written
 
   useEffect(() => {
     if (!user) {
@@ -277,7 +277,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
                 <button onClick={() => setNotifOpen(!notifOpen)} className="relative">
                   <Bell size={19} className="text-gray-500" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#9B2C2C] text-[#FBF7F0] text-[9px] font-bold flex items-center justify-center">
+                    <span data-testid="notif-badge" className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#9B2C2C] text-[#FBF7F0] text-[9px] font-bold flex items-center justify-center">
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
@@ -299,7 +299,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
                         // broken app rather than as an item with no target.
                         const href = resolveNotificationHref(n.actionUrl, "/carrier");
                         const seen = () => {
-                          if (n.read) return;
+                          if (n.readAt) return;
                           api
                             .patch(`/notifications/${n.id}/read`)
                             .then(() => queryClient.invalidateQueries({ queryKey: ["carrier-notifications"] }))
@@ -311,7 +311,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
                             <div className="text-[10px] text-gray-400 mt-1">{timeAgo(n.createdAt)}</div>
                           </>
                         );
-                        const base = `px-3 py-2.5 border-b border-[#F5EEE0] ${!n.read ? "bg-[#E2EAF2]/60" : ""}`;
+                        const base = `px-3 py-2.5 border-b border-[#F5EEE0] ${!n.readAt ? "bg-[#E2EAF2]/60" : ""}`;
                         return href ? (
                           <button
                             key={n.id}

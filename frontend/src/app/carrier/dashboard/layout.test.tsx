@@ -17,7 +17,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, waitFor, screen } from "@testing-library/react";
 
-const { replace, pathname, activationData, authState, loginRedirect } = vi.hoisted(() => ({
+const { replace, pathname, activationData, authState, loginRedirect, notifData } = vi.hoisted(() => ({
+  notifData: { value: [] as any[] },
   replace: vi.fn(),
   pathname: { value: "/carrier/dashboard" },
   activationData: { value: undefined as any },
@@ -38,7 +39,7 @@ vi.mock("next/navigation", () => ({
 // having loaded.
 vi.mock("@tanstack/react-query", () => ({
   useQuery: ({ queryKey }: any) =>
-    queryKey[0] === "carrier-activation" ? { data: activationData.value } : { data: [] },
+    queryKey[0] === "carrier-activation" ? { data: activationData.value } : { data: notifData.value },
   // The layout marks a notification read on click, which needs a query client.
   // A no-op is right here: this file is about ROUTING, and a real client would
   // add a provider and a cache to tests that care about neither.
@@ -94,6 +95,39 @@ beforeEach(() => {
   activationData.value = undefined;
   authState.value = carrier("APPROVED");
   loginRedirect.value = false;
+  notifData.value = [];
+});
+
+// §13.3 Item 321 — mark-read writes `readAt` and nothing ever writes `read`, so a
+// badge counting `!n.read` could never clear. The rows below are the shape the API
+// really returns after a click: `read` still false, `readAt` set.
+describe("Item 321: the notification badge counts readAt", () => {
+  const row = (id: string, readAt: string | null) =>
+    ({ id, title: "t", message: "m", createdAt: "2026-09-26T00:00:00Z", read: false, readAt });
+
+  it("clears once every notification carries readAt", async () => {
+    activationData.value = { requiresTotpEnrollment: false, requiresActivation: false };
+    notifData.value = [row("a", "2026-09-26T01:00:00Z"), row("b", "2026-09-26T01:00:00Z")];
+    await mount();
+    expect(screen.queryByTestId("notif-badge")).toBeNull();
+  });
+
+  it("counts only the notifications with no readAt", async () => {
+    activationData.value = { requiresTotpEnrollment: false, requiresActivation: false };
+    notifData.value = [row("a", "2026-09-26T01:00:00Z"), row("b", null)];
+    await mount();
+    expect(screen.getByTestId("notif-badge").textContent).toBe("1");
+  });
+
+  it("neither portal layout reads the deprecated `read` flag", () => {
+    const fs = require("fs") as typeof import("fs");
+    const path = require("path") as typeof import("path");
+    for (const portal of ["carrier", "shipper"]) {
+      const src = fs.readFileSync(path.join(__dirname, "..", "..", portal, "dashboard", "layout.tsx"), "utf8");
+      expect(src, portal).not.toMatch(/\bn\.read\b/);
+      expect(src, portal).toMatch(/\bn\.readAt\b/);
+    }
+  });
 });
 
 describe("the enrollment wall", () => {

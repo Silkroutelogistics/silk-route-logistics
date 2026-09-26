@@ -19131,7 +19131,13 @@
 // carriers are now fenced out; one open alert per load (any status but RESOLVED, so
 // a DISMISS holds) — a repeat at the same severity is silent, a severity change
 // updates the row and notifies once, and a load that clears resolves its alert.
-export const SRL_VERSION = "3.8.bkk";
+// v3.8.bkl — The carrier and shipper notification badges count readAt, so they can clear (Item 321).
+//   Mark-read writes readAt and nothing has ever written the `read` flag, but both
+// portal layouts counted and highlighted on `!n.read`, so the first carrier to
+// click a notification would have kept the badge forever. Every reader now uses
+// readAt, the field the AE surfaces and unread-count already used; `read` is
+// deprecated, not dropped. Production had 0 portal rows in the stuck state yet.
+export const SRL_VERSION = "3.8.bkl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
