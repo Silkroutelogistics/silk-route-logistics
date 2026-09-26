@@ -825,6 +825,16 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
     );
   }
 
+  // POD_RECEIVED set by hand runs the same idempotent step the POD-upload path
+  // does (loadDocumentService). On a load that went through DELIVERED it finds
+  // the invoice and returns; where DELIVERED was refused (no customer rate yet)
+  // this is the retry. Invoicing audit G-10.
+  if (status === "POD_RECEIVED") {
+    await autoGenerateInvoice(load.id).catch((e) =>
+      log.error({ err: e, loadId: load.id }, "[AutoInvoice] POD_RECEIVED status-path failed"),
+    );
+  }
+
   // Auto-generate invoice and notify when delivered
   if (status === "DELIVERED") {
     await autoGenerateInvoice(load.id);

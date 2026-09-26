@@ -19155,6 +19155,8 @@
 // the shared panel said 35-check; the engine runs 33, and both joined the Compass guard.
 // v3.8.bjn — B2a: a TONU whose ledger write fails leaves a SystemLog row and
 // tells the AE. It used to reach the log only (SRL-121492, invoicing audit G-2).
+// v3.8.bjo — B2b: an AE flip to POD_RECEIVED runs the idempotent auto-invoice,
+// as the POD-upload path already did (invoicing audit G-10).
 export const SRL_VERSION = "3.8.bku";
 
 export function VersionFooter({ className }: { className?: string }) {

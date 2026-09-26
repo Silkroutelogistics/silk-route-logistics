@@ -582,6 +582,25 @@ describe("loadController", () => {
     expect(notes.map((n: any) => n.userId).sort()).toEqual(["poster-1", "user-1"]);
   });
 
+  // Invoicing audit G-10: only the POD-upload path invoiced on POD_RECEIVED. The
+  // AE status flip must run the same idempotent step, so a load whose DELIVERED
+  // invoice was refused (no customer rate yet) is retried here.
+  it("updateLoadStatus — POD_RECEIVED runs the idempotent auto-invoice for that load", async () => {
+    const { autoGenerateInvoice } = await import("../../../src/services/invoiceService");
+    runTransactions(); // first: it resets load.update to {}
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "DELIVERED", carrierId: "c-1", podUrl: "s3://pod.pdf", referenceNumber: "SRL-121495" } as any);
+    mockPrisma.load.update.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "POD_RECEIVED", carrierId: "c-1", referenceNumber: "SRL-121495" } as any);
+    mockPrisma.shipment.findFirst.mockResolvedValue(null);
+    mockPrisma.notification.create.mockResolvedValue({} as any);
+    const { req, res } = mockReqRes({ status: "POD_RECEIVED" }, { id: "user-1", role: "ADMIN" }, { id: "load-1" });
+
+    await updateLoadStatus(req, res);
+
+    expect(res.status).not.toHaveBeenCalledWith(409);
+    expect(res.status).not.toHaveBeenCalledWith(422);
+    expect(vi.mocked(autoGenerateInvoice)).toHaveBeenCalledWith("load-1");
+  });
+
   it("updateLoadStatus — CANCELLED is refused with 409 when a POD is on file, and nothing is written", async () => {
     mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "DISPATCHED", carrierId: "c-1", podUrl: "s3://pod.pdf" } as any);
     const { req, res } = mockReqRes({ status: "CANCELLED" }, { id: "user-1", role: "ADMIN" }, { id: "load-1" });
