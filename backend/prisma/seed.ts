@@ -8,6 +8,9 @@ import { PrismaClient, UserRole } from "@prisma/client";
 import { encrypt } from "../src/utils/encryption";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import {
+  DETENTION_RATE_PER_HOUR, DETENTION_CAP_PER_STOP, LAYOVER_RATE_PER_DAY, TONU_AMOUNT,
+} from "../src/lib/accessorialPolicy";
 
 const prisma = new PrismaClient();
 
@@ -917,11 +920,11 @@ async function main() {
   await prisma.sOP.createMany({
     data: [
       // ── OPERATIONS ──────────────────────────────
-      // §2.3 accessorials reconciled to canonical policy per CLAUDE.md §5
-      // (detention $50/hr after 2hr free per stop, $250/stop cap converting to
-      // layover; TONU $200 flat; layover $250/day). Cap raised $200 → $250 in
-      // v3.8.ars. Lumper is reimbursed on the original receipt. SRL has no
-      // money code and charges no admin fee on it.
+      // §2.3 accessorials: interpolated from lib/accessorialPolicy (2026-09-26)
+      // rather than typed, as seed-sops*.ts already do. The typed figures here
+      // were stale through two schedule changes because the drift guard's
+      // negation exemption hid the line. Lumper is reimbursed on the original
+      // receipt. SRL has no money code and charges no admin fee on it.
       {
         title: "Standard Freight Operations Manual",
         category: "operations",
@@ -941,7 +944,7 @@ async function main() {
 2. RATE MANAGEMENT
 2.1 Spot Rates — Check DAT/Truckstop for lane averages. Markup: 12-18% standard, 8-12% for contract shippers.
 2.2 Contract Rates — Reviewed quarterly. Mini-bid process for lanes >10 loads/month. Rate lock periods: 30/60/90 days.
-2.3 Accessorial Charges — Detention: $50/hr, all equipment types, after 2 hours free at each stop, capped at $250 per stop. Free time is per stop, independent and non-cumulative. Clock starts at arrival. Not payable if the carrier arrives outside the appointment window. At the cap detention converts to layover; the two do not stack for the same hours. Carrier notifies SRL 30 minutes before detention begins and again on departure. Lumper: carrier fronts the cost, SRL reimburses on the original receipt. SRL issues no money codes (no Comchek, EFS, or Comdata) and charges no admin fee on lumper. TONU: $200 flat. Layover: $250/day. No tier or equipment differentiation on any of these.
+2.3 Accessorial Charges — Detention: $${DETENTION_RATE_PER_HOUR}/hr, all equipment types, after 2 hours free at each stop, capped at $${DETENTION_CAP_PER_STOP} per stop. Free time is per stop, independent and non-cumulative. Clock starts at arrival. Not payable if the carrier arrives outside the appointment window. At the cap detention converts to layover; the two do not stack for the same hours. Carrier notifies SRL 30 minutes before detention begins and again on departure. Lumper: carrier fronts the cost, SRL reimburses on the original receipt. SRL issues no money codes (no Comchek, EFS, or Comdata) and charges no admin fee on lumper. TONU: $${TONU_AMOUNT} flat. Layover: $${LAYOVER_RATE_PER_DAY}/day. No tier or equipment differentiation on any of these.
 
 3. EXCEPTION HANDLING
 3.1 Service Failures — Late pickup/delivery: document cause, notify customer immediately, file carrier scorecard deduction.

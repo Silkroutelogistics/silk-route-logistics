@@ -2,9 +2,9 @@
  * Detention → layover reconciliation for ONE stop.
  *
  * The signed Rate Confirmation promises this in writing (pdfService.ts
- * `governingClauses`, v3.8.ars):
+ * `governingClauses`, v3.8.ars; figures as of 2026-09-26):
  *
- *   "At the $250 per stop cap detention converts to layover at $250 per day;
+ *   "At the $200 per stop cap detention converts to layover at $200 per day;
  *    the two do not stack for the same hours."
  *
  * Nothing performed that conversion. Three writers each owned a piece of the
@@ -28,17 +28,19 @@
  * one of them:
  *
  *   [arrival, arrival+2h)          free time. Not billable.
- *   [arrival+2h, conversion)       detention at $50/hr.
- *   [conversion, departure)        layover at $250/day.
+ *   [arrival+2h, conversion)       detention at $40/hr.
+ *   [conversion, departure)        layover at $200/day.
  *
- * `conversion` is the instant detention reaches the cap: 2h free + ($250 ÷
- * $50/hr) = 5 billable hours = arrival + 7h. It is derived, never hardcoded,
- * so changing the cap or the rate moves the handoff with it.
+ * `conversion` is the instant detention reaches the cap: 2h free + ($200 ÷
+ * $40/hr) = 5 billable hours = arrival + 7h. It is derived, never hardcoded,
+ * so changing the cap or the rate moves the handoff with it -- as it did on
+ * 2026-09-26, when $50/$250 became $40/$200 and the handoff stayed at hour 7
+ * because the ratio did not change.
  *
- * The cap payment does NOT absorb layover day one. Detention bills $250 for the
+ * The cap payment does NOT absorb layover day one. Detention bills $200 for the
  * hours it covers — arrival+2h to arrival+7h — and layover bills its own day
  * one starting AT the conversion instant. Those are different hours, so billing
- * both is not stacking. Each further started 24h past conversion adds $250.
+ * both is not stacking. Each further started 24h past conversion adds $200.
  *
  * An earlier revision of this file made the cap CONSUME layover day one, so the
  * ladder sat flat at $250 from hour 7 to hour 31 and a 30-hour hold paid $250.
@@ -55,15 +57,15 @@
  *
  * The ladder this file produces at a single stop:
  *
- *    6h → $200   detention only, still accruing
- *    7h → $500   cap reached. $250 detention + $250 layover day one
- *   14h → $500
- *   24h → $500
- *   30h → $500
- *   31h → $500   layover day one runs [7h, 31h] and is exactly complete here
- *   32h → $750   day two has started
- *   55h → $750
- *   79h → $1000
+ *    6h → $160   detention only, still accruing
+ *    7h → $400   cap reached. $200 detention + $200 layover day one
+ *   14h → $400
+ *   24h → $400
+ *   30h → $400
+ *   31h → $400   layover day one runs [7h, 31h] and is exactly complete here
+ *   32h → $600   day two has started
+ *   55h → $600
+ *   79h → $800
  *
  * A started layover day bills a full day, matching how every published broker
  * schedule handles it and matching `maxAllowedForDwell` below. Day two therefore
@@ -72,7 +74,7 @@
  *
  * What this ladder does NOT do is add money for every further hour the carrier
  * sits, and nothing here should claim it does. Hours 7 through 31 are flat at
- * $500. A carrier held 14 hours and a carrier held 30 hours are paid the same.
+ * $400. A carrier held 14 hours and a carrier held 30 hours are paid the same.
  *
  * That band is defensible, for a specific reason: those hours are not unpaid,
  * they are PREPAID in full at the conversion instant, because a started layover
@@ -106,11 +108,16 @@ const MS_PER_MINUTE = 60 * 1000;
 const MS_PER_DAY = 24 * MS_PER_HOUR;
 
 // Canonical figures — CLAUDE.md §5, principal-ratified 2026-08-14 (v3.8.arn,
-// amended v3.8.ars). Flat: no tier and no equipment differentiation.
+// amended v3.8.ars), RE-RATIFIED 2026-09-26: detention $40/hr (was $50),
+// capped at $200 per stop (was $250), layover $200 per day (was $250), so the
+// TONU, the detention cap and a layover day are one figure. Flat: no tier and
+// no equipment differentiation. Every surface reads these through
+// lib/accessorialPolicy.ts; verify-accessorial-standard fails any that states
+// another number.
 export const DETENTION_FREE_HOURS = 2;
-export const DETENTION_RATE_PER_HOUR = 50;
-export const DETENTION_CAP_PER_STOP = 250;
-export const LAYOVER_RATE_PER_DAY = 250;
+export const DETENTION_RATE_PER_HOUR = 40;
+export const DETENTION_CAP_PER_STOP = 200;
+export const LAYOVER_RATE_PER_DAY = 200;
 
 export interface DwellChargeTerms {
   freeHours?: number;
@@ -134,7 +141,7 @@ export interface DetentionLeg {
    * exact to the cent, for every dwell below the cap. At the cap `amount` is the
    * cap by definition, so the identity holds only to the value of the one minute
    * `billableMinutes` is rounded to — a cent or two when cap ÷ rate does not land
-   * on a whole minute. It is exact at the ratified $250 ÷ $50/hr = 300 minutes.
+   * on a whole minute. It is exact at the ratified $200 ÷ $40/hr = 300 minutes.
    */
   billableMinutes: number;
   /** arrival + free time. */

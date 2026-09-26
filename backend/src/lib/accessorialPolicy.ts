@@ -191,7 +191,16 @@ export const RETIRED_FIGURES: { pattern: RegExp; was: string; now: string }[] = 
   { pattern: /\$65\s*(?:\/|\s+per\s+)\s*(?:hr|hour)/i, was: "detention $65/hr (Gold tier / reefer rate)", now: `$${DETENTION_RATE_PER_HOUR}/hr, all equipment` },
   { pattern: /TONU[^.\n]{0,40}\$350|\$350[^.\n]{0,20}TONU/i, was: "TONU $350", now: `$${TONU_AMOUNT} flat` },
   { pattern: /\$350\s*(?:\/|\s+per\s+)\s*day/i, was: "layover $350/day", now: `$${LAYOVER_RATE_PER_DAY}/day` },
-  { pattern: /cap(?:ped)?[^.\n]{0,30}\$200(?![0-9])/i, was: "detention cap $200/stop", now: `$${DETENTION_CAP_PER_STOP}/stop` },
+  // Retired 2026-09-26, when the schedule became $40/hr capped at $200 per
+  // stop with a $200 layover day. "$200 cap" sat in this list from the earlier
+  // move the other way ($200 to $250) and is now the LIVE figure, so it left
+  // the list in the same change. A retired list is a list of what is wrong
+  // today; it has to move when policy moves, or the guard passes the old number
+  // and fails the new one. Amounts accept a trailing ".00", as the Broker-
+  // Carrier Agreement writes them.
+  { pattern: /\$50(?:\.00)?\s*(?:\/|\s+per\s+)\s*(?:hr|hour)/i, was: "detention $50/hr", now: `$${DETENTION_RATE_PER_HOUR}/hr` },
+  { pattern: /cap(?:ped)?[^.\n]{0,30}\$250(?![0-9])|\$250(?:\.00)?\s*(?:\/|\s+per\s+)\s*stop/i, was: "detention cap $250/stop", now: `$${DETENTION_CAP_PER_STOP}/stop` },
+  { pattern: /\$250(?:\.00)?\s*(?:\/|\s+per\s+)\s*day/i, was: "layover $250/day", now: `$${LAYOVER_RATE_PER_DAY}/day` },
   { pattern: /\$25\s+admin\s+fee|admin\s+fee[^.\n]{0,20}\$25/i, was: "lumper $25 admin fee", now: "at cost, no admin fee" },
   { pattern: /\$150\s+admin\s+fee/i, was: "$150 shipper-cancellation admin fee", now: "not a ratified charge" },
 ];

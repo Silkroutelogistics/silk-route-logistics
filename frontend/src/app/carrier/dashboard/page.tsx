@@ -46,16 +46,19 @@ const TIER_BENEFITS: Record<string, { paymentTerms: string; qpSpeed: string; qpF
   PLATINUM: { paymentTerms: "Net-14", qpSpeed: "7-day",  qpFee: "1.0%" },
 };
 
-// Accessorials, ratified 2026-08-14 (CLAUDE.md §5). Uniform across every tier
-// and every equipment type. State each term COMPLETE — a bare "$50/hr" reads in
+// Accessorials, ratified 2026-08-14 and re-ratified 2026-09-26 at $40/hr capped
+// at $200 per stop, $200 layover, $200 TONU (CLAUDE.md §5). Uniform across every
+// tier and every equipment type. The backend states these from
+// lib/accessorialPolicy.ts; this card is a copy, held to it by
+// verify-accessorial-standard. State each term COMPLETE — a bare rate reads in
 // the carrier's favour and sets up a pay dispute on the first held load. Free
 // time is per stop, independent and non-cumulative; the clock starts at arrival.
 const ACCESSORIAL_TERMS = [
   {
     label: "Detention",
-    value: "$50/hr, all equipment",
+    value: "$40/hr, all equipment",
     detail:
-      "After 2 hours free at each stop, capped at $250 per stop. Free time is counted per stop and does not carry over. The clock starts when you arrive. At the cap, detention converts to layover; the two do not stack for the same hours. Not payable if you arrive outside the appointment window. Notify us 30 minutes before detention begins and again when you depart.",
+      "After 2 hours free at each stop, capped at $200 per stop. Free time is counted per stop and does not carry over. The clock starts when you arrive. At the cap, detention converts to layover; the two do not stack for the same hours. Not payable if you arrive outside the appointment window. Notify us 30 minutes before detention begins and again when you depart.",
   },
   {
     label: "TONU",
@@ -65,8 +68,8 @@ const ACCESSORIAL_TERMS = [
   },
   {
     label: "Layover",
-    value: "$250 per day",
-    detail: "Billed per day. Detention converts to layover once it reaches the $250 per-stop cap.",
+    value: "$200 per day",
+    detail: "Billed per day. Detention converts to layover once it reaches the $200 per-stop cap.",
   },
   {
     label: "Lumper",

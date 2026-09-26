@@ -235,9 +235,10 @@ This SOP covers setting up shipper portal access and EDI connections for custome
 - Webhooks available for real-time event notifications`,
   },
 
-  // Accessorial Pricing reconciled to canonical per CLAUDE.md §5 (detention $50/hr
-  // + $250/stop cap converting to layover, TONU $200 flat — not distance-scaled,
-  // layover $250/day). Cap raised $200 → $250 in v3.8.ars. Lumper is reimbursed on
+  // Accessorial Pricing reconciled to canonical per CLAUDE.md §5 (detention $40/hr
+  // + $200/stop cap converting to layover, TONU $200 flat — not distance-scaled,
+  // layover $200/day; re-ratified 2026-09-26, interpolated from
+  // lib/accessorialPolicy). Lumper is reimbursed on
   // the original receipt; SRL has no money code and charges no admin fee on it.
   {
     title: "Rate Engine & Pricing Methodology",

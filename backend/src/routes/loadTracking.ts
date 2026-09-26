@@ -9,8 +9,9 @@ const router = Router();
 router.use(authenticate);
 
 // ─── Canonical detention rates (v3.8.arn) ───
-// 2h free at EACH stop (independent, non-cumulative), then $50/hr, capped at
-// $250 PER STOP. Flat rate — no tier and no equipment differentiation.
+// 2h free at EACH stop (independent, non-cumulative), then $40/hr, capped at
+// $200 PER STOP (re-ratified 2026-09-26). Flat rate — no tier and no
+// equipment differentiation.
 //
 // The figures now live in lib/detentionLayover.ts alongside the conversion math
 // that consumes them, so the cap and the layover rate it hands off to cannot
@@ -386,7 +387,7 @@ router.post(
         };
 
         // Detention + layover for this stop, reconciled by the single owner.
-        // Past the $250 cap detention converts to layover at $250/day and the
+        // Past the $200 cap detention converts to layover at $200/day and the
         // two never cover the same hours — see lib/detentionLayover.ts.
         if (pickupStop.actualArrival) {
           const arrivalAt = new Date(pickupStop.actualArrival);

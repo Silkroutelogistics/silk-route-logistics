@@ -23,7 +23,7 @@
 // cent:
 //
 //   GOLD carrier, $2,400 line haul, $400 fuel surcharge,
-//   5h pickup dwell -> $150 detention (2h free, 3 billable at the ratified $50/hr),
+//   5h45m pickup dwell -> $150 detention (2h free, 3.75 billable at the ratified $40/hr),
 //   $150 lumper fronted by the carrier and reimbursed AT COST.
 //
 //   Fee base $2,950 (gross less the lumper) · fee $59.00 · carrier net $3,041.00
@@ -58,7 +58,7 @@ const CUSTOMER_LINEHAUL = 3000;
 const CUSTOMER_TOTAL = 3700.0; // 3000 + 400 fuel + 300 accessorials at cost
 
 const APPROVED_LEDGER = [
-  { id: "acc-det", type: "DETENTION_DEL", amount: DETENTION, notes: "5h dwell", billedTo: "SHIPPER" },
+  { id: "acc-det", type: "DETENTION_DEL", amount: DETENTION, notes: "5h45m dwell", billedTo: "SHIPPER" },
   { id: "acc-lump", type: "LUMPER", amount: LUMPER, notes: "receipt on file", billedTo: "SHIPPER" },
 ];
 

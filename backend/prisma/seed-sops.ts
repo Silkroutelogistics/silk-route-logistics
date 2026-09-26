@@ -420,8 +420,9 @@ Can I ask a few questions about your current freight setup?"
   // Tier table carries the pay ladder only (CLAUDE.md §8). The Detention,
   // Safety Bonus, FSC pass-through and Referral columns were dropped rather
   // than corrected: all four describe programs that do not exist and are
-  // prohibited by §5. Detention is uniform and non-tiered: $50/hr, all
-  // equipment, after 2 free hours at each stop, $250/stop cap (v3.8.ars).
+  // prohibited by §5. Detention is uniform and non-tiered: $40/hr, all
+  // equipment, after 2 free hours at each stop, $200/stop cap (re-ratified
+  // 2026-09-26; the figures below interpolate from lib/accessorialPolicy).
   // Entry is performance-gated per §10; the fleet-size shortcut is retired.
   {
     title: "Carrier Onboarding & Growth Playbook",

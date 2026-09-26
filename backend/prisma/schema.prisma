@@ -5027,8 +5027,9 @@ model LoadAccessorial {
   loadId           String            @map("load_id")
   stopId           String?           @map("stop_id")
   type             AccessorialType
-  // What SRL PAYS the carrier. The uniform ratified schedule — $50/hr detention
-  // capped at $250/stop, $250/day layover, $200 TONU, lumpers at cost. Same for
+  // What SRL PAYS the carrier. The uniform ratified schedule (2026-09-26) —
+  // $40/hr detention capped at $200/stop, $200/day layover, $200 TONU, lumpers
+  // at cost; figures live in lib/accessorialPolicy.ts. Same for
   // every carrier, no tier and no equipment differentiation.
   amount           Decimal           @db.Decimal(10, 2)
   // What SRL BILLS the customer for the same event, when that differs.

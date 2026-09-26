@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DETENTION_RATE_PER_HOUR } from "../lib/accessorialPolicy";
 
 const stopSchema = z.object({
   type: z.enum(["PICKUP", "DELIVERY"]).optional(),
@@ -131,12 +132,16 @@ export const createRateConfirmationSchema = z.object({
     rateType: z.enum(["FLAT", "PER_MILE"]).optional(),
     fuelSurcharge: z.number().optional(),
     fuelSurchargeType: z.enum(["FLAT", "PERCENTAGE"]).optional(),
-    // Bounded to the ratified uniform rate (CLAUDE.md §5). Detention is $50/hr for
-    // ALL equipment — the retired "$50 dry van / $65 reefer" split was never
-    // implemented, and the renderer's guard only rejects non-positive values, so an
-    // unbounded field left 65 printable on a signed document. .literal keeps the
-    // field optional and shaped as before; only off-policy values are now refused.
-    detentionRate: z.literal(50).optional(),
+    // Bounded to the ratified uniform rate (CLAUDE.md §5), one rate for ALL
+    // equipment — the retired dry van / reefer split was never implemented, and
+    // the renderer's guard only rejects non-positive values, so an unbounded field
+    // left 65 printable on a signed document. .literal keeps the field optional and
+    // shaped as before; only off-policy values are refused.
+    //
+    // READ FROM THE CONSTANT (2026-09-26). This was z.literal(50). When the rate
+    // moved to $40 a typed literal would have refused the correct rate and still
+    // accepted the retired one onto a document a carrier signs.
+    detentionRate: z.literal(DETENTION_RATE_PER_HOUR).optional(),
     accessorials: z.array(z.object({
       type: z.string().optional(),
       description: z.string(),

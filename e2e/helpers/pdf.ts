@@ -65,6 +65,12 @@ export const RC_PDF_FORBIDDEN: string[] = [
   "$0/hr",
   "$65/hr",
   "$75/hr",
+  // Retired 2026-09-26, when the schedule became $40/hr capped at $200 per stop
+  // with a $200 layover day. "/hr", "/stop" and "/day" each render only in
+  // their own cell, so the suffixed forms cannot match a line-haul figure.
+  "$50/hr",
+  "$250/stop",
+  "$250/day",
   // TONU renders as `$<amount> (truck-order-not-used)` with NO decimals, so a
   // bare "$250.00" could never match a TONU regression while it COULD match a
   // legitimate $250.00 accessorial. Anchored on the label instead.
@@ -167,20 +173,21 @@ export const RC_PDF_REQUIRED: string[] = [
   // ("freight \ncharges") only affects wrapped body copy. Keeping it whole
   // locks rate, free hours, and cap in one adjacency: a regression that
   // dropped the cap while keeping the rate would still fail. If the renderer
-  // ever gains wrapping here, split this into "$50/hr after 2 hrs free" and
-  // "$250/stop cap" rather than deleting it.
+  // ever gains wrapping here, split this into "$40/hr after 2 hrs free" and
+  // "$200/stop cap" rather than deleting it.
   //
-  // The cap reads "$250/stop cap" and NOT "capped at $250/stop" for a measured
+  // The cap reads "$200/stop cap" and NOT "capped at $200/stop" for a measured
   // reason: the grid cell draws with lineBreak:false, and "capped at $250/stop
-  // · notify" measures 216.6pt against 202pt of available width, so it would
-  // overprint the adjacent TONU label. The only way to keep "capped at" is to
-  // drop the deliberate Sprint 50 " · notify" suffix, which is a real control.
-  // If you are tempted to make this string read better, measure it first.
-  // (Trailing " · notify" is appended after the cap, so it does not affect
-  // this match.)
-  "$50/hr after 2 hrs free, $250/stop cap",
+  // · notify" measured 216.6pt against 202pt of available width, so it would
+  // overprint the adjacent TONU label (the figures moved to $40/$200 on
+  // 2026-09-26; the same digit count keeps the measurement). The only way to
+  // keep "capped at" is to drop the deliberate Sprint 50 " · notify" suffix,
+  // which is a real control. If you are tempted to make this string read
+  // better, measure it first. (Trailing " · notify" is appended after the cap,
+  // so it does not affect this match.)
+  "$40/hr after 2 hrs free, $200/stop cap",
   "$200 (truck-order-not-used)",
-  "$250/day",
+  "$200/day",
   // Paperwork deadline, from the GOVERNING TERMS clause block: "Signed BOL,
   // POD, and supporting paperwork are due within 24 hours of delivery."
   // NOTE: that block IS wrapped (`width: CONTENT_W`), so if a future edit to

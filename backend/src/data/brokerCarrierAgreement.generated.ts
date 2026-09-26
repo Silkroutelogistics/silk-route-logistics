@@ -237,8 +237,8 @@ export const BCA_BODY_SECTIONS: LegalSection[] = [
       table: {
         headers: ["Charge", "Terms"],
         rows: [
-          ["Detention", "Two (2) hours free at each stop, measured from arrival. Free time is per stop and does not carry over between stops. After free time, $50.00 per hour, capped at $250.00 per stop. Detention is not payable if CARRIER arrived outside the appointment window. CARRIER shall notify BROKER thirty (30) minutes before detention begins and again on departure."],
-          ["Layover", "$250.00 per day where CARRIER is required to stay overnight at BROKER's or the shipper's request through no fault of CARRIER. Where detention has reached the per-stop cap, the first layover day begins at that point, and detention and layover do not both run for the same hours."],
+          ["Detention", "Two (2) hours free at each stop, measured from arrival. Free time is per stop and does not carry over between stops. After free time, $40.00 per hour, capped at $200.00 per stop. Detention is not payable if CARRIER arrived outside the appointment window. CARRIER shall notify BROKER thirty (30) minutes before detention begins and again on departure."],
+          ["Layover", "$200.00 per day where CARRIER is required to stay overnight at BROKER's or the shipper's request through no fault of CARRIER. Where detention has reached the per-stop cap, the first layover day begins at that point, and detention and layover do not both run for the same hours."],
           ["Truck Order Not Used", "$200.00 where BROKER or the shipper cancels a confirmed load on the same day as the scheduled pickup, or after CARRIER has been dispatched. No TONU is owed where cancellation results from CARRIER's late arrival, unavailable or non-compliant equipment, insurance lapse or other CARRIER breach."],
           ["Carrier release window", "CARRIER may release a load without penalty by giving notice not less than twenty-four (24) hours before the scheduled pickup appointment. This is CARRIER's right to withdraw. It does not limit BROKER's TONU obligation above."],
           ["Lumper", "Reimbursed at cost against a legible receipt. No markup."],

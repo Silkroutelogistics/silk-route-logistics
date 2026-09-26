@@ -185,7 +185,7 @@ For the 97% of US carriers with 10 trucks or fewer, the math is brutal: average 
 **SRL QP addresses this:** NO -- QP accelerates payment but doesn't address detention itself.
 
 **What's missing:**
-- **Mandatory detention pay policy**: SRL should build detention pay into every rate confirmation. Canonical policy as of v3.8.ars: $50/hour after 2 hours free at each stop, capped at $250 per stop. At the cap detention converts to layover at $250/day; the two do not stack for the same hours.
+- **Mandatory detention pay policy**: SRL should build detention pay into every rate confirmation. Canonical policy as of 2026-09-26 (re-ratified; was $50/$250 from v3.8.ars): $40/hour after 2 hours free at each stop, capped at $200 per stop. At the cap detention converts to layover at $200/day; the two do not stack for the same hours.
 - **Detention tracking**: Track shipper detention performance and adjust rates/relationships accordingly
 - **Carrier notification**: Alert carriers about shippers with high detention histories before they accept loads
 - **This is a significant carrier loyalty opportunity**
@@ -499,7 +499,7 @@ Supporting points:
 ### Tier 1 -- Launch With (Months 1-3)
 1. **Payment Guarantee language** on all rate confirmations and carrier portal
 2. **True Cost Calculator** comparing SRL QP vs. factoring (carrier portal widget)
-3. **Detention pay policy** -- $50/hour after 2 hours free at each stop, capped at $250 per stop, mandatory on all loads (canonical as of v3.8.ars)
+3. **Detention pay policy** -- $40/hour after 2 hours free at each stop, capped at $200 per stop, mandatory on all loads (canonical as of 2026-09-26; $50/$250 from v3.8.ars before that)
 4. **Same-day payment tier** at 3.5-4% (in addition to existing 1-3% tiers)
 
 ### Tier 2 -- Add by Month 6

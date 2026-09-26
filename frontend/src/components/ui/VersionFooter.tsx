@@ -19264,6 +19264,14 @@
 // text, the executed PDF and every review pane. Quick Pay's citations of the
 // Broker-Carrier Agreement point at its real paragraphs. The review panes show
 // the tables. Foundation Edition and Quick Pay v5 archived for their signers.
+// v3.8.blk — Detention $40/hr capped at $200 per stop, layover $200 a day, TONU $200: one figure for a day's hold, everywhere it is stated.
+//   Owner-ratified. The dwell constants moved in their one home and every surface
+// followed: the Rate Confirmation's terms grid and governing clause, the
+// Broker-Carrier Agreement's paragraph 24 table, the carrier dashboard card, the
+// Driver Academy lesson and quiz, the SOP seeds. The conversion stays at hour 7.
+// The RC validator read a typed 50; it reads the constant now. The drift guard's
+// retired list moved with the policy, and a negation elsewhere on a line no
+// longer excuses a rate on it.
 export const SRL_VERSION = "3.8.blv";
 
 export function VersionFooter({ className }: { className?: string }) {

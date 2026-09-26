@@ -55,6 +55,14 @@ const SCAN: { dir: string; exts: string[] }[] = [
   { dir: "frontend/src/components", exts: [".tsx", ".ts"] },
 ];
 
+/**
+ * Directories of records rather than statements. data/archive/ holds agreement
+ * bodies exactly as carriers signed them; they must keep the figures that were
+ * in force that day, and editing them would make the stored signature hashes
+ * un-derivable. Their figures are history, not current policy.
+ */
+const SKIP_DIRS = ["backend/src/data/archive/"];
+
 /** Files whose entire job is to record history or enumerate what is banned. */
 const SKIP_FILES = [
   "frontend/src/components/ui/VersionFooter.tsx", // sprint history, by design
@@ -142,13 +150,28 @@ function walk(dir: string, exts: string[], out: string[] = []): string[] {
   return out;
 }
 
-function exempt(line: string, prev: string[]): string | null {
-  for (const e of EXEMPTIONS) if (e.test(line, prev)) return e.name;
+/**
+ * The negation exemption answers one question -- "does this line say SRL does
+ * NOT issue a money code or charge a fee?" -- and it is line-wide. Applied to a
+ * RATE it exonerated everything on the line: the dev seed's accessorial SOP
+ * stated "$50/hr ... capped at $250 per stop" on the same line as "SRL issues no
+ * money codes", and the guard passed it through two schedule changes. A rate is
+ * never made correct by a negation elsewhere in its sentence, so figure checks
+ * skip that exemption.
+ */
+const NOT_FOR_FIGURES = new Set(["negated — says SRL does NOT do this"]);
+
+function exempt(line: string, prev: string[], kind: "figure" | "other" = "other"): string | null {
+  for (const e of EXEMPTIONS) {
+    if (kind === "figure" && NOT_FOR_FIGURES.has(e.name)) continue;
+    if (e.test(line, prev)) return e.name;
+  }
   return null;
 }
 
 function main() {
-  const files = SCAN.flatMap((s) => walk(s.dir, s.exts)).filter((f) => !SKIP_FILES.includes(f));
+  const files = SCAN.flatMap((s) => walk(s.dir, s.exts))
+    .filter((f) => !SKIP_FILES.includes(f) && !SKIP_DIRS.some((d) => f.startsWith(d)));
   const hits: Hit[] = [];
   let scanned = 0;
 
@@ -169,7 +192,7 @@ function main() {
 
       for (const r of RETIRED_FIGURES) {
         if (!r.pattern.test(line)) continue;
-        const why = exempt(line, prev);
+        const why = exempt(line, prev, "figure");
         if (why) continue;
         hits.push({ file, line: i + 1, text: line.trim().slice(0, 160), rule: r.was, expected: r.now });
       }
@@ -231,7 +254,7 @@ function main() {
       const prev = src.split(/\r?\n/).slice(Math.max(0, i - 6), i);
       for (const f of LIVE_FIGURES) {
         if (!f.re.test(line)) continue;
-        if (exempt(line, prev)) continue;
+        if (exempt(line, prev, "figure")) continue;
         hits.push({
           file: target.file, line: i + 1, text: line.trim().slice(0, 160),
           rule: `hardcodes a ratified figure (${target.why})`,

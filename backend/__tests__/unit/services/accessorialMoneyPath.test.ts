@@ -10,7 +10,7 @@
 //
 // The worked example throughout is the one the sprint specifies:
 //   GOLD carrier, $2,400 linehaul, $400 fuel surcharge,
-//   5h dwell -> $150 detention (2h free, 3 billable at $50/hr),
+//   5h45m dwell -> $150 detention (2h free, 3.75 billable at $40/hr),
 //   $150 lumper fronted by the carrier and reimbursed at cost.
 //
 // Every figure below is asserted to the cent, with and without Quick Pay.
@@ -28,7 +28,7 @@ const mockPrisma = vi.mocked(prisma, true) as any;
 // ── The worked example ────────────────────────────────────────────────
 const LINEHAUL = 2400;
 const FSC = 400;
-const DETENTION = 150; // 5h dwell, 2h free, 3h billable at the ratified $50/hr
+const DETENTION = 150; // 5h45m dwell, 2h free, 3.75h billable at the ratified $40/hr
 const LUMPER = 150; // fronted by the carrier, reimbursed AT COST
 const CUSTOMER_RATE = 3000;
 
@@ -36,7 +36,7 @@ const CUSTOMER_RATE = 3000;
 const GOLD_7DAY_PCT = 2;
 
 const APPROVED_LEDGER = [
-  { id: "acc-det", type: "DETENTION_DEL", amount: DETENTION, notes: "5h dwell", billedTo: "SHIPPER" },
+  { id: "acc-det", type: "DETENTION_DEL", amount: DETENTION, notes: "5h45m dwell", billedTo: "SHIPPER" },
   { id: "acc-lump", type: "LUMPER", amount: LUMPER, notes: "receipt on file", billedTo: "SHIPPER" },
 ];
 
