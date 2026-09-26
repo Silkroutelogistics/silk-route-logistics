@@ -65,10 +65,10 @@ describe("loadController", () => {
   // ── createLoad ──────────────────────────────────────────
   it("createLoad — creates a new load and returns 201", async () => {
     (mockPrisma as any).$executeRaw = vi.fn().mockResolvedValue(undefined);
-    (mockPrisma as any).$queryRaw = vi.fn().mockResolvedValue([{ nextval: BigInt(121472) }]);
+    (mockPrisma as any).$queryRaw = vi.fn().mockResolvedValue([{ nextval: BigInt(121498) }]);
     mockPrisma.load.create.mockResolvedValue({
       id: "load-1",
-      referenceNumber: "SRL-121472",
+      referenceNumber: "121498",
       status: "POSTED",
       originCity: "Chicago",
       originState: "IL",

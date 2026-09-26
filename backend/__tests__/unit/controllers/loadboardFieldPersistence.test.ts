@@ -69,8 +69,8 @@ function loadboardBody(extra: Record<string, any> = {}) {
 
 async function createAndCapture(body: Record<string, any>) {
   (mockPrisma as any).$executeRaw = vi.fn().mockResolvedValue(undefined);
-  (mockPrisma as any).$queryRaw = vi.fn().mockResolvedValue([{ nextval: BigInt(121497) }]);
-  mockPrisma.load.create.mockResolvedValue({ id: "load-1", referenceNumber: "SRL-121497" } as any);
+  (mockPrisma as any).$queryRaw = vi.fn().mockResolvedValue([{ nextval: BigInt(121498) }]);
+  mockPrisma.load.create.mockResolvedValue({ id: "load-1", referenceNumber: "121498" } as any);
   const req = { body, user: { id: "user-1", role: "BROKER" }, params: {}, query: {}, headers: {} } as any;
   const res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() } as any;
   await createLoad(req, res);
