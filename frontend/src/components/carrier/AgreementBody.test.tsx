@@ -46,6 +46,29 @@ describe("AgreementBody", () => {
     expect(within(table).getAllByRole("row")).toHaveLength(3);
   });
 
+  it("draws the clauses as a list, with bullets where registration showed them (v3.8.bma)", () => {
+    // Two clauses in the fixture, one per section.
+    const { unmount } = render(<AgreementBody agreement={AGREEMENT} carrierName="X LLC" size="comfortable" />);
+    const items = screen.getAllByRole("listitem");
+    expect(items.map((li) => li.textContent)).toEqual([
+      "BROKER may update this Schedule on thirty (30) days' written notice.",
+      "1. Standard tier payment is free of charge.",
+    ]);
+    for (const list of screen.getAllByRole("list")) expect(list.className).toContain("list-disc");
+    unmount();
+
+    // Compact keeps the activation pane's look, and is still a list.
+    render(<AgreementBody agreement={AGREEMENT} carrierName="X LLC" />);
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    for (const list of screen.getAllByRole("list")) {
+      expect(list.className).not.toContain("list-disc");
+      // Safari drops a list's role when list-style is none, and jsdom does not
+      // model that, so getByRole passes either way. The explicit attribute is
+      // what keeps VoiceOver announcing it; hold the attribute itself.
+      expect(list.getAttribute("role")).toBe("list");
+    }
+  });
+
   it("every pane that shows an agreement renders it through this component", () => {
     // Three panes drawing their own clauses is how two of them came to drop the
     // tables and the name. One renderer keeps them showing the same words.

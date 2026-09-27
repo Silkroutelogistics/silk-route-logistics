@@ -27,6 +27,17 @@ export interface AgreementBodyContent {
  *   Schedule A are TABLES, and a pane that drew only clauses showed a carrier
  *   neither the detention rate nor their payment terms before they agreed to
  *   them.
+ *
+ * v3.8.bma — the clauses are a list again. Registration showed them as a
+ * bulleted list before this component existed, and bli's first cut drew them
+ * as bare paragraphs, which lost the bullets and the list a screen reader
+ * announces. Comfortable keeps the bullets; compact keeps its look (the
+ * activation pane never had bullets) and gains the list semantics.
+ *
+ * role="list" is explicit because Safari drops a list's role from the
+ * accessibility tree when its list-style is none, so VoiceOver would not
+ * announce compact as a list without it. jsdom cannot show that; the test
+ * holds the attribute instead.
  */
 export function AgreementBody({
   agreement,
@@ -50,9 +61,11 @@ export function AgreementBody({
       {agreement.sections.map((s) => (
         <div key={s.heading} className={compact ? "mb-3 last:mb-0" : "mb-2"}>
           <p className={heading}>{s.heading}</p>
-          {s.clauses.map((c, i) => (
-            <p key={i} className={`${text} mb-1`}>{fill(c)}</p>
-          ))}
+          <ul role="list" className={compact ? "list-none" : "list-disc ml-5 space-y-1"}>
+            {s.clauses.map((c, i) => (
+              <li key={i} className={compact ? `${text} mb-1` : text}>{fill(c)}</li>
+            ))}
+          </ul>
           {s.table && (
             <div className="mt-1.5 overflow-x-auto">
               <table className={`w-full border-collapse ${compact ? "text-[11px]" : "text-sm"}`}>

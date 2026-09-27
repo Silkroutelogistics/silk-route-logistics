@@ -19311,7 +19311,12 @@
 //   It cited Art. 8, which only decides which document wins a conflict. Art.
 // 24 is where the BCA says an accepted Rate Confirmation binds, so a carrier
 // following the reference now lands on the rule it points to.
-export const SRL_VERSION = "3.8.blz";
+// v3.8.bma — The agreement clauses are a list again.
+//   Registration showed them as a bulleted list; v3.8.bli's shared renderer
+// drew bare paragraphs, which lost the bullets and the list a screen reader
+// announces. Registration has its bullets back, and the activation pane keeps
+// its look while gaining the list semantics.
+export const SRL_VERSION = "3.8.bma";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
