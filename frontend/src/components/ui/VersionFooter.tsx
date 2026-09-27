@@ -19322,7 +19322,11 @@
 // look. GET now shows the lane, the offered rate and one button. Only the POST from
 // that button acts, and it claims the token first, so each link acts at most once. The
 // claim lasts as long as the token (7 days), not the 25 hours of a logout blacklist row.
-export const SRL_VERSION = "3.8.bmb";
+// v3.8.bmc — A used tender link reports what it did, and each press is recorded (Item 330).
+//   Opening or pressing a link that was already used shows the outcome stored with its
+// claim (accepted, declined, or the refusal and its reason) and changes nothing. Each
+// press writes an audit row with its IP and user agent. Neither write can undo the act.
+export const SRL_VERSION = "3.8.bmc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

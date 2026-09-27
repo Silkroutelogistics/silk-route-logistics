@@ -4,9 +4,10 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { acceptTender, declineTender } from "../controllers/tenderController";
-import { verifyTenderActionToken } from "../lib/tenderActionToken";
+import { verifyTenderActionToken, TenderActionPayload } from "../lib/tenderActionToken";
 import { log } from "../lib/logger";
 import { makeCaptureRes } from "../lib/captureResponse";
+import { clientIp, clientUserAgent } from "../lib/clientIp";
 
 /**
  * v3.8.als §13.3 Item 142 — magic-link tender accept/decline (no login).
@@ -68,6 +69,53 @@ function send(res: Response, status: number, html: string) {
 // self-accept became a second consumer. Two copies would have been two shims
 // free to drift.
 
+type Outcome = "accepted" | "declined" | "refused" | "error";
+const SAID: Record<Outcome, string> = {
+  accepted: "You accepted this tender with this link.",
+  declined: "You declined this tender with this link.",
+  refused: "You used this link and it could not be processed",
+  error: "You used this link and something went wrong on our side.",
+};
+
+// Item 330b: a used link says what it did, from the outcome stored on its claim,
+// and does nothing again. A claim with no outcome yet is a press still in flight.
+function replay(res: Response, row: { reason: string } | null, ref: string, lane: string) {
+  const [, outcome, ...msg] = (row?.reason ?? "").split(":");
+  const said = SAID[outcome as Outcome];
+  const detail = !said ? "Your response is being recorded." : msg.length ? `${said}: ${msg.join(":")}.` : said;
+  return send(res, 409, renderPage({
+    accent: C.warn,
+    heading: "This link was already used",
+    body: `<p>${detail} Nothing changed.</p><p>Tender <span class="ref">${ref}</span> (${lane}). Open the carrier portal for its current status.</p><a class="cta" href="https://silkroutelogistics.ai/carrier/login">Open carrier portal</a>`,
+  }));
+}
+
+// Item 330b: store the outcome on the claim so a replay can report it, and record
+// the press with its IP and user agent. Neither write may undo the act (Item 235.5).
+async function recordOutcome(req: Request, tokenHash: string, p: TenderActionPayload, tenderId: string, outcome: Outcome, msg?: string) {
+  try {
+    await prisma.tokenBlacklist.update({ where: { tokenHash }, data: { reason: `tender-action:${outcome}${msg ? `:${msg.slice(0, 300)}` : ""}` } });
+  } catch (err) {
+    log.error({ err, tenderId }, "[TenderAction] outcome not stored");
+  }
+  try {
+    await prisma.auditLog.create({
+      data: {
+        userId: p.carrierUserId,
+        action: p.action === "accept" ? "TENDER_LINK_ACCEPT" : "TENDER_LINK_DECLINE",
+        entity: "LoadTender",
+        entityId: tenderId,
+        changes: `Tender link ${p.action}: ${outcome}${msg ? ` (${msg})` : ""}`,
+        ipAddress: clientIp(req),
+        userAgent: clientUserAgent(req),
+        details: { outcome },
+      },
+    });
+  } catch (err) {
+    log.error({ err, tenderId }, "[TenderAction] press not audited");
+  }
+}
+
 // Item 330: this link used to act on GET, so anything that fetched it acted: a
 // mail scanner, a link preview, a carrier opening it only to look. GET now shows
 // what the link will do. Only the POST from its button acts, and it claims the
@@ -112,6 +160,10 @@ async function respond(req: Request, res: Response, act: boolean) {
     }));
   }
 
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const used = await prisma.tokenBlacklist.findUnique({ where: { tokenHash } });
+  if (used) return replay(res, used, ref, lane);
+
   // Already handled — don't re-run the action; show current state.
   if (tender.status !== "OFFERED") {
     const label = tender.status.charAt(0) + tender.status.slice(1).toLowerCase();
@@ -138,7 +190,7 @@ async function respond(req: Request, res: Response, act: boolean) {
   const exp = (jwt.decode(token) as { exp?: number } | null)?.exp;
   const claim = await prisma.tokenBlacklist.createMany({
     data: [{
-      tokenHash: crypto.createHash("sha256").update(token).digest("hex"),
+      tokenHash,
       userId: payload.carrierUserId,
       reason: "tender-action",
       expiresAt: new Date(exp ? exp * 1000 : Date.now() + 7 * 24 * 3600 * 1000),
@@ -146,11 +198,7 @@ async function respond(req: Request, res: Response, act: boolean) {
     skipDuplicates: true,
   });
   if (claim.count === 0) {
-    return send(res, 409, renderPage({
-      accent: C.warn,
-      heading: "This link was already used",
-      body: `<p>Your response to tender <span class="ref">${ref}</span> (${lane}) was already recorded. Open the carrier portal for its current status.</p><a class="cta" href="https://silkroutelogistics.ai/carrier/login">Open carrier portal</a>`,
-    }));
+    return replay(res, await prisma.tokenBlacklist.findUnique({ where: { tokenHash } }), ref, lane);
   }
 
   // Delegate to the existing controller with a synthetic carrier actor.
@@ -161,6 +209,7 @@ async function respond(req: Request, res: Response, act: boolean) {
   } as unknown as AuthRequest;
   const { shim, state } = makeCaptureRes();
 
+  let threw = false;
   try {
     if (payload.action === "accept") {
       await acceptTender(syntheticReq, shim);
@@ -168,7 +217,15 @@ async function respond(req: Request, res: Response, act: boolean) {
       await declineTender(syntheticReq, shim);
     }
   } catch (err) {
+    threw = true;
     log.error({ err, tenderId: tender.id, action: payload.action }, "[TenderAction] delegate failed");
+  }
+  const ok = !threw && state.statusCode >= 200 && state.statusCode < 300;
+  const outcome: Outcome = threw ? "error" : !ok ? "refused" : payload.action === "accept" ? "accepted" : "declined";
+  const msg = state.body?.error ?? "This tender could not be processed.";
+  await recordOutcome(req, tokenHash, payload, tender.id, outcome, outcome === "refused" ? msg : undefined);
+
+  if (threw) {
     return send(res, 500, renderPage({
       accent: C.danger,
       heading: "Something went wrong",
@@ -176,7 +233,7 @@ async function respond(req: Request, res: Response, act: boolean) {
     }));
   }
 
-  if (state.statusCode >= 200 && state.statusCode < 300) {
+  if (ok) {
     if (payload.action === "accept") {
       return send(res, 200, renderPage({
         accent: C.success,
@@ -192,7 +249,6 @@ async function respond(req: Request, res: Response, act: boolean) {
   }
 
   // Controller rejected (expired, non-compliant, etc.) — surface its message.
-  const msg = state.body?.error ?? "This tender could not be processed.";
   return send(res, 200, renderPage({
     accent: C.warn,
     heading: "Couldn't process that",

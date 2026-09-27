@@ -22,8 +22,9 @@ import { acceptTender, declineTender } from "../../../src/controllers/tenderCont
 import tenderActionRoutes from "../../../src/routes/tenderAction";
 
 const db = prisma as any;
-// The shared mock has no createMany; attach it here rather than alias another method.
+// The shared mock has no createMany or update; attach them here rather than alias another method.
 db.tokenBlacklist.createMany = vi.fn();
+db.tokenBlacklist.update = vi.fn();
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
@@ -42,13 +43,15 @@ const link = (action: "accept" | "decline") =>
 beforeEach(() => {
   vi.clearAllMocks();
   db.loadTender.findUnique.mockResolvedValue(TENDER);
-  // Answers like the unique index on tokenHash: the first insert of a hash wins.
-  const claimed = new Set<string>();
+  // Answers like the table: tokenHash is unique, so the first insert of a hash wins.
+  const rows = new Map<string, { reason: string }>();
   db.tokenBlacklist.createMany.mockImplementation(async ({ data }: any) => {
-    if (claimed.has(data[0].tokenHash)) return { count: 0 };
-    claimed.add(data[0].tokenHash);
+    if (rows.has(data[0].tokenHash)) return { count: 0 };
+    rows.set(data[0].tokenHash, { reason: data[0].reason });
     return { count: 1 };
   });
+  db.tokenBlacklist.findUnique.mockImplementation(async ({ where }: any) => rows.get(where.tokenHash) ?? null);
+  db.tokenBlacklist.update.mockImplementation(async ({ where, data }: any) => Object.assign(rows.get(where.tokenHash)!, data));
 });
 
 describe("GET /api/tender-action/:token", () => {
@@ -59,7 +62,8 @@ describe("GET /api/tender-action/:token", () => {
     expect(acceptTender).not.toHaveBeenCalled();
     expect(declineTender).not.toHaveBeenCalled();
     expect(db.tokenBlacklist.createMany).not.toHaveBeenCalled();
-    // The route was reached and rendered its form, so the three checks above are not vacuous.
+    expect(db.auditLog.create).not.toHaveBeenCalled();
+    // The route was reached and rendered its form, so the checks above are not vacuous.
     expect(res.text).toContain(`<form method="POST" action="/api/tender-action/${token}">`);
     expect(res.text).toContain("$2,400.00");
   });
@@ -77,13 +81,44 @@ describe("POST /api/tender-action/:token", () => {
     expect(req.user).toMatchObject({ id: "u-carrier", role: "CARRIER" });
   });
 
-  it("does not act a second time on the same token", async () => {
+  it("does not act a second time: a replay, POST or GET, reports the stored outcome", async () => {
     const token = link("decline");
     await request(app).post(`/api/tender-action/${token}`);
-    const again = await request(app).post(`/api/tender-action/${token}`);
-    expect(again.status).toBe(409);
-    expect(again.text).toContain("already used");
+    for (const again of [
+      await request(app).post(`/api/tender-action/${token}`),
+      await request(app).get(`/api/tender-action/${token}`),
+    ]) {
+      expect(again.status).toBe(409);
+      expect(again.text).toContain("You declined this tender with this link. Nothing changed.");
+    }
     expect(declineTender).toHaveBeenCalledTimes(1);
+    expect(db.tokenBlacklist.createMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("stores a refusal with its message, and replays it", async () => {
+    (acceptTender as any).mockImplementationOnce(async (_req: unknown, res: any) =>
+      res.status(400).json({ error: "This tender has expired" }));
+    const token = link("accept");
+    const first = await request(app).post(`/api/tender-action/${token}`);
+    expect(first.text).toContain("This tender has expired");
+    const again = await request(app).get(`/api/tender-action/${token}`);
+    expect(again.text).toContain("could not be processed: This tender has expired.");
+    expect(acceptTender).toHaveBeenCalledTimes(1);
+  });
+
+  it("records the press with its IP and user agent", async () => {
+    await request(app).post(`/api/tender-action/${link("accept")}`).set("User-Agent", "CarrierPhone/1.0");
+    expect(db.auditLog.create).toHaveBeenCalledTimes(1);
+    const { data } = db.auditLog.create.mock.calls[0][0];
+    expect(data).toMatchObject({
+      userId: "u-carrier",
+      action: "TENDER_LINK_ACCEPT",
+      entity: "LoadTender",
+      entityId: "t1",
+      userAgent: "CarrierPhone/1.0",
+      details: { outcome: "accepted" },
+    });
+    expect(data.ipAddress).toMatch(/127\.0\.0\.1/);
   });
 
   it("keeps the claim for as long as the token verifies", async () => {

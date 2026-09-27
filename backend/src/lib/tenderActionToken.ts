@@ -8,7 +8,8 @@ import { env } from "../config/env";
  * accept/decline CTA buttons so the carrier can act without logging in.
  * The token IS the authorization — it embeds the tender id + the carrier's
  * User.id, both signed with JWT_SECRET. The public endpoint at
- * GET /api/tender-action/:token verifies it, then delegates to the existing
+ * /api/tender-action/:token shows a confirm page on GET (Item 330); the POST
+ * from it claims the token once, then delegates to the existing
  * acceptTender/declineTender controllers with a synthetic actor set to the
  * embedded carrierUserId (which satisfies their carrier-userId ownership
  * gate). Same JWT_SECRET + HS256 as the auth tokens; same lifecycle pattern
