@@ -19332,7 +19332,11 @@
 // carrier's offer with its one-click links. They now go to the poster only when staff,
 // else the customer's active account rep, else operations@. Staff get their own copy of
 // the offer with no links, and the carrier's copy no longer takes a CC.
-export const SRL_VERSION = "3.8.bmd";
+// v3.8.bme — Risk and fall-off alerts go to SRL staff, never to a shipper (Item 329).
+//   The risk alert quotes the load's margin and the fall-off alert names the carrier.
+// Both went to the load's poster, who is the shipper when the shipper posted it. Both
+// now use the same staff recipient as the tender emails.
+export const SRL_VERSION = "3.8.bme";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
+import { loadStaffRecipient } from "./notificationService";
 interface RiskFactor {
   factor: string;
   points: number;
@@ -209,7 +210,13 @@ export async function runRiskFlagging() {
     },
     // v3.8.ali §13.3 Item 192 — select riskEmailMuted so the email gate
     // below can honor the per-load kill switch without a second query.
-    select: { id: true, referenceNumber: true, posterId: true, riskEmailMuted: true },
+    select: {
+      id: true, referenceNumber: true, posterId: true, riskEmailMuted: true,
+      // Item 329: the alert quotes the margin, so it goes to staff, never to a
+      // shipper who posted the load in their portal.
+      poster: { select: { id: true, email: true, role: true } },
+      customer: { select: { accountRep: { select: { id: true, email: true, role: true, isActive: true } } } },
+    },
   });
 
   let redCount = 0;
@@ -219,6 +226,7 @@ export async function runRiskFlagging() {
 
   for (const load of loads) {
     try {
+      const staff = loadStaffRecipient(load);
       const risk = await calculateLoadRisk(load.id);
 
       // v3.8.ali §13.3 Item 192 — once-per-load-per-level cadence.
@@ -260,9 +268,9 @@ export async function runRiskFlagging() {
         amberCount++;
         // AMBER is IN-APP ONLY (never email) per Item 192 locked
         // decision. The external channel is reserved for RED urgency.
-        await prisma.notification.create({
+        if (staff.userId) await prisma.notification.create({
           data: {
-            userId: load.posterId,
+            userId: staff.userId,
             type: "LOAD_UPDATE",
             title: `Risk AMBER: Load #${load.referenceNumber}`,
             message: risk.factors.map((f) => f.description).join("; "),
@@ -276,9 +284,9 @@ export async function runRiskFlagging() {
         // In-app notification ALWAYS fires on the RED crossing — the
         // kill switch is email-only, so the portal badge + teammates'
         // view are never suppressed.
-        await prisma.notification.create({
+        if (staff.userId) await prisma.notification.create({
           data: {
-            userId: load.posterId,
+            userId: staff.userId,
             type: "LOAD_UPDATE",
             title: `RISK RED: Load #${load.referenceNumber}`,
             message: `URGENT — ${risk.factors.map((f) => f.description).join("; ")}`,
@@ -300,13 +308,15 @@ export async function runRiskFlagging() {
           // above is NOT gated (it's the low-cost inside-portal channel);
           // the preference governs the external email only, same as the
           // per-load kill switch.
-          const poster = await prisma.user.findUnique({ where: { id: load.posterId }, select: { email: true, firstName: true, preferences: true } });
-          const prefs = (poster?.preferences as { notifications?: { riskAlerts?: boolean } } | null) ?? null;
+          const recipient = staff.userId
+            ? await prisma.user.findUnique({ where: { id: staff.userId }, select: { email: true, firstName: true, preferences: true } })
+            : { email: staff.email, firstName: staff.firstName, preferences: null };
+          const prefs = (recipient?.preferences as { notifications?: { riskAlerts?: boolean } } | null) ?? null;
           const riskAlertsOptedOut = prefs?.notifications?.riskAlerts === false;
-          if (poster && !riskAlertsOptedOut) {
+          if (recipient && !riskAlertsOptedOut) {
             try {
               const { sendRiskAlertEmail } = await import("./emailService");
-              await sendRiskAlertEmail(poster.email, poster.firstName, load.referenceNumber, risk);
+              await sendRiskAlertEmail(recipient.email, recipient.firstName, load.referenceNumber, risk);
               emailsSent++;
             } catch { /* non-blocking */ }
           } else if (riskAlertsOptedOut) {

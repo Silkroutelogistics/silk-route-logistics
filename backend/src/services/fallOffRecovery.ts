@@ -4,6 +4,7 @@ import { log } from "../lib/logger";
 import { assignCarrier } from "./carrierAssignmentService";
 import { releaseCarrier } from "./carrierReleaseService";
 import { reviewableFallOffCount, needsDeactivationReview, DEACTIVATION_REVIEW_THRESHOLD } from "../lib/fallOffScoring";
+import { loadStaffRecipient } from "./notificationService";
 
 /**
  * C.4 — Carrier Fall-Off Recovery
@@ -14,10 +15,14 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
     where: { id: loadId },
     include: {
       carrier: { select: { id: true, firstName: true, lastName: true, company: true, carrierProfile: true } },
-      poster: { select: { id: true, email: true, firstName: true } },
+      // Item 329: the alert names the carrier, so it goes to staff, never to a
+      // shipper who posted the load in their portal.
+      poster: { select: { id: true, email: true, firstName: true, role: true } },
+      customer: { select: { accountRep: { select: { id: true, email: true, role: true, isActive: true, firstName: true } } } },
     },
   });
   if (!load) throw new Error("Load not found");
+  const staff = loadStaffRecipient(load);
 
   const originalCarrierId = load.carrierId;
   const startTime = Date.now();
@@ -40,9 +45,9 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
   const eventId = release.fallOffEventId;
 
   // 1. ALERT AE — urgent red notification
-  await prisma.notification.create({
+  if (staff.userId) await prisma.notification.create({
     data: {
-      userId: load.posterId,
+      userId: staff.userId,
       type: "LOAD_UPDATE",
       title: `CARRIER FALL-OFF: Load #${load.referenceNumber}`,
       message: `Carrier ${load.carrier?.company || load.carrier?.firstName || "Unknown"} has fallen off. Recovery in progress.`,
@@ -54,8 +59,8 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
   try {
     const { sendFallOffAlertEmail } = await import("./emailService");
     await sendFallOffAlertEmail(
-      load.poster.email,
-      load.poster.firstName,
+      staff.email,
+      staff.firstName,
       load.referenceNumber,
       load.carrier?.company || `${load.carrier?.firstName} ${load.carrier?.lastName}`,
       `${load.originCity}, ${load.originState}`,
