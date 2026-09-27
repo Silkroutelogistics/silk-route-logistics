@@ -1,6 +1,6 @@
 SRL RATE CONFIRMATION — RENDERED CAPTURE
 
-Generated 2026-09-26 from no version letter in HEAD subject (commit 65a54ebe) PLUS uncommitted changes to backend/src/lib/srl-chrome.ts, backend/src/services/pdfService.ts.
+Generated 2026-09-27 from v3.8.bly (commit bb10d76d) PLUS uncommitted changes to backend/src/services/pdfService.ts.
 Regenerate:  cd backend && npx tsx scripts/verify-rc-matrix.ts --dump
 
 Y coordinates are top-down from the page top, rounded to 0.5pt. Items sharing
@@ -38,7 +38,7 @@ read as a page map and taught the wrong one for several sprints.
     178  AE: Wasi Haider · (269) 220-6760
   189.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
   202.5  DATE ISSUED ⟂ LOAD REF ⟂ PICKUP ⟂ DELIVERY ⟂ PICKUP # ⟂ PO # ⟂ QUICK PAY ⟂ TERMS
-    218  Sep 26, 2026 ⟂ SRL-121488 ⟂ 8/13/2026 ⟂ 8/17/2026 ⟂ — ⟂ PO1770 ⟂ Not elected ⟂ Net-30
+    218  Sep 27, 2026 ⟂ SRL-121488 ⟂ 8/13/2026 ⟂ 8/17/2026 ⟂ — ⟂ PO1770 ⟂ Not elected ⟂ Net-30
     237  PARTIES
   258.5  SHIPPER · PICKUP FROM ⟂ CONSIGNEE · DELIVER TO
     277  Virun ⟂ Mainfreight North Lake
@@ -129,7 +129,7 @@ read as a page map and taught the wrong one for several sprints.
      49  SRL-121488R
      51  SILK ROUTE LOGISTICS INC.
      60  SRL-121488R · Rate Confirmation (continued)
-     95  A G R E E M E N T T O B E B O U N D ⟂ BCA Art. 8
+     95  A G R E E M E N T T O B E B O U N D ⟂ BCA Art. 24
   112.5  Carrier has read this entire Rate Confirmation. Carrier accepts it, and agrees to be bound by it and by the Broker-Carrier Agreement it incorporates, on the
     123  first of these: accepting it electronically through SRL's signing link, dispatching a unit, arriving at the pickup location, or beginning transport. No signature on
     133  this document is required. A carrier that does not agree to every term must decline the load before dispatching a unit.
@@ -153,7 +153,7 @@ read as a page map and taught the wrong one for several sprints.
     178  AE: Wasi Haider · (269) 220-6760
   189.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
   202.5  DATE ISSUED ⟂ LOAD REF ⟂ PICKUP ⟂ DELIVERY ⟂ PICKUP # ⟂ PO # ⟂ QUICK PAY ⟂ TERMS
-    218  Sep 26, 2026 ⟂ SRL-121488 ⟂ 8/13/2026 ⟂ 8/17/2026 ⟂ — ⟂ PO1770 ⟂ Not elected ⟂ Net-30
+    218  Sep 27, 2026 ⟂ SRL-121488 ⟂ 8/13/2026 ⟂ 8/17/2026 ⟂ — ⟂ PO1770 ⟂ Not elected ⟂ Net-30
     237  PARTIES
   258.5  SHIPPER · PICKUP FROM ⟂ CONSIGNEE · DELIVER TO
     277  Virun ⟂ Mainfreight North Lake
@@ -248,7 +248,7 @@ read as a page map and taught the wrong one for several sprints.
   166.5  Payment terms run from the date SRL receives a complete packet. An incomplete packet does not start the clock.
   187.5  SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, call SRL at
   196.5  (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before you move the freight.
-    218  A G R E E M E N T T O B E B O U N D ⟂ BCA Art. 8
+    218  A G R E E M E N T T O B E B O U N D ⟂ BCA Art. 24
   235.5  Carrier has read this entire Rate Confirmation. Carrier accepts it, and agrees to be bound by it and by the Broker-Carrier Agreement it incorporates, on the
     246  first of these: accepting it electronically through SRL's signing link, dispatching a unit, arriving at the pickup location, or beginning transport. No signature on
   256.5  this document is required. A carrier that does not agree to every term must decline the load before dispatching a unit.
@@ -272,7 +272,7 @@ read as a page map and taught the wrong one for several sprints.
     178  AE: Wasi Haider · (269) 220-6760
   189.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
   202.5  DATE ISSUED ⟂ LOAD REF ⟂ PICKUP ⟂ DELIVERY ⟂ PICKUP # ⟂ PO # ⟂ QUICK PAY ⟂ TERMS
-    218  Sep 26, 2026 ⟂ SRL-121488 ⟂ 8/13/2026 ⟂ 8/17/2026 ⟂ — ⟂ PO1770 ⟂ 3% · 7-day ⟂ 7 days
+    218  Sep 27, 2026 ⟂ SRL-121488 ⟂ 8/13/2026 ⟂ 8/17/2026 ⟂ — ⟂ PO1770 ⟂ 3% · 7-day ⟂ 7 days
     237  PARTIES
   258.5  SHIPPER · PICKUP FROM ⟂ CONSIGNEE · DELIVER TO
     277  Virun ⟂ Mainfreight North Lake
@@ -364,7 +364,7 @@ read as a page map and taught the wrong one for several sprints.
      49  SRL-121488R
      51  SILK ROUTE LOGISTICS INC.
      60  SRL-121488R · Rate Confirmation (continued)
-     95  A G R E E M E N T T O B E B O U N D ⟂ BCA Art. 8
+     95  A G R E E M E N T T O B E B O U N D ⟂ BCA Art. 24
   112.5  Carrier has read this entire Rate Confirmation. Carrier accepts it, and agrees to be bound by it and by the Broker-Carrier Agreement it incorporates, on the
     123  first of these: accepting it electronically through SRL's signing link, dispatching a unit, arriving at the pickup location, or beginning transport. No signature on
     133  this document is required. A carrier that does not agree to every term must decline the load before dispatching a unit.

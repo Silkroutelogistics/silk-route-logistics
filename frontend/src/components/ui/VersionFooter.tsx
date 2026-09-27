@@ -19307,7 +19307,11 @@
 // otherwise the fee stops on loads delivered from now on, and a payment already
 // prepared keeps its fee. The Quick Pay tab re-reads the enrolment list after a
 // termination, so it stops showing "enabled" from a stale copy.
-export const SRL_VERSION = "3.8.bly";
+// v3.8.blz — The Rate Confirmation's Agreement to be Bound cites BCA Art. 24.
+//   It cited Art. 8, which only decides which document wins a conflict. Art.
+// 24 is where the BCA says an accepted Rate Confirmation binds, so a carrier
+// following the reference now lands on the rule it points to.
+export const SRL_VERSION = "3.8.blz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

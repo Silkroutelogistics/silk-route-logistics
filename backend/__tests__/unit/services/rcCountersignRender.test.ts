@@ -72,6 +72,18 @@ describe.each([
     }
   }, 60_000);
 
+  it("cites the article the clause rests on, Art. 24 (v3.8.blz)", async () => {
+    // BCA Art. 24 is where an accepted Rate Confirmation binds; Art. 8 only
+    // decides which document wins a conflict. The reference sits right after
+    // the heading, before the clause.
+    const text = await get();
+    const at = text.indexOf(squash("AGREEMENT TO BE BOUND"));
+    expect(at, "vacuity: the heading must be on the page").toBeGreaterThan(-1);
+    const ref = text.slice(at, text.indexOf(CLAUSE));
+    expect(ref).toContain(squash("BCA Art. 24"));
+    expect(ref).not.toContain(squash("BCA Art. 8"));
+  }, 60_000);
+
   it("states acceptance once: Governing Terms no longer carries its own clause", async () => {
     const text = await get();
     expect(text).not.toContain(squash("Acceptance: Carrier"));

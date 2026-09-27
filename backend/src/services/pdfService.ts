@@ -2786,7 +2786,10 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     ? doc.font(FONT_BODY_ITALIC, 8).heightOfString(csStatement, { width: CONTENT_W, lineGap: 1 }) + 8
     : 0;
   rcEnsureRoom(RC_BOUND_HEADING_H + boundH + csStatementH);
-  y = drawSectionHeading(doc, "AGREEMENT TO BE BOUND", MARGIN, y, { ref: "BCA Art. 8" }) + 2;
+  // v3.8.blz — Art. 24, where the BCA says an accepted Rate Confirmation binds.
+  // bls cited Art. 8, which only decides which document wins a conflict, so a
+  // carrier following the reference to check the rule found nothing there.
+  y = drawSectionHeading(doc, "AGREEMENT TO BE BOUND", MARGIN, y, { ref: "BCA Art. 24" }) + 2;
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
   doc.text(RC_AGREEMENT_TO_BE_BOUND, MARGIN, y, { width: CONTENT_W, lineGap: 0.5 });
   y = doc.y;
