@@ -19291,7 +19291,12 @@
 // clears it, unless another signed Quick Pay Agreement is still in force, and
 // the pilot admission stands so re-signing turns it back on. The carrier notice,
 // the AE dialog and the banner stop saying a Quick Pay termination blocks loads.
-export const SRL_VERSION = "3.8.blv";
+// v3.8.blw — Facial verify no longer returns the carrier's full EIN.
+//   It returned the identity row straight from its update, and was missed when
+// the identity route was closed in v3.8.blr. Harmless only while no EIN was
+// stored; blr's onboarding field fills the column. Both routes now go through
+// one helper, and a census lists every file that touches the row.
+export const SRL_VERSION = "3.8.blw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

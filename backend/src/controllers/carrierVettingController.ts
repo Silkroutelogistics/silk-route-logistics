@@ -185,11 +185,20 @@ export async function getIdentityStatus(req: AuthRequest, res: Response) {
     return;
   }
 
-  // The full EIN is for the IRS match and the carrier's own agreement. The
-  // last four identify it on screen; the whole number never leaves the server
-  // through this route.
-  const { w9TinFull: _tin, ...shown } = idv;
-  res.json({ ...shown, w9TinOnFile: !!_tin });
+  res.json(withheldEin(idv));
+}
+
+/**
+ * The identity row as an AE screen may see it.
+ *
+ * The full EIN is for the IRS match and the carrier's own agreement. The last
+ * four identify it on screen; the whole number never leaves the server through
+ * a route that returns this row. v3.8.blw — facial-verify returned the row
+ * too, from its update, and was missed when this route was closed in v3.8.blr.
+ */
+function withheldEin<T extends { w9TinFull?: string | null }>(idv: T) {
+  const { w9TinFull, ...shown } = idv;
+  return { ...shown, w9TinOnFile: !!w9TinFull };
 }
 
 /**
@@ -389,7 +398,7 @@ export async function runOfacScreen(req: AuthRequest, res: Response) {
 export async function runFacialVerify(req: AuthRequest, res: Response) {
   try {
     const result = await verifyFacialMatch(req.params.id);
-    res.json(result);
+    res.json(withheldEin(result));
   } catch (err) {
     log.error({ err: err }, "[FacialVerify] Error:");
     res.status(500).json({ error: err instanceof Error ? err.message : "Facial verification failed" });
