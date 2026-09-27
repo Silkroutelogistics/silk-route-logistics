@@ -104,8 +104,43 @@ const check = (label: string, ok: boolean, detail = "") => {
       where: { userId: made.users[0] }, orderBy: { createdAt: "desc" },
     });
     check("the Quick Pay notice says Quick Pay is off and loads can still be accepted",
-      !!note?.message.includes("Quick Pay is off") && !!note?.message.includes("you can still accept loads") &&
+      !!note?.message.includes("Quick Pay is off") && !!note?.message.includes("You can still accept loads") &&
       !note?.message.includes("not be able to accept new loads"));
+    check("and it promises no fee only on loads delivered from now on (v3.8.blx)",
+      !!note?.message.includes("loads delivered from now on") && !note?.message.includes("any load not yet paid"));
+
+    // 5. The carrier who still holds a signed agreement is told nothing changed.
+    const noteB = await prisma.notification.findFirst({
+      where: { userId: made.users[1] }, orderBy: { createdAt: "desc" },
+    });
+    check("the carrier still holding a signed agreement is told Quick Pay is unchanged (v3.8.blx)",
+      !!noteB?.message.includes("Quick Pay is unchanged") && !noteB?.message.includes("Quick Pay is off"));
+
+    // 6. v3.8.blx — two terminations of one carrier's two signed rows, sent
+    //    together. Before the row lock each counted the other's row as still
+    //    SIGNED and both left Quick Pay on with nothing in force. Several
+    //    carriers, so an interleaving that happens to serialize cannot hide it.
+    const RACES = 6;
+    const racers = [];
+    for (let i = 0; i < RACES; i++) {
+      const c = await carrier(`race${i}`);
+      const x = await signed(c.id, "SRL-QPA-2026-R5-old");
+      const y = await signed(c.id, "SRL-QPA-2026-R6");
+      racers.push({ c, x, y });
+    }
+    const results = await Promise.all(racers.flatMap(({ c, x, y }) => [call(c.id, x.id), call(c.id, y.id)]));
+    check("every concurrent termination answered 200", results.every((r) => r.status === 200),
+      results.map((r) => r.status).join(","));
+    let stuck = 0;
+    for (const { c } of racers) {
+      const pr = await prisma.carrierProfile.findUnique({ where: { id: c.id } });
+      const left = await prisma.carrierAgreement.count({ where: { carrierId: c.id, templateName: "quick-pay", status: "SIGNED" } });
+      if (left === 0 && pr?.quickPayEnabled !== false) stuck++;
+    }
+    check("after both rows end together, Quick Pay is off for every carrier", stuck === 0,
+      `${stuck} of ${RACES} left on with no signed agreement`);
+    check("and exactly one of each pair reported switching it off",
+      racers.every((_, i) => [results[2 * i], results[2 * i + 1]].filter((r) => r.body?.quickPayDisabled === true).length === 1));
   } finally {
     await prisma.notification.deleteMany({ where: { userId: { in: made.users } } });
     await prisma.carrierAgreement.deleteMany({ where: { carrierId: { in: made.profiles } } });

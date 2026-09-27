@@ -19296,7 +19296,13 @@
 // the identity route was closed in v3.8.blr. Harmless only while no EIN was
 // stored; blr's onboarding field fills the column. Both routes now go through
 // one helper, and a census lists every file that touches the row.
-export const SRL_VERSION = "3.8.blw";
+// v3.8.blx — A Quick Pay termination tells the carrier what it actually did.
+//   A carrier who still holds another signed Quick Pay Agreement was told Quick
+// Pay was off and to re-sign; now they are told nothing changed. "Any load not
+// yet paid pays with no fee" is now "loads delivered from now on", since a
+// payment prepared before keeps its fee. And a row lock stops two terminations
+// arriving together from both leaving Quick Pay on.
+export const SRL_VERSION = "3.8.blx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

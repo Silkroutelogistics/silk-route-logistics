@@ -17,6 +17,7 @@ const { mockPrisma } = vi.hoisted(() => ({
     carrierProfile: { update: vi.fn() },
     notification: { create: vi.fn() },
     $transaction: vi.fn(),
+    $queryRaw: vi.fn(),
   },
 }));
 
@@ -229,8 +230,43 @@ describe("terminateAgreement — Quick Pay", () => {
     const note = mockPrisma.notification.create.mock.calls[0][0].data;
     expect(note.message).toContain("Quick Pay Agreement has been terminated");
     expect(note.message).toContain("Quick Pay is off");
-    expect(note.message).toContain("you can still accept loads");
+    expect(note.message).toContain("You can still accept loads");
     expect(note.message).not.toContain("not be able to accept new loads");
+  });
+
+  it("promises no fee only on loads delivered from now on, and says a prepared payment keeps its fee", async () => {
+    // v3.8.blx — "any load not yet paid will pay with no fee" was false: a
+    // payment prepared before the termination keeps the fee it was priced with.
+    mockPrisma.carrierAgreement.count.mockResolvedValue(0);
+    await terminateAgreement(makeReq(), makeRes());
+    const msg: string = mockPrisma.notification.create.mock.calls[0][0].data.message;
+    expect(msg).toContain("loads delivered from now on pay on your standard terms, with no fee");
+    expect(msg).toContain("A payment already prepared before this termination keeps the Quick Pay fee it was prepared with");
+    expect(msg).not.toContain("any load not yet paid");
+  });
+
+  it("tells a carrier who still holds a signed agreement that Quick Pay is unchanged", async () => {
+    // v3.8.blx — this carrier was told "Quick Pay is off" and to re-sign, while
+    // the agreement they work under was never touched.
+    mockPrisma.carrierAgreement.count.mockResolvedValue(1);
+    await terminateAgreement(makeReq(), makeRes());
+    const msg: string = mockPrisma.notification.create.mock.calls[0][0].data.message;
+    expect(msg).toContain("You still hold a signed Quick Pay Agreement, so Quick Pay is unchanged");
+    expect(msg).not.toContain("Quick Pay is off");
+    expect(msg).not.toContain("sign the current Quick Pay Agreement");
+  });
+
+  it("locks this carrier's profile row before counting what is still signed", async () => {
+    // v3.8.blx — two terminations arriving together each counted the other's
+    // row as still SIGNED and both left Quick Pay on. The lock serializes them;
+    // it has to come before the count or it serializes nothing.
+    mockPrisma.carrierAgreement.count.mockResolvedValue(0);
+    await terminateAgreement(makeReq(), makeRes());
+    const [strings, ...values] = mockPrisma.$queryRaw.mock.calls[0];
+    expect(strings.join("?")).toContain(`FROM "carrier_profiles" WHERE id = ? FOR UPDATE`);
+    expect(values).toEqual(["carrier-1"]);
+    expect(mockPrisma.$queryRaw.mock.invocationCallOrder[0])
+      .toBeLessThan(mockPrisma.carrierAgreement.count.mock.invocationCallOrder[0]);
   });
 
   it("never touches the profile when a Broker-Carrier Agreement is terminated", async () => {
