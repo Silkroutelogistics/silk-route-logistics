@@ -19231,7 +19231,9 @@
 // They are SENT via Tipalti in production; the duplicate guard refuses a second email.
 // v3.8.blu — the 11:00 reminder job (processARReminders) skips customers billed through Tipalti (D-1).
 // No flags, no early OVERDUE, no late-payment count, no credit auto-block; aging still shows.
-export const SRL_VERSION = "3.8.blu";
+// v3.8.blv — the invoice prints the PO from the load record only (Load.poNumbers), never a hand fill-in;
+// a load with no PO prints "PO: none on file" and logs a warning. Ruled 2026-09-26.
+export const SRL_VERSION = "3.8.blv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -3153,7 +3153,21 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
   const CGRID_GAP = 28;
   const chargesW = CONTENT_W - CARD_W - CGRID_GAP;
 
-  const billBottom = drawBillToBlock(doc, billTo, y, MARGIN, twoColW);
+  const billToBottom = drawBillToBlock(doc, billTo, y, MARGIN, twoColW);
+
+  // PO (ruled 2026-09-26). Read from Load.poNumbers and nothing else: not a
+  // hand-filled field, not the shipper's or customer's reference column. Two
+  // delivered packets printed POs their own load records do not hold (TO3665
+  // on 121492I, PO1861 on 121494I), both through the old hand-filled template.
+  // An AP desk that matches on PO rejects or short-pays an invoice quoting one
+  // it does not recognise, so a load with no PO says so rather than guessing.
+  const poNumbers = (invoice.load.poNumbers ?? []).map((p) => (p ?? "").trim()).filter(Boolean);
+  if (poNumbers.length === 0) {
+    log.warn({ invoice: docId, load: loadRef }, "[Invoice] no PO on the load record; the invoice prints 'PO: none on file'");
+  }
+  doc.font(FONT_BODY, 9.5).fillColor(TOKENS.fg1)
+     .text(`PO: ${poNumbers.length ? poNumbers.join(", ") : "none on file"}`, MARGIN, billToBottom, { width: twoColW });
+  const billBottom = doc.y + 4;
 
   // REMIT TO (Silk Route Logistics). COMPANY.address is already the full
   // one-line address (street + city/state/zip), so don't repeat cityStateZip.
