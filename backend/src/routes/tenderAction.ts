@@ -1,4 +1,6 @@
 import { Router, Request, Response } from "express";
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { acceptTender, declineTender } from "../controllers/tenderController";
@@ -10,8 +12,8 @@ import { makeCaptureRes } from "../lib/captureResponse";
  * v3.8.als §13.3 Item 142 — magic-link tender accept/decline (no login).
  *
  * PUBLIC router (NOT behind authenticate). The signed token from the
- * tender-offered email IS the authorization. This endpoint verifies the
- * token, then delegates to the existing acceptTender/declineTender
+ * tender-offered email IS the authorization. GET shows a confirm page; the
+ * POST from it verifies the token, then delegates to the existing acceptTender/declineTender
  * controllers via a response-capturing shim + a synthetic carrier actor —
  * reusing the entire battle-tested accept path (compliance re-check, atomic
  * transaction, shipment creation, auto-RC, notifications, tracking-link
@@ -66,8 +68,13 @@ function send(res: Response, status: number, html: string) {
 // self-accept became a second consumer. Two copies would have been two shims
 // free to drift.
 
-router.get("/:token", async (req: Request, res: Response) => {
-  const payload = verifyTenderActionToken(String(req.params.token));
+// Item 330: this link used to act on GET, so anything that fetched it acted: a
+// mail scanner, a link preview, a carrier opening it only to look. GET now shows
+// what the link will do. Only the POST from its button acts, and it claims the
+// token first, so a link acts at most once.
+async function respond(req: Request, res: Response, act: boolean) {
+  const token = String(req.params.token);
+  const payload = verifyTenderActionToken(token);
   if (!payload) {
     return send(res, 400, renderPage({
       accent: C.danger,
@@ -112,6 +119,37 @@ router.get("/:token", async (req: Request, res: Response) => {
       accent: C.warn,
       heading: "Already handled",
       body: `<p>Tender <span class="ref">${ref}</span> (${lane}) has already been <strong>${label.toLowerCase()}</strong>. No further action is needed.</p><a class="cta" href="https://silkroutelogistics.ai/carrier/login">Open carrier portal</a>`,
+    }));
+  }
+
+  if (!act) {
+    const verb = payload.action === "accept" ? "Accept" : "Decline";
+    const rate = tender.offeredRate.toLocaleString("en-US", { style: "currency", currency: "USD" });
+    return send(res, 200, renderPage({
+      accent: C.navy,
+      heading: `${verb} tender ${ref}?`,
+      body: `<p>${lane}</p><div class="kv"><span>Offered rate</span><span><strong>${rate}</strong></span></div><form method="POST" action="/api/tender-action/${encodeURIComponent(token)}"><button type="submit">${verb} this tender</button></form><p>Nothing happens until you press the button. The link works once.</p>`,
+    }));
+  }
+
+  // Claim before acting. tokenHash is unique, so of two presses exactly one
+  // inserts. The claim lasts as long as the token itself: blacklistToken's 25h
+  // would let a 7-day link act again on day two.
+  const exp = (jwt.decode(token) as { exp?: number } | null)?.exp;
+  const claim = await prisma.tokenBlacklist.createMany({
+    data: [{
+      tokenHash: crypto.createHash("sha256").update(token).digest("hex"),
+      userId: payload.carrierUserId,
+      reason: "tender-action",
+      expiresAt: new Date(exp ? exp * 1000 : Date.now() + 7 * 24 * 3600 * 1000),
+    }],
+    skipDuplicates: true,
+  });
+  if (claim.count === 0) {
+    return send(res, 409, renderPage({
+      accent: C.warn,
+      heading: "This link was already used",
+      body: `<p>Your response to tender <span class="ref">${ref}</span> (${lane}) was already recorded. Open the carrier portal for its current status.</p><a class="cta" href="https://silkroutelogistics.ai/carrier/login">Open carrier portal</a>`,
     }));
   }
 
@@ -160,6 +198,9 @@ router.get("/:token", async (req: Request, res: Response) => {
     heading: "Couldn't process that",
     body: `<p>${msg}</p><p>Log in to your carrier portal for the latest status on tender <span class="ref">${ref}</span>.</p><a class="cta" href="https://silkroutelogistics.ai/carrier/login">Open carrier portal</a>`,
   }));
-});
+}
+
+router.get("/:token", (req: Request, res: Response) => respond(req, res, false));
+router.post("/:token", (req: Request, res: Response) => respond(req, res, true));
 
 export default router;

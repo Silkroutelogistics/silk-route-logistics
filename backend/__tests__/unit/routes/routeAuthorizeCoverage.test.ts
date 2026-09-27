@@ -239,6 +239,9 @@ const KNOWN_UNGATED: readonly string[] = [
   "rcSign.ts GET /:token",
   "rcSign.ts POST /:token",
   "tenderAction.ts GET /:token",
+  // Item 330: the GET above now only renders a confirm page; this POST from its
+  // button is what acts. Same token, same authority: it moved, it did not widen.
+  "tenderAction.ts POST /:token",
   "trackTraceBoard.ts GET /tracking-token/:loadId",
   "tracking.ts GET /:token",
   "verify.ts GET /:token",

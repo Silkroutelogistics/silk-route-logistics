@@ -19316,7 +19316,13 @@
 // drew bare paragraphs, which lost the bullets and the list a screen reader
 // announces. Registration has its bullets back, and the activation pane keeps
 // its look while gaining the list semantics.
-export const SRL_VERSION = "3.8.bma";
+// v3.8.bmb — A tender email's Accept and Decline links act only from a button press (Item 330).
+//   Opening the link used to accept or decline as the carrier, so anything that fetched
+// it acted: a mail scanner vetting links, a link preview, a carrier opening it only to
+// look. GET now shows the lane, the offered rate and one button. Only the POST from
+// that button acts, and it claims the token first, so each link acts at most once. The
+// claim lasts as long as the token (7 days), not the 25 hours of a logout blacklist row.
+export const SRL_VERSION = "3.8.bmb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
