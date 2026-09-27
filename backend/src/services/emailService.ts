@@ -673,7 +673,10 @@ export async function sendPasswordExpiryReminder(email: string, firstName: strin
 
 export interface TenderOfferedEmailParams {
   to: string;
-  cc?: string;
+  // Item 329: no cc. The carrier's copy carries one-click action links, so a CC
+  // would hand them to whoever is copied. Staff get their own copy: audience "ae".
+  audience?: "carrier" | "ae";
+  carrierName?: string;
   ref: string;
   originName: string;   // "San Diego, CA"
   destName: string;     // "Northlake, TX"
@@ -714,9 +717,10 @@ export async function sendTenderOfferedEmail(params: TenderOfferedEmailParams): 
     ? `<p style="background:#FAEEDA;border-left:3px solid #BA7517;padding:12px;margin:16px 0;font-size:14px"><strong>Dispatch notes:</strong> ${params.dispatchNotes}</p>`
     : "";
 
+  const forAe = params.audience === "ae";
   const html = wrap(`
-    <h2 style="color:#0A2540;margin:0 0 16px">You've been offered a load</h2>
-    <p>A new tender is available for your fleet. Review the details below and respond before it expires.</p>
+    <h2 style="color:#0A2540;margin:0 0 16px">${forAe ? `Tender sent to ${params.carrierName ?? "the carrier"}` : "You've been offered a load"}</h2>
+    <p>${forAe ? "Your copy of the offer. The carrier answers from their own email or portal; nothing in this copy acts on the tender." : "A new tender is available for your fleet. Review the details below and respond before it expires."}</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
       <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #E2EAF2">${params.ref}</td></tr>
       <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Lane</td><td style="padding:8px;border:1px solid #E2EAF2">${params.originName} &rarr; ${params.destName}</td></tr>
@@ -728,7 +732,7 @@ export async function sendTenderOfferedEmail(params: TenderOfferedEmailParams): 
       <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Expires</td><td style="padding:8px;border:1px solid #E2EAF2">${expiryLabel} ET</td></tr>
     </table>
     ${dispatchNotesBlock}
-    ${params.acceptUrl && params.declineUrl ? `
+    ${forAe ? "" : params.acceptUrl && params.declineUrl ? `
     <p>Respond in one click — no login required:</p>
     <table role="presentation" style="margin:8px 0 16px"><tr>
       <td style="padding-right:10px"><a href="${params.acceptUrl}" style="display:inline-block;background:#2F7A4F;color:#FFFFFF;padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:bold">Accept load</a></td>
@@ -743,13 +747,12 @@ export async function sendTenderOfferedEmail(params: TenderOfferedEmailParams): 
 
   return sendEmail(
     params.to,
-    `Tender Offered: ${params.ref} (${params.originName} → ${params.destName})`,
+    forAe
+      ? `Tender sent: ${params.ref} (${params.originName} → ${params.destName}) to ${params.carrierName ?? "carrier"}`
+      : `Tender Offered: ${params.ref} (${params.originName} → ${params.destName})`,
     html,
     undefined,
-    {
-      replyTo: "operations@silkroutelogistics.ai",
-      cc: params.cc,
-    },
+    { replyTo: "operations@silkroutelogistics.ai" },
   );
 }
 

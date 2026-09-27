@@ -19326,7 +19326,13 @@
 //   Opening or pressing a link that was already used shows the outcome stored with its
 // claim (accepted, declined, or the refusal and its reason) and changes nothing. Each
 // press writes an audit row with its IP and user agent. Neither write can undo the act.
-export const SRL_VERSION = "3.8.bmc";
+// v3.8.bmd — Tender emails go to SRL staff, never to a shipper who posted the load (Item 329).
+//   A load posted in the shipper portal has the shipper as its poster, and every tender
+// email and in-app row went to the poster: the carrier's name and rate, and a CC on the
+// carrier's offer with its one-click links. They now go to the poster only when staff,
+// else the customer's active account rep, else operations@. Staff get their own copy of
+// the offer with no links, and the carrier's copy no longer takes a CC.
+export const SRL_VERSION = "3.8.bmd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

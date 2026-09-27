@@ -16,11 +16,32 @@ import { sendEmail, wrap } from "./emailService";
 // carrier, so it must read the same ladder settlement charges from. Never
 // restate the percentages inline here.
 import { normalizeTier, quickPayFeePercent, standardNetDays } from "../lib/quickPayPricing";
+import { isStaffRole } from "../lib/sessionPolicy";
 
 // Sprint 54 (v3.8.acc) Item 7 — operations@ alias is CC'd on every
 // AE-facing tender-accept email so the team has a shared audit trail
 // of bookings without depending on AE staff to forward individually.
 const OPERATIONS_CC = "operations@silkroutelogistics.ai";
+
+type StaffUser = { id: string; email: string; role: string; isActive?: boolean; firstName?: string | null } | null;
+
+/**
+ * Item 329: who at SRL hears about a load. The poster is a SHIPPER when the
+ * shipper posted the load in their portal, and a tender email to them hands the
+ * shipper the carrier's rate and the carrier's name. So the poster is used only
+ * when staff, then the customer's active account rep, then operations@. With no
+ * staff user there is no in-app recipient (userId null).
+ */
+export function loadStaffRecipient(load: {
+  poster: StaffUser;
+  customer?: { accountRep: StaffUser } | null;
+}): { userId: string | null; email: string; firstName: string } {
+  const staff = (u: NonNullable<StaffUser>) => ({ userId: u.id, email: u.email, firstName: u.firstName ?? "" });
+  if (load.poster && isStaffRole(load.poster.role)) return staff(load.poster);
+  const rep = load.customer?.accountRep;
+  if (rep && rep.isActive !== false && isStaffRole(rep.role)) return staff(rep);
+  return { userId: null, email: OPERATIONS_CC, firstName: "team" };
+}
 
 // Notification types aligned with application events
 export type NotificationType =
@@ -156,7 +177,10 @@ export async function notifyTenderAction(
           pickupDate: true,
           deliveryDate: true,
           poster: {
-            select: { email: true, firstName: true },
+            select: { id: true, email: true, firstName: true, role: true },
+          },
+          customer: {
+            select: { accountRep: { select: { id: true, email: true, role: true, isActive: true, firstName: true } } },
           },
         },
       },
@@ -185,7 +209,10 @@ export async function notifyTenderAction(
 
   // Sprint 45a — resolve email surfaces for fan-out
   const carrierEmail = tender.carrier.contactEmail ?? tender.carrier.user.email;
-  const aeEmail = tender.load.poster?.email;
+  const ae = loadStaffRecipient(tender.load);
+  const aeEmail = ae.email;
+  const notifyAe = (type: NotificationType, title: string, message: string, data?: { actionUrl?: string }) =>
+    ae.userId ? createNotification(ae.userId, type, title, message, data) : Promise.resolve(null);
   const carrierName =
     tender.carrier.companyName ??
     tender.carrier.user.company ??
@@ -198,6 +225,19 @@ export async function notifyTenderAction(
   const dollarsPerMile = miles && miles > 0 ? tender.offeredRate / miles : null;
   // Transit estimate: industry-standard 500 mi/day single-driver pace.
   const transitDays = miles && miles > 0 ? miles / 500 : null;
+
+  const offer = {
+    ref,
+    originName,
+    destName,
+    rate: tender.offeredRate,
+    expiresAt: tender.expiresAt,
+    equipment: tender.load.equipmentType,
+    weight: tender.load.weight,
+    milesEstimate: miles,
+    transitDays,
+    dollarsPerMile,
+  };
 
   switch (action) {
     case "OFFERED":
@@ -220,27 +260,19 @@ export async function notifyTenderAction(
           declineUrl = tenderActionUrl(mintTenderActionToken({ tenderId: tender.id, action: "decline", carrierUserId }));
         }
         try {
-          await sendTenderOfferedEmail({
-            to: carrierEmail,
-            cc: aeEmail ?? undefined,
-            ref,
-            originName,
-            destName,
-            rate: tender.offeredRate,
-            expiresAt: tender.expiresAt,
-            equipment: tender.load.equipmentType,
-            weight: tender.load.weight,
-            milesEstimate: miles,
-            transitDays,
-            dollarsPerMile,
-            acceptUrl,
-            declineUrl,
-          });
+          await sendTenderOfferedEmail({ ...offer, to: carrierEmail, acceptUrl, declineUrl });
         } catch (err) {
           log.error({ err, tenderId, carrierEmail }, "[NotificationService] sendTenderOfferedEmail failed");
         }
       } else {
         log.warn({ tenderId, carrierUserId }, "[NotificationService] OFFERED: no carrier email available; in-app only");
+      }
+      // Item 329: staff get their own copy, never a CC on the carrier's email,
+      // because the carrier's copy carries the one-click accept and decline links.
+      try {
+        await sendTenderOfferedEmail({ ...offer, to: aeEmail, audience: "ae", carrierName });
+      } catch (err) {
+        log.error({ err, tenderId }, "[NotificationService] staff copy of sendTenderOfferedEmail failed");
       }
       break;
 
@@ -250,8 +282,7 @@ export async function notifyTenderAction(
       // generic Track & Trace deep-link when no auto-RC was generated
       // (e.g., auto-RC throw → AE still gets the notification, just
       // without the RC anchor).
-      await createNotification(
-        posterId,
+      await notifyAe(
         "TENDER_ACCEPTED",
         "Tender Accepted",
         `Your tender for load ${ref} (${lane}) has been accepted at $${tender.offeredRate.toLocaleString()}.`,
@@ -266,7 +297,7 @@ export async function notifyTenderAction(
         try {
           await sendTenderAcceptedEmail({
             to: aeEmail,
-            cc: OPERATIONS_CC,
+            cc: aeEmail === OPERATIONS_CC ? undefined : OPERATIONS_CC,
             ref,
             originName,
             destName,
@@ -298,8 +329,7 @@ export async function notifyTenderAction(
       break;
 
     case "DECLINED":
-      await createNotification(
-        posterId,
+      await notifyAe(
         "TENDER_DECLINED",
         "Tender Declined",
         `Your tender for load ${ref} (${lane}) has been declined by the carrier.`,
@@ -330,8 +360,7 @@ export async function notifyTenderAction(
       break;
 
     case "EXPIRED":
-      await createNotification(
-        posterId,
+      await notifyAe(
         "LOAD_UPDATE",
         "Tender Expired",
         `Tender to ${carrierName} for load ${ref} (${lane}) expired without a response.`,
@@ -362,8 +391,7 @@ export async function notifyTenderAction(
       // decline. Counter UI on carrier side doesn't exist today (Item
       // 144 banked); when it ships, this email path will already be
       // wired so the AE workflow is end-to-end on day 1.
-      await createNotification(
-        posterId,
+      await notifyAe(
         "TENDER_RECEIVED",
         "Tender Counter Offer",
         `The carrier has countered your tender for load ${ref} (${lane}) with a rate of $${(tender.counterRate ?? tender.offeredRate).toLocaleString()}.`,
