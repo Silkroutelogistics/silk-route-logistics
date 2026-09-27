@@ -813,6 +813,10 @@ export default function CarrierPoolPage() {
       queryClient.invalidateQueries({ queryKey: ["carrier-agreements"] });
       queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
       queryClient.invalidateQueries({ queryKey: ["loads"] });
+      // v3.8.bly — a Quick Pay termination can switch quickPayEnabled off, and
+      // the Quick Pay tab reads that flag from the enrolment list before the
+      // carrier list. Refresh both, as the approve/withdraw mutation does.
+      queryClient.invalidateQueries({ queryKey: ["quickpay-enrollments"] });
       setTerminateReason("");
       setTerminateConfirming(null);
       // ARC 18 — report what actually happened rather than a fixed sentence.
@@ -1889,11 +1893,26 @@ export default function CarrierPoolPage() {
                                         carrier's ability to haul. The Broker-Carrier wording
                                         below was shown for both, and told an admin that ending
                                         Quick Pay would stop tendering. */}
-                                    {ag.templateName === "quick-pay" ? (
+                                    {/* v3.8.bly — and it says what THIS termination does. With
+                                        another signed Quick Pay Agreement in force, Quick Pay stays
+                                        on. Otherwise the fee stops on loads delivered from now on; a
+                                        payment already prepared keeps the fee it was priced with. */}
+                                    {ag.templateName === "quick-pay" &&
+                                    agreements.some((o) => o.id !== ag.id && o.templateName === "quick-pay" && o.status === "SIGNED") ? (
+                                    <div className="text-[11px] text-red-800 space-y-1">
+                                      <p><span className="font-semibold">Quick Pay stays on:</span>{" "}
+                                        this carrier holds another signed Quick Pay Agreement, and that one stays in force.
+                                        Only this copy ends.</p>
+                                      <p><span className="font-semibold">Does not stop:</span>{" "}
+                                        tendering, or anything else for this carrier.</p>
+                                      <p className="text-red-700">The agreement and its signed PDF are kept as a record.</p>
+                                    </div>
+                                    ) : ag.templateName === "quick-pay" ? (
                                     <div className="text-[11px] text-red-800 space-y-1">
                                       <p><span className="font-semibold">Stops immediately:</span>{" "}
-                                        Quick Pay for this carrier. Any load not yet paid pays on their standard terms, with no fee,
-                                        until they sign the current Quick Pay Agreement.</p>
+                                        Quick Pay for this carrier. Loads delivered from now on pay on their standard terms, with no fee,
+                                        until they sign the current Quick Pay Agreement. A payment already prepared keeps the fee it
+                                        was prepared with.</p>
                                       <p><span className="font-semibold">Does not stop:</span>{" "}
                                         tendering. This carrier keeps hauling under their Broker-Carrier Agreement, and payments
                                         already made stand. Their pilot admission stays approved, so re-signing turns Quick Pay back on.</p>

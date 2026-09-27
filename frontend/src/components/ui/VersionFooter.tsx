@@ -19302,7 +19302,12 @@
 // yet paid pays with no fee" is now "loads delivered from now on", since a
 // payment prepared before keeps its fee. And a row lock stops two terminations
 // arriving together from both leaving Quick Pay on.
-export const SRL_VERSION = "3.8.blx";
+// v3.8.bly — The AE Quick Pay termination dialog says what this termination does.
+//   With another signed Quick Pay Agreement in force it says Quick Pay stays on;
+// otherwise the fee stops on loads delivered from now on, and a payment already
+// prepared keeps its fee. The Quick Pay tab re-reads the enrolment list after a
+// termination, so it stops showing "enabled" from a stale copy.
+export const SRL_VERSION = "3.8.bly";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

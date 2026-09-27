@@ -562,4 +562,72 @@ describe("Terminating an agreement says what it ends", () => {
     expect(panel.textContent).toContain("cannot be tendered or accept any new load");
     expect(panel.textContent).not.toContain("Quick Pay for this carrier");
   });
+
+  it("promises no fee only on loads delivered from now on (v3.8.bly)", async () => {
+    // A payment prepared before the termination keeps the fee it was priced
+    // with, so "any load not yet paid pays with no fee" was false.
+    const { user, panel, buttons } = await openCompliance();
+    await user.click(buttons[0]);
+    expect(panel.textContent).toContain("Loads delivered from now on pay on their standard terms, with no fee");
+    expect(panel.textContent).toContain("A payment already prepared keeps the fee it");
+    expect(panel.textContent).not.toContain("Any load not yet paid");
+  });
+
+  it("re-fetches the Quick Pay enrolment list, so the Quick Pay tab stops reading enabled (v3.8.bly)", async () => {
+    const { api } = await import("@/lib/api");
+    (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      data: { ...QP, status: "TERMINATED", quickPayDisabled: true, inFlight: { count: 0, loads: [], aesNotified: 0, checkCallsEscalated: 0 } },
+    });
+    const enrolmentReads = () =>
+      (api.get as ReturnType<typeof vi.fn>).mock.calls.filter((c) => String(c[0]).startsWith("/carriers/quickpay-enrollments")).length;
+    const { user, panel, buttons } = await openCompliance();
+    const before = enrolmentReads();
+    expect(before, "vacuity: the enrolment list is read on this page").toBeGreaterThan(0);
+    await user.click(buttons[0]);
+    await user.type(within(panel).getByPlaceholderText(/Why is this being terminated/), "Reversing a test signature");
+    await user.click(within(panel).getByRole("button", { name: /Confirm termination/ }));
+    await waitFor(() => expect(enrolmentReads()).toBeGreaterThan(before));
+  });
+});
+
+// v3.8.bly — with a second signed Quick Pay Agreement in force, ending one of
+// them changes nothing for the carrier, and the dialog must not say it does.
+describe("Terminating one of two signed Quick Pay Agreements", () => {
+  const base = {
+    templateName: "quick-pay", status: "SIGNED", signedAt: "2026-09-26T15:43:58Z", signedByName: "John Doe",
+    terminatedAt: null, terminationReason: null, documentUrl: null, executedCopySent: true,
+    executedCopySentAt: null, executedCopySendError: null, contentHash: null,
+  };
+  beforeEach(async () => {
+    const { api } = await import("@/lib/api");
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.startsWith("/carrier/all")) return Promise.resolve({ data: { carriers: [LIVE], total: 1 } });
+      if (url === "/carriers/cp-live/agreements") {
+        return Promise.resolve({ data: [
+          { ...base, id: "ag-qp-old", version: "SRL-QPA-2026-R5" },
+          { ...base, id: "ag-qp-new", version: "SRL-QPA-2026-R6" },
+        ] });
+      }
+      if (url === "/carriers/cp-live/security-signals") {
+        return Promise.resolve({ data: { geo: { geoMismatch: false }, events: [], chameleonMatches: [], unusualOtpSmsOverride: null } });
+      }
+      if (url.startsWith("/carriers/quickpay-enrollments")) return Promise.resolve({ data: { status: "ALL", count: 0, enrollments: [] } });
+      return Promise.resolve({ data: {} });
+    });
+  });
+
+  it("says Quick Pay stays on, and never that it stops", async () => {
+    const user = userEvent.setup();
+    mount();
+    await screen.findByText("Live Freight LLC", { selector: "p" });
+    await user.click(rowFor("Live Freight LLC"));
+    const panel = await screen.findByRole("dialog");
+    await user.click(within(panel).getByRole("button", { name: /Compliance/ }));
+    const buttons = await within(panel).findAllByRole("button", { name: /Terminate this agreement/ });
+    expect(buttons).toHaveLength(2);
+    await user.click(buttons[0]);
+    expect(panel.textContent).toContain("Quick Pay stays on");
+    expect(panel.textContent).toContain("holds another signed Quick Pay Agreement");
+    expect(panel.textContent).not.toContain("Stops immediately");
+  });
 });
