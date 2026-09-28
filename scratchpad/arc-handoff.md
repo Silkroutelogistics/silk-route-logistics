@@ -17,6 +17,7 @@ Nothing below is a regression introduced by the arc it sits under.
 - Found, not fixed: carrier-payment dispute notices go to the poster (Item 334).
 - Found, not fixed: `productionRail.test.ts` requires classification only of files that name `.env.production.local`. A new script that reaches production through `_census-credential` is never flagged; this arc's read-only production check is one.
 - Found, not fixed: CLAUDE.md says `npm test` runs at `--maxWorkers=2` by default, but nothing configures it. `vitest.config.ts` sets no worker count.
+- Verify on the first real tender press after 01:22:57Z that the accept/decline row carries IP + user agent. Read-only check, any session.
 
 **Deviations.**
 - A dry run of the closing docs script hit the worktree once instead of the copies. One command in a chain ran without `DOCS_ROOT`, and the script defaulted to the worktree. It changed `docs/claude/backlog-open.md` and `scratchpad/arc-handoff.md`. Both were restored from HEAD before any commit, and nothing else was touched. **Guard:** the script now has no default target and refuses to run without `DOCS_ROOT`, verified by running it bare.
