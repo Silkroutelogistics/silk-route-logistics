@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Clock, AlertTriangle, DollarSign, TrendingUp } from "lucide-react";
 import { ReminderEmailSwitch } from "@/components/accounting/ReminderEmailSwitch";
+import { formatDueDay } from "@shared/constants/invoiceDueDay";
 
 interface AgingBucket {
   label: string;
@@ -196,7 +197,8 @@ export default function AgingReportPage() {
                   <td className="px-5 py-3 text-sm text-white font-medium">{inv.invoiceNumber}</td>
                   <td className="px-5 py-3 text-sm text-slate-300">{inv.customer}</td>
                   <td className="px-5 py-3 text-sm text-white">{fmt(inv.balance)}</td>
-                  <td className="px-5 py-3 text-sm text-slate-300">{new Date(inv.dueDate).toLocaleDateString()}</td>
+                  {/* v3.8.bnl — the day the invoice prints, not the browser's day (ruling 2026-09-27, 3). */}
+                  <td className="px-5 py-3 text-sm text-slate-300">{formatDueDay(inv.dueDate) ?? "—"}</td>
                   <td className="px-5 py-3">
                     <span className={`text-sm font-medium ${inv.daysOverdue > 60 ? "text-red-400" : inv.daysOverdue > 30 ? "text-orange-400" : "text-yellow-400"}`}>
                       {inv.daysOverdue}d

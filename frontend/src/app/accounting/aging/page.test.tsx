@@ -5,7 +5,7 @@
  * OVERDUE "with the balance shown". The report ages balances (v3.8.bnb); the
  * page's overdue table shows each row's balance, under a column that says so.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -36,6 +36,21 @@ function mount() {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(api.get).mockResolvedValue({ data: REPORT } as any);
+});
+
+// v3.8.bnl — ruling 2026-09-27, 3: the report ages by the due day; its page
+// shows that day as the invoice prints it. On a device west of UTC a
+// midnight-UTC due date used to read a day early (Oct 10 for Oct 11).
+describe("aging page — the due day", () => {
+  const TZ = process.env.TZ;
+  beforeEach(() => { vi.clearAllMocks(); process.env.TZ = "America/Los_Angeles"; vi.mocked(api.get).mockResolvedValue({ data: REPORT } as any); });
+  afterEach(() => { if (TZ === undefined) delete process.env.TZ; else process.env.TZ = TZ; });
+
+  it("shows the due day the invoice prints, not the device's day", async () => {
+    mount();
+    const row = (await screen.findByText("SRL-121494I")).closest("tr")!;
+    expect(within(row).getByText("Oct 11, 2026")).toBeTruthy();
+  });
 });
 
 describe("aging page — the balance shown", () => {

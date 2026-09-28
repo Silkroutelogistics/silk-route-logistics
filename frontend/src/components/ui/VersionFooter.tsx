@@ -19441,7 +19441,9 @@
 // pages: open invoices past their due day on the Toronto clock, never a void or a draft.
 // v3.8.bnk — A payment counts as late only once its due day is over on the Toronto clock: a
 // payment on the evening of the due day is on time.
-export const SRL_VERSION = "3.8.bnk";
+// v3.8.bnl — The aging page shows each due date as the day the invoice prints, not the day before
+// on devices west of UTC.
+export const SRL_VERSION = "3.8.bnl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
