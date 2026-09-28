@@ -19403,7 +19403,9 @@
 // v3.8.bmp — A customer invoice copy never reaches a carrier or a customer. The download refuses it to
 //   any non-staff role, the load's carrier and customer included. GET /loads/:id (ungated, unscoped) now
 // withholds it from non-staff callers, and an upload to an invoice or customer is refused too.
-export const SRL_VERSION = "3.8.bmp";
+// v3.8.bmq — The four Beekeepers packets move from OTHER to CUSTOMER_INVOICE_COPY in the same deploy:
+//   a data migration by id, only while still OTHER, one audit row each. Elsewhere it changes nothing.
+export const SRL_VERSION = "3.8.bmq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
