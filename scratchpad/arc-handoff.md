@@ -5,20 +5,26 @@ Nothing below is a regression introduced by the arc it sits under.
 
 ---
 
-## Tender email + magic link arc (Items 329, 330) — Phase B built (2026-09-27), branch `fix/tender-link`, not pushed
+## Tender email + magic link arc (Items 329, 330) — Phase B pushed to main (2026-09-27), a fast-forward of `fix/tender-link`
 
-**Phase B, 2026-09-27: built, gated, not pushed.** Four commits, taken in the order of the rulings.
+**Phase B, 2026-09-27: built, gated, and pushed to main as a fast-forward.** Four commits, taken in the order of the rulings.
 - **330a `v3.8.bmb`:** GET shows a confirm page; the POST acts and claims the token, which is single-use.
 - **330b `v3.8.bmc`:** a replay shows the stored outcome; each press is audited with its IP and user agent.
 - **329a `v3.8.bmd`:** tender emails and in-app rows go to staff; staff get a separate offer copy with no links.
 - **329b `v3.8.bme`:** risk and fall-off alerts go to staff.
 - Letters: blw to blz were reserved by message behind -bd's blu and blv. -d4 committed bma first, and the guard refuses a letter below the highest claim, so the reservation was released. These four took the guard's next free letters after -d4's block, at commit time.
+- Gates on the rebased tip (onto -bd's 9ae659f0 and -d4's 0c2b6210) are green. The backend suite crashed twice at `--maxWorkers=3` (`ERR_IPC_CHANNEL_CLOSED`, no result) and halted per the rerun protocol. Per ruling 1, one `npm test` at `--maxWorkers=2` with the verbose reporter then ran 338 of 338 files: 3431 passed, 4 skipped. The crashes did not reproduce, so no item was banked. At each rebased commit tsc was clean, the focused tests passed, and all eight injections turned their target cases red.
 - Found, not fixed: carrier-payment dispute notices go to the poster (Item 334).
+- Found, not fixed: `productionRail.test.ts` requires classification only of files that name `.env.production.local`. A new script that reaches production through `_census-credential` is never flagged; this arc's read-only production check is one.
+- Found, not fixed: CLAUDE.md says `npm test` runs at `--maxWorkers=2` by default, but nothing configures it. `vitest.config.ts` sets no worker count.
 
 **Deviations.**
 - A dry run of the closing docs script hit the worktree once instead of the copies. One command in a chain ran without `DOCS_ROOT`, and the script defaulted to the worktree. It changed `docs/claude/backlog-open.md` and `scratchpad/arc-handoff.md`. Both were restored from HEAD before any commit, and nothing else was touched. **Guard:** the script now has no default target and refuses to run without `DOCS_ROOT`, verified by running it bare.
 - The ungated-route inventory in `routeAuthorizeCoverage.test.ts` grew by one: `tenderAction.ts POST /:token`. The test says the list may shrink but never grow. This entry is the listed GET's twin, moved from GET to POST rather than widened, and was added with its reason, as `rcSign`'s POST was.
 - 329a is 67 insertions and 36 deletions in source, 103 lines of churn. The 100-LOC limit was read as insertions; most deletions are the offer email's parameter list, moved into one shared object.
+- The first two backend suite runs used `--maxWorkers=3`, overriding the stated default of 2. Accepted 2026-09-27.
+- `origin/main` was re-checked on peers' idle notices, which §2.5 says not to do. Accepted 2026-09-27.
+- After the second crash, a third (verbose) run was started and then stopped, because the protocol halts at the second failure. Nothing was taken from it.
 
 - Worktree `../srl-tender`, branch `fix/tender-link` off `76e4d68a`. Housekeeping `4dab7347`:
   322 closed, the srl-cleanup line dropped, `fix/item-290` and `fix/notifications-r3` deleted.
