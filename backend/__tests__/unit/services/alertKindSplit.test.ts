@@ -8,7 +8,7 @@
  * the freight was known to be wrong. What was true is that nobody had filed a
  * located report — a gap in OUR data, and not a claim we can put to a customer.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   assessAlertLevel,
   hasLocatedReport,
@@ -31,10 +31,22 @@ describe("R4 — the two kinds are distinguishable", () => {
   });
 
   it("a real ETA overrun is LATE", () => {
-    const appt = hoursAgo(5);
-    const a = assessAlertLevel(new Date(), appt, "08:00", new Date(), "IN_TRANSIT");
-    expect(a.level).not.toBe("GREEN");
-    expect(a.kind).toBe("LATE");
+    // The clock is pinned. The appointment is "5 hours ago" with an 08:00
+    // window, and the engine combines the two into one instant, so with the
+    // real clock this case read GREEN whenever 5 hours ago fell on today before
+    // 08:00: about 05:00 to 13:00 UTC every day, CI's timezone. At 16:00 UTC the
+    // combined appointment (08:00 today) is 8 hours past, which is the overrun
+    // this case means. Measured 2026-09-28: 05:07Z GREEN, 13:00Z and 16:00Z LATE.
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-09-28T16:00:00Z"));
+      const appt = hoursAgo(5);
+      const a = assessAlertLevel(new Date(), appt, "08:00", new Date(), "IN_TRANSIT");
+      expect(a.level).not.toBe("GREEN");
+      expect(a.kind).toBe("LATE");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
