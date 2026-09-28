@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const post = vi.fn();
 vi.mock("@/lib/api", () => ({ api: { post: (...a: unknown[]) => post(...a), patch: vi.fn() } }));
 vi.mock("@/lib/useInlineDocument", () => ({ useInlineDocumentUrl: () => null }));
 
-import { DocsTab } from "./DocsTab";
+import { readFileSync } from "fs";
+import { resolve } from "path";
+import { DocsTab, CUSTOMER_SENDABLE_DOC_TYPES } from "./DocsTab";
 
 /**
  * D (ruled 2026-09-28). On 2026-09-27 SRL's customer invoices for four Beekeepers loads were
@@ -62,25 +64,56 @@ describe("T&T DocsTab — the carrier's invoice and SRL's copy are two rows", ()
 });
 
 /**
- * F-D3 (ruled 2026-09-28). A POD upload no longer emails the customer; staff send one POD
- * from its row, after a confirm, and the row says who received it.
+ * F-D3 (ruled 2026-09-28). A POD upload no longer emails the customer; staff send one
+ * delivery document from its row, after a confirm, and the row says who received it.
+ * Second ruling the same day: the signed delivery BOL is sendable the same way; no other
+ * type is.
  */
-describe("T&T DocsTab — sending the POD to the customer is a deliberate act", () => {
+describe("T&T DocsTab — sending delivery evidence to the customer is a deliberate act", () => {
   const POD = { id: "d-pod-44", docType: "POD", status: "PENDING" };
+  const BOL_DEL = { id: "d-bol-del-45", docType: "SIGNED_BOL_DEL", status: "PENDING" };
+  const OTHERS = [
+    { id: "d-rc", docType: "RATE_CON", status: "PENDING" },
+    { id: "d-bol", docType: "BOL", status: "PENDING" },
+    { id: "d-pu", docType: "SIGNED_BOL_PU", status: "PENDING" },
+    { id: "d-inv", docType: "INVOICE", status: "PENDING" },
+    { id: "d-copy", docType: "CUSTOMER_INVOICE_COPY", status: "PENDING" },
+  ];
   beforeEach(() => {
     post.mockReset();
     vi.restoreAllMocks();
   });
 
-  it("no POD on file: no Send to customer anywhere, even with a signed delivery BOL", () => {
-    renderTab([{ id: "d-bol", docType: "SIGNED_BOL_DEL", status: "PENDING" }]);
+  it("the tab's sendable list is the backend's, read from source", () => {
+    const src = readFileSync(resolve(process.cwd(), "../backend/src/services/shipperLoadNotifyService.ts"), "utf8");
+    const m = src.match(/export const CUSTOMER_SENDABLE_DOC_TYPES = \[([^\]]*)\]/);
+    expect(m, "backend constant not found").not.toBeNull();
+    const backend = [...m![1].matchAll(/"([A-Z_]+)"/g)].map((x) => x[1]);
+    expect(backend.length).toBeGreaterThan(0);
+    expect([...CUSTOMER_SENDABLE_DOC_TYPES]).toEqual(backend);
+  });
+
+  it("every other row, on file, gets no Send to customer", () => {
+    renderTab(OTHERS);
     expect(screen.queryByText("Send to customer")).toBeNull();
   });
 
-  it("a POD on file: the button sits on the POD row and nowhere else", () => {
-    renderTab([POD, { id: "d-bol", docType: "SIGNED_BOL_DEL", status: "PENDING" }]);
-    expect(screen.getAllByText("Send to customer")).toHaveLength(1);
+  it("the POD row and the signed delivery BOL row each get one", () => {
+    renderTab([POD, BOL_DEL, ...OTHERS]);
+    expect(screen.getAllByText("Send to customer")).toHaveLength(2);
     expect(rowOf("Proof of delivery (POD)").textContent).toContain("Send to customer");
+    expect(rowOf("Signed BOL (delivery)").textContent).toContain("Send to customer");
+  });
+
+  it("the signed delivery BOL row sends its own document, asks about it by name, and the note lands on its row", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    post.mockResolvedValue({ data: { sent: 1, recipients: ["ops@cust.test"], failed: [] } });
+    renderTab([POD, BOL_DEL]);
+    fireEvent.click(within(rowOf("Signed BOL (delivery)")).getByText("Send to customer"));
+    expect(confirm.mock.calls[0][0]).toContain("Signed BOL (delivery)");
+    await waitFor(() => expect(post).toHaveBeenCalledWith("/documents/d-bol-del-45/send-to-customer"));
+    await waitFor(() => expect(rowOf("Signed BOL (delivery)").textContent).toContain("Sent to ops@cust.test."));
+    expect(rowOf("Proof of delivery (POD)").textContent).not.toContain("Sent to");
   });
 
   it("confirmed: posts to the POD's send route and shows who got it, and who did not", async () => {

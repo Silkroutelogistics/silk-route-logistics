@@ -19485,7 +19485,10 @@
 // v3.8.boa — ruling 2026-09-28: the signed delivery BOL is sendable to the customer by
 // the same staff act as the POD (attached, no link, no auto-send, same logging). Those
 // two only; every other type is refused before the file is read.
-export const SRL_VERSION = "3.8.boa";
+// v3.8.bob — the T&T Docs tab's signed delivery BOL row gets "Send to customer" too; each
+// row confirms by name and keeps its own result note. A test holds the tab's list to the
+// backend's.
+export const SRL_VERSION = "3.8.bob";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

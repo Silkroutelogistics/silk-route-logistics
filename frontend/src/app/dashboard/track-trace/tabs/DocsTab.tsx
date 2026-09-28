@@ -35,6 +35,10 @@ const LIFECYCLE = [
 
 const LIFECYCLE_BAR = ["RATE_CON", "BOL", "SIGNED_BOL_PU", "POD", "INVOICE"];
 
+// Mirrors CUSTOMER_SENDABLE_DOC_TYPES in backend shipperLoadNotifyService (ruled
+// 2026-09-28): delivery evidence only. DocsTab.test.tsx holds the two lists equal.
+export const CUSTOMER_SENDABLE_DOC_TYPES: readonly string[] = ["POD", "SIGNED_BOL_DEL"];
+
 export function DocsTab({ load, loadId, onChange }: Props) {
   const [preview, setPreview] = useState<any>(null);
   const [uploading, setUploading] = useState<string | null>(null);
@@ -65,17 +69,18 @@ export function DocsTab({ load, loadId, onChange }: Props) {
     onSuccess: onChange,
   });
 
-  // F-D3 (ruled 2026-09-28): a POD upload no longer emails the customer. Sending it is
-  // this deliberate act, one document, and the customer gets the file attached.
-  const [podSendNote, setPodSendNote] = useState<string | null>(null);
-  const sendPod = useMutation({
-    mutationFn: async (id: string) =>
+  // F-D3 (ruled 2026-09-28): a POD upload no longer emails the customer. Sending delivery
+  // evidence is this deliberate act, one document, and the customer gets the file
+  // attached. The note belongs to the row that sent it.
+  const [sendNote, setSendNote] = useState<{ code: string; text: string } | null>(null);
+  const sendToCustomer = useMutation({
+    mutationFn: async ({ id }: { id: string; code: string }) =>
       (await api.post(`/documents/${id}/send-to-customer`)).data as { recipients: string[]; failed: string[] },
-    onSuccess: (r) => {
-      setPodSendNote(`Sent to ${r.recipients.join(", ")}${r.failed.length ? `. Not sent to ${r.failed.join(", ")}` : ""}.`);
+    onSuccess: (r, { code }) => {
+      setSendNote({ code, text: `Sent to ${r.recipients.join(", ")}${r.failed.length ? `. Not sent to ${r.failed.join(", ")}` : ""}.` });
       onChange();
     },
-    onError: (e: any) => setPodSendNote(`Not sent: ${e?.response?.data?.error ?? "the request failed"}`),
+    onError: (e: any, { code }) => setSendNote({ code, text: `Not sent: ${e?.response?.data?.error ?? "the request failed"}` }),
   });
 
   const statusPill = (doc: any) => {
@@ -123,7 +128,7 @@ export function DocsTab({ load, loadId, onChange }: Props) {
                     <div className="min-w-0">
                       <div className="font-medium text-gray-900 truncate">{d.label}</div>
                       <div>{statusPill(doc)}</div>
-                      {d.code === "POD" && podSendNote && <div className="text-[11px] text-gray-600">{podSendNote}</div>}
+                      {sendNote?.code === d.code && <div className="text-[11px] text-gray-600">{sendNote.text}</div>}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -136,17 +141,17 @@ export function DocsTab({ load, loadId, onChange }: Props) {
                             className="px-2 py-1 text-xs text-green-700 border border-green-200 rounded hover:bg-green-50"
                           >Verify</button>
                         )}
-                        {d.code === "POD" && (
+                        {CUSTOMER_SENDABLE_DOC_TYPES.includes(d.code) && (
                           <button
                             onClick={() => {
-                              if (window.confirm("Email this POD, attached, to the customer's operational contacts?")) {
-                                setPodSendNote(null);
-                                sendPod.mutate(doc.id);
+                              if (window.confirm(`Email this ${d.label}, attached, to the customer's operational contacts?`)) {
+                                setSendNote(null);
+                                sendToCustomer.mutate({ id: doc.id, code: d.code });
                               }
                             }}
-                            disabled={sendPod.isPending}
+                            disabled={sendToCustomer.isPending}
                             className="px-2 py-1 text-xs text-[#BA7517] border border-[#BA7517]/40 rounded hover:bg-[#FAEEDA] disabled:opacity-50"
-                          ><Send className="w-3 h-3 inline mr-1" />{sendPod.isPending ? "Sending…" : "Send to customer"}</button>
+                          ><Send className="w-3 h-3 inline mr-1" />{sendToCustomer.isPending && sendToCustomer.variables?.code === d.code ? "Sending…" : "Send to customer"}</button>
                         )}
                       </>
                     )}
