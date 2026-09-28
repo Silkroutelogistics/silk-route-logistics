@@ -137,18 +137,28 @@ export async function sendDeliveryETAUpdate(loadId: string) {
   log.info(`[ShipperLoadNotify] ETA update sent to ${to.join(", ")} for ${load.referenceNumber}`);
 }
 
-// ─── 6. Proof of Delivery to the customer (manual, staff only) ─────
+// ─── 6. Delivery evidence to the customer (manual, staff only) ─────
 
 /**
  * F-D3 (ruled 2026-09-28). This used to run on every POD upload, from the load seam,
  * so a customer was emailed each time a POD landed, including a second or corrected
  * one. Its "Download POD" button was PORTAL_BASE + podUrl: the marketing host plus a
- * storage key, which served nothing. Now an SRL user sends one POD deliberately
+ * storage key, which served nothing. Now an SRL user sends one document deliberately
  * (POST /documents/:id/send-to-customer) and the file is ATTACHED, so the customer
  * has nothing to log in to and no link that expires or opens more than this file.
+ *
+ * What may be sent is delivery evidence and nothing else (ruled 2026-09-28): the POD,
+ * and the signed delivery BOL, which ruling 6 accepts as the same evidence. The name
+ * stays sendPODToContact so the mocks that stand in for it keep meaning what they say.
  */
+export const CUSTOMER_SENDABLE_DOC_TYPES = ["POD", "SIGNED_BOL_DEL"] as const;
+const SENDABLE: Record<(typeof CUSTOMER_SENDABLE_DOC_TYPES)[number], { name: string; title: string; slug: string }> = {
+  POD: { name: "proof of delivery", title: "Proof of Delivery", slug: "POD" },
+  SIGNED_BOL_DEL: { name: "signed delivery bill of lading", title: "Signed Delivery BOL", slug: "Signed-BOL" },
+};
+
 export type PodSendResult =
-  | { ok: true; recipients: string[]; failed: string[]; referenceNumber: string }
+  | { ok: true; recipients: string[]; failed: string[]; referenceNumber: string; docType: string; docTitle: string }
   | { ok: false; status: number; code: string; error: string };
 
 export async function sendPODToContact(loadId: string, documentId: string): Promise<PodSendResult> {
@@ -156,14 +166,16 @@ export async function sendPODToContact(loadId: string, documentId: string): Prom
     where: { id: documentId, loadId },
     select: { docType: true, fileUrl: true, fileName: true, fileType: true },
   });
-  if (!doc) return { ok: false, status: 404, code: "POD_NOT_FOUND", error: "No such document on this load." };
-  if (doc.docType !== "POD") {
-    return { ok: false, status: 400, code: "NOT_A_POD", error: "Only a proof of delivery can be sent to the customer from here." };
+  if (!doc) return { ok: false, status: 404, code: "DOC_NOT_FOUND", error: "No such document on this load." };
+  // An own-property test: a bare lookup would resolve "toString" on the object literal.
+  const kind = doc.docType && Object.hasOwn(SENDABLE, doc.docType) ? SENDABLE[doc.docType as keyof typeof SENDABLE] : undefined;
+  if (!kind) {
+    return { ok: false, status: 400, code: "DOC_NOT_SENDABLE", error: "Only a proof of delivery or a signed delivery BOL can be sent to the customer from here." };
   }
   // A storage-refused upload leaves a row with no file (Item 248): nothing to attach.
-  if (!doc.fileUrl) return { ok: false, status: 409, code: "POD_FILE_MISSING", error: "This POD has no stored file to send." };
+  if (!doc.fileUrl) return { ok: false, status: 409, code: "DOC_FILE_MISSING", error: `This ${kind.name} has no stored file to send.` };
   const load = await fetchLoadForNotify(loadId);
-  if (!load) return { ok: false, status: 404, code: "POD_NOT_FOUND", error: "Load not found." };
+  if (!load) return { ok: false, status: 404, code: "DOC_NOT_FOUND", error: "Load not found." };
   const to = await resolveRecipients(load);
   if (to.length === 0) {
     return { ok: false, status: 409, code: "NO_OPERATIONAL_RECIPIENTS", error: "This customer has no operational contact to send it to." };
@@ -172,11 +184,11 @@ export async function sendPODToContact(loadId: string, documentId: string): Prom
   const chunks: Buffer[] = [];
   for await (const chunk of await getFileStream(doc.fileUrl)) chunks.push(Buffer.from(chunk));
   const ext = path.extname(doc.fileName || "") || ".pdf";
-  const attachment = { filename: `${load.referenceNumber}-POD${ext}`, content: Buffer.concat(chunks), contentType: doc.fileType || "application/pdf" };
+  const attachment = { filename: `${load.referenceNumber}-${kind.slug}${ext}`, content: Buffer.concat(chunks), contentType: doc.fileType || "application/pdf" };
 
   const html = wrap(`
-    <h2 style="color:#0f172a">Load ${load.referenceNumber} &mdash; Proof of Delivery</h2>
-    <p>The proof of delivery for your shipment <strong>${load.referenceNumber}</strong> is attached to this email.</p>
+    <h2 style="color:#0f172a">Load ${load.referenceNumber} &mdash; ${kind.title}</h2>
+    <p>The ${kind.name} for your shipment <strong>${load.referenceNumber}</strong> is attached to this email.</p>
     ${loadInfoTable(load)}
     ${trackingLink(load)}
     <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because your contact email is associated with this shipment on Silk Route Logistics.</p>
@@ -187,16 +199,16 @@ export async function sendPODToContact(loadId: string, documentId: string): Prom
   const failed: string[] = [];
   for (const addr of to) {
     try {
-      await sendShipperEmail(addr, `Load ${load.referenceNumber} — Proof of Delivery`, html, [attachment]);
+      await sendShipperEmail(addr, `Load ${load.referenceNumber} — ${kind.title}`, html, [attachment]);
       sent.push(addr);
     } catch (err) {
-      log.error({ err, loadId }, `[ShipperLoadNotify] POD send to ${addr} failed`);
+      log.error({ err, loadId }, `[ShipperLoadNotify] ${doc.docType} send to ${addr} failed`);
       failed.push(addr);
     }
   }
-  if (sent.length === 0) return { ok: false, status: 502, code: "POD_SEND_FAILED", error: "The POD could not be sent to any recipient." };
-  log.info(`[ShipperLoadNotify] POD sent to ${sent.join(", ")} for ${load.referenceNumber}`);
-  return { ok: true, recipients: sent, failed, referenceNumber: load.referenceNumber };
+  if (sent.length === 0) return { ok: false, status: 502, code: "DOC_SEND_FAILED", error: `The ${kind.name} could not be sent to any recipient.` };
+  log.info(`[ShipperLoadNotify] ${doc.docType} sent to ${sent.join(", ")} for ${load.referenceNumber}`);
+  return { ok: true, recipients: sent, failed, referenceNumber: load.referenceNumber, docType: doc.docType as string, docTitle: kind.title };
 }
 
 // ─── Daily ETA Updates Cron Handler ────────────────────────────

@@ -3,20 +3,22 @@
  *
  * A POD upload used to email the customer on every upload, and the email's
  * "Download POD" button was PORTAL_BASE + podUrl: the marketing host plus a storage
- * key, which served nothing. Now staff send one POD deliberately and the customer
- * gets the FILE, attached: no link, no login.
+ * key, which served nothing. Now staff send one delivery document deliberately and the
+ * customer gets the FILE, attached: no link, no login. The POD and the signed delivery
+ * BOL are sendable (ruled 2026-09-28, second ruling); no other type is.
  *
  * The real router, the real authorize(), and the real sender (shipperLoadNotifyService)
  * run here; only the email transport, storage, the recipient resolver and the activity
- * log are mocked. The stored bytes are unique to this file, so an attachment carrying
- * them can only have come from reading the POD. document.findFirst answers its WHERE
- * against the fixtures, so a sender that stops scoping by load or type goes red.
+ * log are mocked. Each stored file has bytes unique to it, so an attachment carrying
+ * them can only have come from reading THAT document. document.findFirst answers its
+ * WHERE against the fixtures, so a sender that stops scoping by load or type goes red.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
 import { Readable } from "stream";
 import { prisma } from "../../../src/config/database";
+import { CUSTOMER_SENDABLE_DOC_TYPES } from "../../../src/services/shipperLoadNotifyService";
 
 const h = vi.hoisted(() => ({
   sendEmail: vi.fn(),
@@ -50,13 +52,23 @@ vi.mock("../../../src/services/loadActivityService", () => ({ logLoadActivity: h
 vi.mock("../../../src/lib/logger", () => ({ log: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() } }));
 
 const mockPrisma = prisma as any;
-const STORED = Buffer.from("%PDF-1.4 pod-bytes-7731");
+const STORED: Record<string, Buffer> = {
+  "s3://srl/documents/pod-7731.pdf": Buffer.from("%PDF-1.4 pod-bytes-7731"),
+  "s3://srl/documents/bol-5519.pdf": Buffer.from("%PDF-1.4 bol-bytes-5519"),
+};
+const file = (id: string, docType: string, fileUrl: string, loadId: string | null = "load-303") =>
+  ({ id, loadId, docType, fileUrl, fileName: `${id}.pdf`, fileType: "application/pdf" });
 const DOCS = [
-  { id: "d-pod", loadId: "load-303", docType: "POD", fileUrl: "s3://srl/documents/pod-7731.pdf", fileName: "signed pod.pdf", fileType: "application/pdf" },
-  { id: "d-bol", loadId: "load-303", docType: "SIGNED_BOL_DEL", fileUrl: "s3://srl/documents/bol.pdf", fileName: "bol.pdf", fileType: "application/pdf" },
-  { id: "d-empty", loadId: "load-303", docType: "POD", fileUrl: "", fileName: "lost.pdf", fileType: "application/pdf" },
-  { id: "d-loose", loadId: null, docType: "POD", fileUrl: "s3://srl/documents/loose.pdf", fileName: "loose.pdf", fileType: "application/pdf" },
+  file("d-pod", "POD", "s3://srl/documents/pod-7731.pdf"),
+  file("d-bol-del", "SIGNED_BOL_DEL", "s3://srl/documents/bol-5519.pdf"),
+  file("d-bol-pu", "SIGNED_BOL_PU", "s3://srl/documents/pu.pdf"),
+  file("d-inv", "INVOICE", "s3://srl/documents/inv.pdf"),
+  file("d-rc", "RATE_CON", "s3://srl/documents/rc.pdf"),
+  file("d-copy", "CUSTOMER_INVOICE_COPY", "s3://srl/documents/copy.pdf"),
+  file("d-empty", "POD", ""),
+  file("d-loose", "POD", "s3://srl/documents/loose.pdf", null),
 ];
+const NOT_SENDABLE = ["d-bol-pu", "d-inv", "d-rc", "d-copy"];
 
 async function app() {
   const documents = (await import("../../../src/routes/documents")).default;
@@ -84,29 +96,56 @@ beforeEach(() => {
     carrier: { company: "Haul Co" }, customer: { name: "Cust Co" }, checkCalls: [],
   });
   h.resolveOperationalRecipients.mockResolvedValue([{ email: "ops@cust.test" }, { email: "lead@cust.test" }]);
-  h.getFileStream.mockImplementation(async () => Readable.from([STORED]));
+  h.getFileStream.mockImplementation(async (url: string) => {
+    if (!STORED[url]) throw new Error(`test read an unexpected file: ${url}`);
+    return Readable.from([STORED[url]]);
+  });
   h.sendEmail.mockResolvedValue("email-id");
   h.logLoadActivity.mockResolvedValue({});
 });
 
-describe("staff send one POD, and the customer gets the file", () => {
-  it("attaches the stored POD, sends no link, and records who sent it", async () => {
+function attachedFrom(url: string, filename: string, subjectBit: string, name: string) {
+  expect(h.sendEmail).toHaveBeenCalledTimes(2);
+  for (const [, subject, html, attachments] of h.sendEmail.mock.calls) {
+    expect(subject).toContain("SRL-900303");
+    expect(subject).toContain(subjectBit);
+    expect(attachments).toHaveLength(1);
+    expect(attachments[0].filename).toBe(filename);
+    expect(Buffer.compare(attachments[0].content, STORED[url])).toBe(0);
+    expect(html).toContain(`The ${name} for your shipment`);
+    expect(html).toContain("attached");
+    expect(html).not.toContain("Download POD");
+    expect(html).not.toContain(url.split("/").pop()!.replace(".pdf", "")); // no storage key in a link
+  }
+}
+
+describe("what may be sent", () => {
+  it("exactly the POD and the signed delivery BOL", () => {
+    expect([...CUSTOMER_SENDABLE_DOC_TYPES]).toEqual(["POD", "SIGNED_BOL_DEL"]);
+  });
+});
+
+describe("staff send one delivery document, and the customer gets the file", () => {
+  it("POD: attaches the stored POD, sends no link, records who sent what", async () => {
     const r = await send("d-pod", "BROKER");
     expect(r.status).toBe(200);
     expect(r.body).toEqual({ sent: 2, recipients: ["ops@cust.test", "lead@cust.test"], failed: [] });
-    expect(h.sendEmail).toHaveBeenCalledTimes(2);
-    for (const [, subject, html, attachments] of h.sendEmail.mock.calls) {
-      expect(subject).toContain("SRL-900303");
-      expect(attachments).toHaveLength(1);
-      expect(attachments[0].filename).toBe("SRL-900303-POD.pdf");
-      expect(Buffer.compare(attachments[0].content, STORED)).toBe(0);
-      expect(html).toContain("attached");
-      expect(html).not.toContain("Download POD");
-      expect(html).not.toContain("pod-7731"); // the storage key is never put in a link
-    }
-    expect(h.getFileStream).toHaveBeenCalledWith("s3://srl/documents/pod-7731.pdf");
+    attachedFrom("s3://srl/documents/pod-7731.pdf", "SRL-900303-POD.pdf", "Proof of Delivery", "proof of delivery");
     expect(h.logLoadActivity).toHaveBeenCalledWith(expect.objectContaining({
-      loadId: "load-303", eventType: "pod_sent_to_customer", actorId: "u-broker",
+      loadId: "load-303", eventType: "doc_sent_to_customer", actorId: "u-broker",
+      description: "Proof of Delivery sent to the customer (2 recipients)",
+      metadata: expect.objectContaining({ documentId: "d-pod", docType: "POD", recipients: ["ops@cust.test", "lead@cust.test"] }),
+    }));
+  });
+
+  it("signed delivery BOL: the same action, its own file, name and subject", async () => {
+    const r = await send("d-bol-del", "OPERATIONS");
+    expect(r.status).toBe(200);
+    expect(r.body.sent).toBe(2);
+    attachedFrom("s3://srl/documents/bol-5519.pdf", "SRL-900303-Signed-BOL.pdf", "Signed Delivery BOL", "signed delivery bill of lading");
+    expect(h.logLoadActivity).toHaveBeenCalledWith(expect.objectContaining({
+      eventType: "doc_sent_to_customer", actorId: "u-operations",
+      metadata: expect.objectContaining({ documentId: "d-bol-del", docType: "SIGNED_BOL_DEL" }),
     }));
   });
 
@@ -119,49 +158,53 @@ describe("staff send one POD, and the customer gets the file", () => {
 });
 
 describe("who may send it", () => {
-  it("no session is 401; a shipper, a carrier and a FACTOR are 403; nothing is emailed", async () => {
+  it("no session is 401; a shipper, a carrier and a FACTOR are 403; nothing is read or emailed", async () => {
     expect((await send("d-pod")).status).toBe(401);
-    for (const role of ["SHIPPER", "CARRIER", "FACTOR"]) expect((await send("d-pod", role)).status, role).toBe(403);
+    for (const role of ["SHIPPER", "CARRIER", "FACTOR"]) {
+      expect((await send("d-pod", role)).status, role).toBe(403);
+      expect((await send("d-bol-del", role)).status, role).toBe(403);
+    }
     expect(h.sendEmail).not.toHaveBeenCalled();
     expect(h.getFileStream).not.toHaveBeenCalled();
   });
 });
 
 describe("what is refused, before any email", () => {
-  it("a document that is not a POD: 400 NOT_A_POD", async () => {
-    const r = await send("d-bol", "BROKER");
-    expect([r.status, r.body.code]).toEqual([400, "NOT_A_POD"]);
-  });
-  it("a POD row with no stored file: 409 POD_FILE_MISSING", async () => {
+  for (const id of NOT_SENDABLE) {
+    it(`${id}: 400 DOC_NOT_SENDABLE, the file is not read and nothing is emailed`, async () => {
+      const r = await send(id, "BROKER");
+      expect([r.status, r.body.code]).toEqual([400, "DOC_NOT_SENDABLE"]);
+      expect(h.getFileStream).not.toHaveBeenCalled();
+      expect(h.sendEmail).not.toHaveBeenCalled();
+    });
+  }
+  it("a document row with no stored file: 409 DOC_FILE_MISSING", async () => {
     const r = await send("d-empty", "BROKER");
-    expect([r.status, r.body.code]).toEqual([409, "POD_FILE_MISSING"]);
+    expect([r.status, r.body.code]).toEqual([409, "DOC_FILE_MISSING"]);
+    expect(h.sendEmail).not.toHaveBeenCalled();
   });
-  it("a document on no load, or no document: 404", async () => {
+  it("a document on no load, or no document: 404, nothing emailed", async () => {
     expect((await send("d-loose", "BROKER")).status).toBe(404);
     expect((await send("d-none", "BROKER")).status).toBe(404);
+    expect(h.sendEmail).not.toHaveBeenCalled();
   });
-  it("a customer with no operational contact: 409 NO_OPERATIONAL_RECIPIENTS", async () => {
+  it("a customer with no operational contact: 409 NO_OPERATIONAL_RECIPIENTS, file not read", async () => {
     h.resolveOperationalRecipients.mockResolvedValue([]);
-    const r = await send("d-pod", "BROKER");
+    const r = await send("d-bol-del", "BROKER");
     expect([r.status, r.body.code]).toEqual([409, "NO_OPERATIONAL_RECIPIENTS"]);
     expect(h.getFileStream).not.toHaveBeenCalled();
   });
   it("the stored file cannot be read: 502, and nothing is sent or recorded", async () => {
     h.getFileStream.mockRejectedValue(new Error("NoSuchKey"));
     const r = await send("d-pod", "BROKER");
-    expect([r.status, r.body.code]).toEqual([502, "POD_SEND_FAILED"]);
+    expect([r.status, r.body.code]).toEqual([502, "DOC_SEND_FAILED"]);
+    expect(h.sendEmail).not.toHaveBeenCalled();
     expect(h.logLoadActivity).not.toHaveBeenCalled();
   });
   it("every address fails: 502, and nothing is recorded as sent", async () => {
     h.sendEmail.mockRejectedValue(new Error("down"));
-    const r = await send("d-pod", "BROKER");
-    expect([r.status, r.body.code]).toEqual([502, "POD_SEND_FAILED"]);
+    const r = await send("d-bol-del", "BROKER");
+    expect([r.status, r.body.code]).toEqual([502, "DOC_SEND_FAILED"]);
     expect(h.logLoadActivity).not.toHaveBeenCalled();
   });
-  for (const id of ["d-bol", "d-empty", "d-loose", "d-none"]) {
-    it(`${id}: no email goes out`, async () => {
-      await send(id, "BROKER");
-      expect(h.sendEmail).not.toHaveBeenCalled();
-    });
-  }
 });

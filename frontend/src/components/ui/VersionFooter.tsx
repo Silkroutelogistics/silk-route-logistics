@@ -19482,7 +19482,10 @@
 // place of the old "Download POD" link, which pointed at nothing.
 // v3.8.bnz — F-D3: the T&T Docs tab's POD row gets "Send to customer". It asks first,
 // then shows who received the POD and who did not, or the server's refusal.
-export const SRL_VERSION = "3.8.bnz";
+// v3.8.boa — ruling 2026-09-28: the signed delivery BOL is sendable to the customer by
+// the same staff act as the POD (attached, no link, no auto-send, same logging). Those
+// two only; every other type is refused before the file is read.
+export const SRL_VERSION = "3.8.boa";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
