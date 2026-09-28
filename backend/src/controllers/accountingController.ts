@@ -46,6 +46,11 @@ function startOfWeek(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), diff);
 }
 
+/** What is still owed across these invoices, to the cent (v3.8.bng). */
+function sumBalances(invoices: { amount: number; totalAmount: number | null; paidAmount: number | null }[]): number {
+  return Math.round(invoices.reduce((s, inv) => s + invoiceBalance(inv), 0) * 100) / 100;
+}
+
 function daysBetween(a: Date, b: Date): number {
   return Math.floor((b.getTime() - a.getTime()) / 86_400_000);
 }
@@ -149,10 +154,12 @@ export async function getDashboard(req: AuthRequest, res: Response) {
     const cashBalance = latestFund?.runningBalance ?? 0;
 
     // --- Accounts Receivable outstanding ---
-    const arOutstanding = await prisma.invoice.aggregate({
-      where: { status: { in: ["SENT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED", "OVERDUE", "PARTIAL"] } },
-      _sum: { amount: true },
-      _count: true,
+    // v3.8.bng — what is still owed on open invoices, balance by balance (ruling
+    // 2026-09-27, 2): a partly paid invoice counts for what is left, as the aging
+    // report adds it (v3.8.bnb). The sum of face amounts counted it in full.
+    const openInvoices = await prisma.invoice.findMany({
+      where: { status: { in: OPEN_STATUSES as any[] } },
+      select: { amount: true, totalAmount: true, paidAmount: true },
     });
 
     // --- Accounts Payable due (unpaid carrier pays) ---
@@ -220,8 +227,8 @@ export async function getDashboard(req: AuthRequest, res: Response) {
 
     res.json({
       cashBalance,
-      arOutstanding: arOutstanding._sum.amount ?? 0,
-      arCount: arOutstanding._count,
+      arOutstanding: sumBalances(openInvoices),
+      arCount: openInvoices.length,
       apDue: apDue._sum.netAmount ?? 0,
       apCount: apDue._count,
       qpRevenueMTD: qpRevenue._sum.quickPayFeeAmount ?? 0,
@@ -4158,7 +4165,7 @@ export async function getAccountingDashboardEnhanced(req: AuthRequest, res: Resp
     // --- All core metrics in parallel ---
     const [
       latestFund,
-      arOutstanding,
+      openInvoices,
       apDue,
       qpRevenue,
       mtdLoads,
@@ -4169,10 +4176,9 @@ export async function getAccountingDashboardEnhanced(req: AuthRequest, res: Resp
       recentApprovals,
     ] = await Promise.all([
       prisma.factoringFund.findFirst({ orderBy: { createdAt: "desc" }, select: { runningBalance: true } }),
-      prisma.invoice.aggregate({
-        where: { status: { in: ["SENT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED", "OVERDUE", "PARTIAL"] } },
-        _sum: { amount: true },
-        _count: true,
+      prisma.invoice.findMany({ // v3.8.bng — balances, as the dashboard above
+        where: { status: { in: OPEN_STATUSES as any[] } },
+        select: { amount: true, totalAmount: true, paidAmount: true },
       }),
       prisma.carrierPay.aggregate({
         where: { status: { in: ["PENDING", "PREPARED", "SUBMITTED", "APPROVED", "PROCESSING", "SCHEDULED"] } },
@@ -4217,8 +4223,8 @@ export async function getAccountingDashboardEnhanced(req: AuthRequest, res: Resp
     res.json({
       cashBalance,
       fundHealth,
-      arOutstanding: arOutstanding._sum.amount ?? 0,
-      arCount: arOutstanding._count,
+      arOutstanding: sumBalances(openInvoices),
+      arCount: openInvoices.length,
       apDue: apDue._sum.netAmount ?? 0,
       apCount: apDue._count,
       qpRevenueMTD: qpRevenue._sum.quickPayFeeAmount ?? 0,

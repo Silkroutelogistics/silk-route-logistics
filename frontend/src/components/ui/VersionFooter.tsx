@@ -19431,7 +19431,9 @@
 // stays current through its due day and is a day past due from midnight Toronto.
 // v3.8.bnf — The accounting dashboard counts an invoice overdue from midnight Toronto after its
 // due day, not from the stored time the evening before, and counts partly paid ones.
-export const SRL_VERSION = "3.8.bnf";
+// v3.8.bng — The accounting dashboard's Outstanding AR adds what is still owed on each open
+// invoice, so a partly paid invoice counts for its balance, as in the aging report.
+export const SRL_VERSION = "3.8.bng";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

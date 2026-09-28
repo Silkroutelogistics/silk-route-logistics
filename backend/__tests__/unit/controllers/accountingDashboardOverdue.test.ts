@@ -6,6 +6,9 @@
  * America/Toronto clock from the shared rule. It had counted an invoice from
  * its stored instant, so a due date stored at midnight UTC counted as overdue
  * from 8 PM Eastern the evening before; and it left PARTIAL out.
+ *
+ * v3.8.bng — ruling 2026-09-27, 2: the same dashboards' Outstanding AR adds
+ * what is still owed on each open invoice, not its face amount.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { prisma } from "../../../src/config/database";
@@ -54,6 +57,7 @@ beforeEach(() => {
   mockPrisma.paymentDispute.count.mockResolvedValue(0);
   mockPrisma.approvalQueue.findMany.mockResolvedValue([]);
   mockPrisma.invoice.count.mockImplementation(async (args: any) => count(args));
+  mockPrisma.invoice.findMany.mockResolvedValue([]);
 });
 afterEach(() => vi.useRealTimers());
 
@@ -87,5 +91,28 @@ describe.each([
       .map((s) => ({ id: s, status: s, dueDate: DUE_OCT25 }));
     rows.push({ id: "no-due", status: "SENT", dueDate: null });
     expect(await overdueOn(handler)).toBe(7);
+  });
+});
+
+describe.each([
+  ["GET /accounting/dashboard", getDashboard],
+  ["GET /accounting/dashboard/enhanced", getAccountingDashboardEnhanced],
+])("%s — Outstanding AR", (_name, handler) => {
+  it("adds what is still owed: a partly paid invoice counts for its balance", async () => {
+    vi.setSystemTime(new Date("2026-11-01T12:00:00.000Z"));
+    rows = [];
+    mockPrisma.invoice.findMany.mockResolvedValue([
+      { amount: 1000, totalAmount: 1000, paidAmount: 600 }, // $400 left
+      { amount: 500, totalAmount: null, paidAmount: null }, // nothing paid, no itemised total
+      { amount: 1000, totalAmount: 1150, paidAmount: null }, // itemised: owed on the total
+    ]);
+    const r = res();
+    await handler({ query: {} } as any, r);
+    const body = r.json.mock.calls[0][0];
+    expect(body.arOutstanding).toBe(2050);
+    expect(body.arCount).toBe(3);
+    expect(mockPrisma.invoice.findMany.mock.calls[0][0].where).toEqual({
+      status: { in: ["SENT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED", "PARTIAL", "OVERDUE"] },
+    });
   });
 });
