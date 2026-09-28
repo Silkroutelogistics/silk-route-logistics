@@ -5,8 +5,8 @@
  * generated invoice from GET /pdf/invoice/:id through the api client, and tell
  * the user when that fails rather than failing silently again.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor, within, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -59,6 +59,56 @@ describe("a partly paid invoice shows its balance", () => {
     await userEvent.click(await screen.findByText("SRL-121495I"));
     const label = await screen.findByText("Balance");
     expect(label.parentElement!.textContent).toContain("$400.00");
+  });
+});
+
+// v3.8.bnh — ruling 2026-09-27, 3: the page's past-due flag uses the due day on
+// the America/Toronto clock from the shared rule, and a due date shows the day
+// the invoice prints on any device. The device here is west of UTC, where a
+// midnight-UTC due date used to read a day early.
+describe("the past-due flag and the due day", () => {
+  const DUE = { ...INV, id: "inv-due", invoiceNumber: "SRL-121496I", status: "SENT", dueDate: "2026-10-25T00:00:00.000Z" };
+  const TZ = process.env.TZ;
+  const show = (rows: unknown[]) =>
+    vi.mocked(api.get).mockResolvedValue({ data: { invoices: rows, total: rows.length, totalPages: 1 } } as any);
+  const statusAt = async (now: string, rows: unknown[], number: string) => {
+    cleanup();
+    show(rows);
+    vi.setSystemTime(new Date(now));
+    mount();
+    const row = (await screen.findByText(number)).closest("tr")!;
+    return row.lastElementChild!.textContent;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    process.env.TZ = "America/Los_Angeles";
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    if (TZ === undefined) delete process.env.TZ; else process.env.TZ = TZ;
+  });
+
+  it("is not raised on the due day, and is from 00:00 Toronto the day after", async () => {
+    expect(await statusAt("2026-10-26T03:59:00.000Z", [DUE], "SRL-121496I")).toBe("SENT");
+    expect(await statusAt("2026-10-26T04:00:00.000Z", [DUE], "SRL-121496I")).toBe("OVERDUE");
+  });
+
+  it("uses the Toronto clock, not New York's (January 1974, when the two differed)", async () => {
+    const old = { ...DUE, dueDate: "1974-01-09T00:00:00.000Z" };
+    expect(await statusAt("1974-01-10T04:30:00.000Z", [old], "SRL-121496I")).toBe("SENT");
+    expect(await statusAt("1974-01-10T05:00:00.000Z", [old], "SRL-121496I")).toBe("OVERDUE");
+  });
+
+  it("is not raised on a draft, which has not been sent", async () => {
+    expect(await statusAt("2026-11-01T12:00:00.000Z", [{ ...DUE, status: "DRAFT" }], "SRL-121496I")).toBe("DRAFT");
+  });
+
+  it("shows the due day the invoice prints, not the device's day", async () => {
+    await statusAt("2026-10-20T12:00:00.000Z", [DUE], "SRL-121496I");
+    const row = screen.getByText("SRL-121496I").closest("tr")!;
+    expect(within(row).getByText("Oct 25, 2026")).toBeTruthy();
   });
 });
 

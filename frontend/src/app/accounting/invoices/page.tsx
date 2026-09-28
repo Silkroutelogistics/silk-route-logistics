@@ -14,6 +14,7 @@ import type { Invoice } from "@/types/entities";
 import { cn } from "@/lib/utils";
 import { decodeHtmlEntities } from "@/lib/htmlEntities";
 import { invoiceBalance } from "@shared/constants/invoiceBalance";
+import { formatDueDay, isInvoiceOverdue } from "@shared/constants/invoiceDueDay";
 
 /* ── Constants ────────────────────────────────────────────── */
 
@@ -162,12 +163,7 @@ export default function InvoicesPage() {
     const counts: Record<string, number> = {};
     if (data?.invoices) {
       for (const inv of data.invoices) {
-        const isOverdue =
-          inv.status !== "PAID" &&
-          inv.status !== "VOID" &&
-          inv.dueDate &&
-          new Date(inv.dueDate) < new Date();
-        const key = isOverdue ? "OVERDUE" : inv.status;
+        const key = isInvoiceOverdue(inv) ? "OVERDUE" : inv.status;
         counts[key] = (counts[key] || 0) + 1;
       }
     }
@@ -178,13 +174,11 @@ export default function InvoicesPage() {
 
   /* ── Helpers ─────────────────────────────────────────── */
 
+  // v3.8.bnh — past its due day on the America/Toronto clock, and open (a draft
+  // has not been sent, so it cannot be late), from the shared rule (ruling
+  // 2026-09-27, 3). It had compared the stored instant with the device clock.
   function isOverdue(inv: Invoice) {
-    return (
-      inv.status !== "PAID" &&
-      inv.status !== "VOID" &&
-      inv.dueDate &&
-      new Date(inv.dueDate) < new Date()
-    );
+    return isInvoiceOverdue(inv);
   }
 
   function displayStatus(inv: Invoice) {
@@ -372,7 +366,7 @@ export default function InvoicesPage() {
                           {!panelOpen && (
                             <td className="px-5 py-3 text-sm">
                               <span className={overdue ? "text-red-400" : "text-slate-300"}>
-                                {fmtDate(inv.dueDate)}
+                                {formatDueDay(inv.dueDate) ?? "—"}
                               </span>
                               {overdue && (
                                 <AlertTriangle className="inline w-3 h-3 text-red-400 ml-1" />
@@ -635,7 +629,7 @@ function SummaryTab({ invoice }: { invoice: Invoice }) {
         <DetailField label="Customer" value={customerName(invoice)} />
         <DetailField label="Route" value={route} />
         <DetailField label="Total Amount" value={fmt(invoice.amount)} highlight />
-        <DetailField label="Due Date" value={fmtDate(invoice.dueDate)} warn={!!invoice.dueDate && new Date(invoice.dueDate) < new Date() && invoice.status !== "PAID" && invoice.status !== "VOID"} />
+        <DetailField label="Due Date" value={formatDueDay(invoice.dueDate) ?? "—"} warn={isInvoiceOverdue(invoice)} />
         <DetailField label="Created" value={fmtDate(invoice.createdAt)} />
         <DetailField
           label="Payment Method"

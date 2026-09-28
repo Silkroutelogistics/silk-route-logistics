@@ -53,3 +53,27 @@ export function daysPastDue(dueDate: Date | string, now: Date): number {
   const dueDay = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
   return Math.round((pastDueCutoff(now).getTime() - dueDay) / DAY_MS);
 }
+
+/** True once the due day is over on the due-day clock. False with no due date. */
+function isPastDue(dueDate: Date | string | null | undefined, now: Date): boolean {
+  return !!dueDate && daysPastDue(dueDate, now) > 0;
+}
+
+/**
+ * An invoice is overdue once it is open (OPEN_STATUSES) and its due day is
+ * over. The accounting invoices page flags these.
+ */
+export function isInvoiceOverdue(inv: { status: string; dueDate?: Date | string | null }, now: Date = new Date()): boolean {
+  return OPEN_STATUSES.includes(inv.status) && isPastDue(inv.dueDate, now);
+}
+
+/**
+ * The due day as the invoice prints it, e.g. "Oct 25, 2026": the UTC date of
+ * the stored value, whatever clock the viewer's device keeps. Null with none.
+ */
+export function formatDueDay(dueDate: Date | string | null | undefined): string | null {
+  if (!dueDate) return null;
+  const d = new Date(dueDate);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
+}

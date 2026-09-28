@@ -19433,7 +19433,9 @@
 // due day, not from the stored time the evening before, and counts partly paid ones.
 // v3.8.bng — The accounting dashboard's Outstanding AR adds what is still owed on each open
 // invoice, so a partly paid invoice counts for its balance, as in the aging report.
-export const SRL_VERSION = "3.8.bng";
+// v3.8.bnh — The accounting invoices page flags an invoice past due from midnight Toronto after
+// its due day, never a draft, and shows every due date as the day the invoice prints.
+export const SRL_VERSION = "3.8.bnh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
