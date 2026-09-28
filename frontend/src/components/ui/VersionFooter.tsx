@@ -19396,7 +19396,11 @@
 // the broker SIGNATURE line of every Broker-Carrier and Quick Pay Agreement
 // executed from this deploy on, in place of the typed name. The caption still
 // says it was applied electronically, because it is.
-export const SRL_VERSION = "3.8.bmn";
+// v3.8.bmo — SRL's copy of its invoice to a customer is its own document type, CUSTOMER_INVOICE_COPY,
+//   and only SRL staff can file it. The Documents tab's "Invoice" row files INVOICE, the carrier's
+// invoice, and on 2026-09-27 four customer invoice packets went in that way. The new type is not
+// paperwork, not a settlement type, not carrier-uploadable and not shipper-visible.
+export const SRL_VERSION = "3.8.bmo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

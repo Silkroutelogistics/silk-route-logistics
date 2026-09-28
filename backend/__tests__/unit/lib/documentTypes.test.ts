@@ -32,6 +32,7 @@ import {
   CARRIER_DOC_TYPES,
   CUSTOMER_DOC_TYPES,
   CARRIER_UPLOADABLE_LOAD_DOC_TYPES,
+  SRL_INTERNAL_LOAD_DOC_TYPES,
   normalizeDocType,
   isAllowedDocType,
   carrierMayUploadLoadDocType,
@@ -113,14 +114,18 @@ describe("the vocabulary", () => {
     expect(new Set(SETTLEMENT_DOC_TYPES)).toEqual(inMap);
   });
 
-  it("the carrier-uploadable load types are every LOAD type except RATE_CON, and every settlement type is among them", () => {
-    expect([...CARRIER_UPLOADABLE_LOAD_DOC_TYPES].sort()).toEqual(LOAD_DOC_TYPES.filter((t) => t !== "RATE_CON").sort());
-    expect(carrierMayUploadLoadDocType("RATE_CON")).toBe(false);
-    for (const t of LOAD_DOC_TYPES) if (t !== "RATE_CON") expect(carrierMayUploadLoadDocType(t), t).toBe(true);
+  // D (2026-09-28): the SRL-internal types leave the subset too. CUSTOMER_INVOICE_COPY is
+  // SRL's record; the upload seam refuses it from any non-staff actor (customerInvoiceCopy.test).
+  it("the carrier-uploadable load types are every LOAD type except RATE_CON and the SRL-internal ones, and every settlement type is among them", () => {
+    const withheld = ["RATE_CON", ...SRL_INTERNAL_LOAD_DOC_TYPES] as string[];
+    expect([...CARRIER_UPLOADABLE_LOAD_DOC_TYPES].sort()).toEqual(LOAD_DOC_TYPES.filter((t) => !withheld.includes(t)).sort());
+    for (const t of withheld) expect(carrierMayUploadLoadDocType(t), t).toBe(false);
+    for (const t of LOAD_DOC_TYPES) if (!withheld.includes(t)) expect(carrierMayUploadLoadDocType(t), t).toBe(true);
     // the paperwork panel's slots must all be reachable from the portal
     for (const t of SETTLEMENT_DOC_TYPES) expect(carrierMayUploadLoadDocType(t), t).toBe(true);
-    // vacuity: the subset is the list minus exactly one
-    expect(CARRIER_UPLOADABLE_LOAD_DOC_TYPES).toHaveLength(LOAD_DOC_TYPES.length - 1);
+    // vacuity: the subset is the list minus exactly RATE_CON and the one SRL-internal type
+    expect(SRL_INTERNAL_LOAD_DOC_TYPES).toHaveLength(1);
+    expect(CARRIER_UPLOADABLE_LOAD_DOC_TYPES).toHaveLength(LOAD_DOC_TYPES.length - 2);
   });
 
   it("refuses an unknown string in every class", () => {

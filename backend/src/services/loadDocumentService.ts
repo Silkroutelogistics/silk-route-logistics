@@ -48,7 +48,7 @@ import path from "path";
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
 import { uploadFile, validateBufferSignature } from "./storageService";
-import { normalizeDocType, isAllowedDocType, carrierMayUploadLoadDocType } from "../lib/documentTypes";
+import { normalizeDocType, isAllowedDocType, carrierMayUploadLoadDocType, isSrlInternalDocType, isSrlStaffRole } from "../lib/documentTypes";
 import { actualEventStamps } from "../lib/loadEventStamps";
 import { logLoadActivity } from "./loadActivityService";
 import { broadcastSSE } from "../routes/trackTraceSSE";
@@ -92,6 +92,12 @@ export async function recordLoadDocument(input: RecordLoadDocumentInput): Promis
   const docType = normalizeDocType(input.docType) ?? "OTHER";
   if (!isAllowedDocType(docType, "LOAD")) {
     throw new LoadDocumentRefusal(400, "UNKNOWN_DOC_TYPE", `Unknown document type "${docType}"`);
+  }
+  // SRL-internal types (CUSTOMER_INVOICE_COPY) are SRL's own record. Only staff file them:
+  // a carrier or a shipper who is a party to the load must not be able to put a
+  // document into that slot, where it would read as SRL's copy of what was sent.
+  if (isSrlInternalDocType(docType) && !isSrlStaffRole(input.actor.role)) {
+    throw new LoadDocumentRefusal(400, "DOC_TYPE_SRL_ONLY", `"${docType}" is an SRL record and can only be filed by SRL staff.`);
   }
   if (input.actor.role === "CARRIER" && !carrierMayUploadLoadDocType(docType)) {
     throw new LoadDocumentRefusal(

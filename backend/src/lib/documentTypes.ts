@@ -39,7 +39,43 @@ export const LOAD_DOC_TYPES = [
   "PHOTO_DAMAGE",
   "RECEIPT_MECHANICAL",
   "OTHER",
+  "CUSTOMER_INVOICE_COPY", // SRL-internal: see SRL_INTERNAL_LOAD_DOC_TYPES below
 ] as const;
+
+/**
+ * Load documents that are SRL's own record, never the carrier's or the customer's
+ * (ruled 2026-09-28).
+ *
+ * CUSTOMER_INVOICE_COPY is a copy of SRL's invoice to the customer, kept on the load as
+ * sent. It used to be filed through the Documents tab's "Invoice" row as INVOICE, and
+ * INVOICE is the CARRIER's invoice everywhere else. So the copy cleared the carrier-pay
+ * gate, filled the carrier's paperwork panel, emailed accounting that the carrier had
+ * invoiced, and was listed and served in the carrier's portal.
+ *
+ * An SRL-internal type is none of those things. It is not a settlement type, not
+ * paperwork and not carrier-uploadable. It is not in SHIPPER_VISIBLE_DOC_TYPES. Only
+ * SRL staff may upload, list or download it.
+ */
+export const SRL_INTERNAL_LOAD_DOC_TYPES = ["CUSTOMER_INVOICE_COPY"] as const;
+const SRL_INTERNAL = new Set<string>(SRL_INTERNAL_LOAD_DOC_TYPES);
+
+/** Is this docType SRL's own record, withheld from every carrier and customer surface? */
+export function isSrlInternalDocType(docType: string | null | undefined): boolean {
+  return !!docType && SRL_INTERNAL.has(docType);
+}
+
+/**
+ * The roles that operate SRL internally, the one list. Everyone else (CARRIER,
+ * SHIPPER, CARRIER_REVIEWER, FACTOR) is scoped to what they own and never sees an
+ * SRL-internal document. An allowlist, so a role added later is refused until
+ * someone decides otherwise. Moved here from documentController (v3.8.aue added
+ * ACCOUNT_EXECUTIVE).
+ */
+export const SRL_STAFF_ROLES: readonly string[] = ["ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING", "AE", "ACCOUNT_EXECUTIVE"];
+
+export function isSrlStaffRole(role: string | null | undefined): boolean {
+  return !!role && SRL_STAFF_ROLES.includes(role);
+}
 
 export const CARRIER_DOC_TYPES = [
   "W9",
@@ -72,7 +108,7 @@ export const CUSTOMER_DOC_TYPES = [
 
 /**
  * The load-document types a CARRIER may upload: everything in LOAD_DOC_TYPES
- * except RATE_CON.
+ * except RATE_CON and the SRL-internal types.
  *
  * The signed rate confirmation is system-generated — frozen at issue and
  * identified by its contentHash (v3.8.axt), signed through the token page and
@@ -84,10 +120,10 @@ export const CUSTOMER_DOC_TYPES = [
  * is the AE's record, not the carrier's assertion. One list, enforced in the
  * load-document seam both upload routes pass through (v3.8.bfu).
  */
-export const CARRIER_UPLOADABLE_LOAD_DOC_TYPES = LOAD_DOC_TYPES.filter((t) => t !== "RATE_CON");
+export const CARRIER_UPLOADABLE_LOAD_DOC_TYPES = LOAD_DOC_TYPES.filter((t) => t !== "RATE_CON" && !SRL_INTERNAL.has(t));
 const CARRIER_UPLOADABLE = new Set<string>(CARRIER_UPLOADABLE_LOAD_DOC_TYPES);
 
-/** May a carrier upload this LOAD docType? Every allowed load type except RATE_CON. */
+/** May a carrier upload this LOAD docType? Every allowed load type except RATE_CON and the SRL-internal ones. */
 export function carrierMayUploadLoadDocType(docType: string): boolean {
   return CARRIER_UPLOADABLE.has(docType);
 }
