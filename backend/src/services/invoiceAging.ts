@@ -1,5 +1,5 @@
 import { prisma } from "../config/database";
-import { pastDueCutoff } from "../../../shared/constants/invoiceDueDay";
+import { OVERDUE_FROM, pastDueCutoff } from "../../../shared/constants/invoiceDueDay";
 
 /**
  * v3.8.bmi — when an invoice turns OVERDUE, decided in one place (ruling
@@ -21,10 +21,11 @@ import { pastDueCutoff } from "../../../shared/constants/invoiceDueDay";
  * Beekeepers' four invoices, due Oct 25, would have gone overdue on Oct 24.
  * A generated invoice carries its creation time of day, so under the old rule
  * it turned overdue partway through its due day; now it waits for the day to end.
+ *
+ * WHICH. OVERDUE_FROM, in the shared rule. v3.8.bna added PARTIAL (ruling
+ * 2026-09-27, 2): a partly paid invoice past its due day turns OVERDUE like any
+ * other, and keeps its paidAmount, so its balance still shows.
  */
-
-/** The statuses this job moves to OVERDUE. Unchanged from the inline query it replaces. */
-export const OVERDUE_FROM = ["SENT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED"];
 
 /** Marks every invoice whose due date has passed OVERDUE. Returns how many moved. */
 export async function markPastDueInvoicesOverdue(now: Date = new Date()): Promise<number> {

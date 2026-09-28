@@ -19419,7 +19419,9 @@
 // both trees, and a guard fails the build on a new one that does not.
 // v3.8.bmz — An invoice's due day is judged on the America/Toronto clock, from one shared
 // rule; the hourly aging job reads it.
-export const SRL_VERSION = "3.8.bmz";
+// v3.8.bna — A partly paid invoice past its due day turns overdue like any other, and keeps
+// what was paid, so its balance still shows.
+export const SRL_VERSION = "3.8.bna";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

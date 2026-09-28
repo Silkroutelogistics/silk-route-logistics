@@ -8,8 +8,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { prisma } from "../../../src/config/database";
-import { markPastDueInvoicesOverdue, OVERDUE_FROM } from "../../../src/services/invoiceAging";
-import { pastDueCutoff } from "../../../../shared/constants/invoiceDueDay";
+import { markPastDueInvoicesOverdue } from "../../../src/services/invoiceAging";
+import { OVERDUE_FROM, pastDueCutoff } from "../../../../shared/constants/invoiceDueDay";
 
 const mockPrisma = prisma as any;
 
@@ -50,7 +50,7 @@ describe("a due date has passed once its day is over on the Toronto clock", () =
   });
 });
 
-interface Row { id: string; status: string; dueDate: Date | null; channel: "EMAIL" | "TIPALTI" }
+interface Row { id: string; status: string; dueDate: Date | null; channel: "EMAIL" | "TIPALTI"; paidAmount?: number }
 let rows: Row[];
 
 /**
@@ -95,10 +95,19 @@ describe("markPastDueInvoicesOverdue — the hourly aging job", () => {
     expect(rows[0].status).toBe("OVERDUE");
   });
 
-  it("moves only the statuses it always moved, and never one with no due date", async () => {
-    // The inline query this replaces moved exactly these five. PARTIAL is not
-    // among them: whether it should be is an open decision (v3.8.bmh).
-    expect(OVERDUE_FROM).toEqual(["SENT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED"]);
+  it("a partly paid invoice past its due date turns OVERDUE and keeps what was paid", async () => {
+    // Ruling 2026-09-27, 2. The job writes the status and nothing else, so the
+    // paid amount survives and the balance ($400 here) is still what shows.
+    rows = [{ id: "part", status: "PARTIAL", dueDate: DUE_OCT25, channel: "EMAIL", paidAmount: 600 }];
+    expect(await markPastDueInvoicesOverdue(new Date("2026-10-26T00:30:00.000Z"))).toBe(0); // its due day is not over
+    expect(rows[0].status).toBe("PARTIAL");
+    expect(await markPastDueInvoicesOverdue(new Date("2026-10-26T04:00:00.000Z"))).toBe(1);
+    expect(rows[0]).toEqual({ id: "part", status: "OVERDUE", dueDate: DUE_OCT25, channel: "EMAIL", paidAmount: 600 });
+  });
+
+  it("moves exactly the issued, unsettled statuses, and never one with no due date", async () => {
+    // The five the inline query moved, and PARTIAL since v3.8.bna.
+    expect(OVERDUE_FROM).toEqual(["SENT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED", "PARTIAL"]);
     rows = [
       ...OVERDUE_FROM.map((s) => ({ id: s, status: s, dueDate: DUE_OCT25, channel: "EMAIL" as const })),
       { id: "paid", status: "PAID", dueDate: DUE_OCT25, channel: "EMAIL" },
