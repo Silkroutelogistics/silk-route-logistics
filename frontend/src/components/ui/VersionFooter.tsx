@@ -19474,7 +19474,10 @@
 // v3.8.bnw — F-D6: GET /loads applies the same rule per row. A carrier's rows drop the
 // customer rate, billed total and margin; a shipper's drop the carrier rate and margin;
 // any role that is neither staff, carrier nor shipper lists nothing.
-export const SRL_VERSION = "3.8.bnw";
+// v3.8.bnx — F-D4: a shipper uploads a BOL or OTHER only, never a POD or an INVOICE, on
+// the load path and the entity path alike; any other non-staff, non-carrier role
+// uploads nothing. One rule (documentUploadRefusal), applied in the seam and the route.
+export const SRL_VERSION = "3.8.bnx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

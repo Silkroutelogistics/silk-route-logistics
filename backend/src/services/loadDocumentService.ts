@@ -48,7 +48,7 @@ import path from "path";
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
 import { uploadFile, validateBufferSignature } from "./storageService";
-import { normalizeDocType, isAllowedDocType, carrierMayUploadLoadDocType, isSrlInternalDocType, isSrlStaffRole } from "../lib/documentTypes";
+import { normalizeDocType, isAllowedDocType, carrierMayUploadLoadDocType, isSrlInternalDocType, isSrlStaffRole, documentUploadRefusal } from "../lib/documentTypes";
 import { actualEventStamps } from "../lib/loadEventStamps";
 import { logLoadActivity } from "./loadActivityService";
 import { broadcastSSE } from "../routes/trackTraceSSE";
@@ -99,6 +99,10 @@ export async function recordLoadDocument(input: RecordLoadDocumentInput): Promis
   if (isSrlInternalDocType(docType) && !isSrlStaffRole(input.actor.role)) {
     throw new LoadDocumentRefusal(400, "DOC_TYPE_SRL_ONLY", `"${docType}" is an SRL record and can only be filed by SRL staff.`);
   }
+  // F-D4: a shipper files a BOL or OTHER, never a POD (the delivery event) or an INVOICE
+  // (the carrier's pay claim); any role that is neither staff, carrier nor shipper files nothing.
+  const roleRefusal = documentUploadRefusal(input.actor.role, docType);
+  if (roleRefusal) throw new LoadDocumentRefusal(roleRefusal.status, roleRefusal.code, roleRefusal.message);
   if (input.actor.role === "CARRIER" && !carrierMayUploadLoadDocType(docType)) {
     throw new LoadDocumentRefusal(
       400,

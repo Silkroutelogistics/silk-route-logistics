@@ -128,6 +128,44 @@ export function carrierMayUploadLoadDocType(docType: string): boolean {
   return CARRIER_UPLOADABLE.has(docType);
 }
 
+/**
+ * F-D4 (ruled 2026-09-28): who may upload through /api/documents, and which types.
+ *
+ * Staff: any allowed type. A carrier: its own list, enforced in the load seam above.
+ * A shipper: BOL and OTHER only. A shipper who is a party to a load could otherwise
+ * file a POD, which is the delivery event (it advances the load and fires the
+ * settlement hooks), or an INVOICE, which is the carrier's claim for pay. Neither is
+ * the shipper's to make. Every other role (FACTOR, CARRIER_REVIEWER, a role added
+ * later) uploads nothing here: an allowlist, like SRL_STAFF_ROLES.
+ *
+ * An absent docType is allowed for a shipper: the load seam stores it as OTHER, and
+ * the shipper portal sends files with no type at all.
+ */
+export const SHIPPER_UPLOADABLE_DOC_TYPES = ["BOL", "OTHER"] as const;
+const SHIPPER_UPLOADABLE = new Set<string>(SHIPPER_UPLOADABLE_DOC_TYPES);
+
+export interface DocumentUploadRefusal {
+  status: number;
+  code: "ROLE_MAY_NOT_UPLOAD_DOCUMENTS" | "DOC_TYPE_NOT_SHIPPER_UPLOADABLE";
+  message: string;
+}
+
+/** Why this role may not upload this type, or null when it may. The one rule for both upload paths. */
+export function documentUploadRefusal(role: string, docType: string | null | undefined): DocumentUploadRefusal | null {
+  if (isSrlStaffRole(role) || role === "CARRIER") return null;
+  if (role !== "SHIPPER") {
+    return { status: 403, code: "ROLE_MAY_NOT_UPLOAD_DOCUMENTS", message: "This account cannot upload documents." };
+  }
+  if (docType && !SHIPPER_UPLOADABLE.has(docType)) {
+    return {
+      status: 400,
+      code: "DOC_TYPE_NOT_SHIPPER_UPLOADABLE",
+      message: `A shipper can upload a bill of lading or another document, not "${docType}".`,
+    };
+  }
+  return null;
+}
+
 export type LoadDocType = (typeof LOAD_DOC_TYPES)[number];
 export type DocTypeClass = "LOAD" | "CARRIER" | "CUSTOMER" | "ANY";
 

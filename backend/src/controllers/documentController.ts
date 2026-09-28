@@ -8,7 +8,7 @@ import { uploadFile, uploadFileToPath, getDownloadUrl, getFileStream, deleteFile
 import { recordLoadDocument, LoadDocumentRefusal } from "../services/loadDocumentService";
 import { log } from "../lib/logger";
 import { flagSensitiveActionAfterNewLogin } from "../lib/loginFlags";
-import { normalizeDocType, isAllowedDocType, docTypeClassFor, isSrlInternalDocType, isSrlStaffRole } from "../lib/documentTypes";
+import { normalizeDocType, isAllowedDocType, docTypeClassFor, isSrlInternalDocType, isSrlStaffRole, documentUploadRefusal } from "../lib/documentTypes";
 import { SHIPPER_VISIBLE_DOC_TYPES } from "./shipperPortalController";
 
 /**
@@ -169,6 +169,16 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
   });
   if (ownershipError) {
     res.status(403).json({ error: ownershipError });
+    return;
+  }
+
+  // F-D4 — the same rule the load seam applies, here so the entity path (no loadId)
+  // answers the same way: a shipper uploads a BOL or OTHER only, and a role that is
+  // neither staff, carrier nor shipper uploads nothing. After the ownership gate, so a
+  // target the caller does not own is still refused as such.
+  const roleRefusal = documentUploadRefusal(req.user!.role, docType);
+  if (roleRefusal) {
+    res.status(roleRefusal.status).json({ error: roleRefusal.message, code: roleRefusal.code });
     return;
   }
 
