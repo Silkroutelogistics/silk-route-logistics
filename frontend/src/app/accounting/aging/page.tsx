@@ -17,7 +17,8 @@ interface AgingDetail {
   id: string;
   invoiceNumber: string;
   customer: string;
-  amount: number;
+  /** What is still owed (v3.8.bnc): a partly paid invoice shows what is left. */
+  balance: number;
   dueDate: string;
   daysOverdue: number;
   bucket: string;
@@ -29,6 +30,8 @@ interface BackendBucket {
     id: string;
     invoiceNumber: string;
     amount: number;
+    /** v3.8.bnb — totalAmount (or amount) less paidAmount; the totals add these. */
+    balance: number;
     dueDate?: string;
     createdAt: string;
     daysOutstanding: number;
@@ -78,7 +81,7 @@ function transformResponse(raw: BackendAgingResponse): { buckets: AgingBucket[];
         id: inv.id,
         invoiceNumber: inv.invoiceNumber,
         customer: inv.load?.customer?.name || inv.user?.company || `${inv.user?.firstName || ""} ${inv.user?.lastName || ""}`.trim() || "—",
-        amount: inv.amount,
+        balance: inv.balance,
         dueDate: inv.dueDate || inv.createdAt,
         daysOverdue: inv.daysOutstanding,
         bucket: meta.label,
@@ -178,7 +181,7 @@ export default function AgingReportPage() {
             <tr className="border-b border-white/5">
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Invoice #</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Customer</th>
-              <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Amount</th>
+              <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Balance</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Due Date</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Days Overdue</th>
               <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Bucket</th>
@@ -192,7 +195,7 @@ export default function AgingReportPage() {
                 <tr key={inv.id} className="hover:bg-[#0F1117]">
                   <td className="px-5 py-3 text-sm text-white font-medium">{inv.invoiceNumber}</td>
                   <td className="px-5 py-3 text-sm text-slate-300">{inv.customer}</td>
-                  <td className="px-5 py-3 text-sm text-white">{fmt(inv.amount)}</td>
+                  <td className="px-5 py-3 text-sm text-white">{fmt(inv.balance)}</td>
                   <td className="px-5 py-3 text-sm text-slate-300">{new Date(inv.dueDate).toLocaleDateString()}</td>
                   <td className="px-5 py-3">
                     <span className={`text-sm font-medium ${inv.daysOverdue > 60 ? "text-red-400" : inv.daysOverdue > 30 ? "text-orange-400" : "text-yellow-400"}`}>

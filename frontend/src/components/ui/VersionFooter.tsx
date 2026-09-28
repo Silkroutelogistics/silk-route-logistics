@@ -19423,7 +19423,9 @@
 // what was paid, so its balance still shows.
 // v3.8.bnb — The AR aging report ages what is still owed: each row carries its balance and
 // the totals add balances, so a partly paid invoice counts for what is left.
-export const SRL_VERSION = "3.8.bnb";
+// v3.8.bnc — The aging page's overdue table shows each invoice's balance, under a Balance
+// column, so a partly paid invoice shows what is left to collect.
+export const SRL_VERSION = "3.8.bnc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
