@@ -19391,7 +19391,12 @@
 // customer; that is left to the hourly aging job.
 // v3.8.bmi — An invoice turns overdue once its due day is over in Eastern time, not the
 // evening before; the hourly aging job does it for every customer, Tipalti included.
-export const SRL_VERSION = "3.8.bmi";
+// v3.8.bmn — Executed agreements carry Wasi Haider's pen signature.
+//   His black-pen scan, background removed, specks cleaned and trimmed, sits on
+// the broker SIGNATURE line of every Broker-Carrier and Quick Pay Agreement
+// executed from this deploy on, in place of the typed name. The caption still
+// says it was applied electronically, because it is.
+export const SRL_VERSION = "3.8.bmn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
