@@ -203,9 +203,14 @@ describe("filing it: POST /documents/upload and the carrier route", () => {
 describe("reaching it: the carrier portal list, the download, and GET /loads/:id", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Updated 2026-09-28 for F-D6: GET /loads/:id now refuses a non-party (403). The
+    // shipper here must be a party for the "withholds it from a shipper" case to mean
+    // anything, so the load's customer is u-shipper, returned only when the query asks
+    // for it. tenders: [] is what Prisma returns for the include on a load with none.
     mockPrisma.load.findUnique.mockImplementation(async (args: any) => ({
-      id: "load-1", carrierId: "u-carrier", posterId: "u-admin", status: "DELIVERED",
+      id: "load-1", carrierId: "u-carrier", posterId: "u-admin", status: "DELIVERED", tenders: [],
       documents: answer(args?.include?.documents?.where ? { docType: args.include.documents.where.docType } : {}),
+      ...(args?.include?.customer ? { customer: { userId: "u-shipper" } } : {}),
     }));
   });
 

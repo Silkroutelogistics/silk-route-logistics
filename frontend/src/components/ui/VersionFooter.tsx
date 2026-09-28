@@ -19468,7 +19468,10 @@
 // v3.8.bnu — F-D2: the shipper portal stops showing carrier pay. Open Quotes shows the
 // load's customer rate, INVOICE leaves the shipper allowlist, the disputes API drops the
 // carrier's net pay, and a shipper who posted a load is bounded by the allowlist too.
-export const SRL_VERSION = "3.8.bnu";
+// v3.8.bnv — F-D6 (ruled b): GET /loads/:id is scoped by party. A non-party gets 403;
+// the assigned carrier sees no customer money, margin or other carriers' tenders; the
+// shipper sees no carrier money, margin, tenders or carrier terms. Staff see it whole.
+export const SRL_VERSION = "3.8.bnv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

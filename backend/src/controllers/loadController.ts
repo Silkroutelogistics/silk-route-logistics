@@ -39,6 +39,7 @@ import { uncancelLoad } from "../services/uncancelLoad";
 import { UNCANCEL_WINDOW_HOURS, assessUncancel } from "../lib/uncancelPolicy";
 import { createNotification } from "../services/notificationService";
 import { isSrlInternalDocType, isSrlStaffRole } from "../lib/documentTypes";
+import { loadPartyOf, redactLoadForParty } from "../lib/loadPartyView";
 
 const RELEASED_VALUE_BASIS_VALUES = ["PER_POUND", "PER_PIECE", "TOTAL", "NVD"] as const;
 type ReleasedValueBasisLiteral = (typeof RELEASED_VALUE_BASIS_VALUES)[number];
@@ -567,6 +568,7 @@ export async function getLoadById(req: AuthRequest, res: Response) {
       documents: true,
       messages: { include: { sender: { select: { id: true, firstName: true, lastName: true } } }, orderBy: { createdAt: "asc" } },
       delays: { include: { reportedBy: { select: { id: true, firstName: true, lastName: true } } }, orderBy: { reportedAt: "desc" } },
+      customer: { select: { userId: true } }, // for the party check only; never sent
     },
   });
 
@@ -574,16 +576,29 @@ export async function getLoadById(req: AuthRequest, res: Response) {
     res.status(404).json({ error: "Load not found" });
     return;
   }
-  // This route has no authorize() and no ownership scope (it is in the frozen ungated
-  // inventory), so any authenticated session can read a load it knows the id of. The
-  // packets are the one part of that closed here: SRL-internal documents
-  // (CUSTOMER_INVOICE_COPY) are withheld from every non-staff caller. The wider
-  // exposure, the customer rate and the rest of the load, is its own decision.
-  if (!isSrlStaffRole(req.user?.role)) {
-    res.json({ ...load, documents: load.documents.filter((d) => !isSrlInternalDocType(d.docType)) });
+  // F-D6 (ruled b). The route has no authorize() (it stays in the frozen ungated
+  // inventory); the scope is here. Staff see the whole load. A carrier assigned to it,
+  // or a shipper who posted it or is its customer, sees it without the other side's
+  // money. Anyone else gets 403.
+  const party = loadPartyOf(req.user, load);
+  if (!party) {
+    res.status(403).json({ error: "Not authorized to view this load", code: "NOT_A_LOAD_PARTY" });
     return;
   }
-  res.json(load);
+  const { customer: _partyCheckOnly, ...rest } = load;
+  if (party === "STAFF") {
+    res.json(rest);
+    return;
+  }
+  // Non-staff: SRL-internal documents (CUSTOMER_INVOICE_COPY) are withheld (v3.8.bmp).
+  // Tenders are carrier pay: a carrier sees only its own, a shipper none.
+  res.json({
+    ...redactLoadForParty(rest, party),
+    documents: rest.documents.filter((d) => !isSrlInternalDocType(d.docType)),
+    tenders: party === "CARRIER" ? rest.tenders.filter((t) => t.carrier?.userId === req.user!.id) : [],
+    // The assigned carrier's tier and Quick Pay flag are its payment terms: carrier side.
+    carrier: party === "SHIPPER" && rest.carrier ? { ...rest.carrier, carrierProfile: undefined } : rest.carrier,
+  });
 }
 
 // v3.8.akb Item 159 Sprint 1 — AE-side transition map MOVED to
