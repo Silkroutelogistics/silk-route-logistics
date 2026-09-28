@@ -1036,9 +1036,9 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   // emails that used to fire here were duplicates of the milestone email above
   // (same event, near-identical content — a shipper got 2-3 emails per milestone).
   // sendShipperMilestoneEmail is the single canonical shipper lifecycle email;
-  // the POD email is sent once, by the load-document seam
-  // (services/loadDocumentService -> sendPODToContact), whichever route carried
-  // the upload. E1d retired the second sender that used to live here.
+  // the POD email is no longer automatic at all (F-D3, v3.8.bny): SRL staff send
+  // one POD, attached, from the Docs tab (POST /documents/:id/send-to-customer ->
+  // sendPODToContact). E1d retired the second sender that used to live here.
 
   res.json(load);
 }
