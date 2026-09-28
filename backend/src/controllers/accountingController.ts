@@ -28,6 +28,7 @@ import { atCostReimbursementsForLoad, carrierAccessorialsForLoad } from "../serv
 import { BILLED_STATUSES, invoiceValue } from "../lib/invoiceTotals";
 import { invoiceBalance } from "../../../shared/constants/invoiceBalance";
 import { OPEN_STATUSES, daysPastDue, dueDayClockDate } from "../../../shared/constants/invoiceDueDay";
+import { pastDueWhere } from "../services/invoiceAging";
 import { assertInvoiceOnFileOrOverride, invoiceOnFile } from "../lib/carrierPayInvoiceGate";
 import { priorSentBaseInvoice, priorSentMessage } from "../lib/invoiceSendGuard";
 
@@ -194,12 +195,10 @@ export async function getDashboard(req: AuthRequest, res: Response) {
     });
 
     // --- Overdue invoices count ---
-    const overdueInvoices = await prisma.invoice.count({
-      where: {
-        status: { in: ["SENT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED", "OVERDUE"] },
-        dueDate: { lt: now },
-      },
-    });
+    // v3.8.bnf — past their due day on the Toronto clock, PARTIAL included, from
+    // the shared rule (ruling 2026-09-27, 3). It had counted an invoice from the
+    // stored instant, 8 PM Eastern the evening before a midnight-UTC due date.
+    const overdueInvoices = await prisma.invoice.count({ where: pastDueWhere(now) });
 
     // --- Open disputes ---
     const openDisputes = await prisma.paymentDispute.count({
@@ -4193,9 +4192,7 @@ export async function getAccountingDashboardEnhanced(req: AuthRequest, res: Resp
         select: { customerRate: true, carrierRate: true, grossMargin: true, marginPercent: true },
       }),
       prisma.approvalQueue.count({ where: { status: "PENDING" } }),
-      prisma.invoice.count({
-        where: { status: { in: ["SENT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED", "OVERDUE"] }, dueDate: { lt: now } },
-      }),
+      prisma.invoice.count({ where: pastDueWhere(now) }), // v3.8.bnf — as the dashboard above
       prisma.paymentDispute.count({ where: { status: { in: ["OPEN", "INVESTIGATING", "PROPOSED"] } } }),
       prisma.shipperCredit.count({ where: { OR: [{ autoBlocked: true }, { creditLimit: { gt: 0 }, currentUtilized: { gt: 0 } }] } }),
       prisma.approvalQueue.findMany({

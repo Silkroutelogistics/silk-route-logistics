@@ -1,5 +1,5 @@
 import { prisma } from "../config/database";
-import { OVERDUE_FROM, pastDueCutoff } from "../../../shared/constants/invoiceDueDay";
+import { OPEN_STATUSES, OVERDUE_FROM, pastDueCutoff } from "../../../shared/constants/invoiceDueDay";
 
 /**
  * v3.8.bmi — when an invoice turns OVERDUE, decided in one place (ruling
@@ -26,6 +26,16 @@ import { OVERDUE_FROM, pastDueCutoff } from "../../../shared/constants/invoiceDu
  * 2026-09-27, 2): a partly paid invoice past its due day turns OVERDUE like any
  * other, and keeps its paidAmount, so its balance still shows.
  */
+
+/**
+ * The invoices past their due day, as a Prisma filter: open (issued, not
+ * settled) with a due date before today's date on the Toronto clock. The
+ * accounting dashboard counts these (v3.8.bnf, ruling 2026-09-27, 3), so its
+ * count agrees with the aging report and with the status this job writes.
+ */
+export function pastDueWhere(now: Date) {
+  return { status: { in: OPEN_STATUSES as any[] }, dueDate: { lt: pastDueCutoff(now) } };
+}
 
 /** Marks every invoice whose due date has passed OVERDUE. Returns how many moved. */
 export async function markPastDueInvoicesOverdue(now: Date = new Date()): Promise<number> {

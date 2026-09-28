@@ -19429,7 +19429,9 @@
 // amount in the list and beside what was paid in the detail panel.
 // v3.8.bne — The AR aging report ages by the due day on the America/Toronto clock: an invoice
 // stays current through its due day and is a day past due from midnight Toronto.
-export const SRL_VERSION = "3.8.bne";
+// v3.8.bnf — The accounting dashboard counts an invoice overdue from midnight Toronto after its
+// due day, not from the stored time the evening before, and counts partly paid ones.
+export const SRL_VERSION = "3.8.bnf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
