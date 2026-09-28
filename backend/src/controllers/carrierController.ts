@@ -28,9 +28,6 @@ import {
 import { runIdentityCheck } from "../services/identityVerificationService";
 import { screenCarrier } from "../services/ofacScreeningService";
 import { populateAuthorityGrantedDate } from "../services/fmcsaService";
-// The consent record names the version the server serves, never one the
-// request supplied. See the bcaVersion write below.
-import { BCA_VERSION } from "../data/agreements";
 import { resolveCountry, extractClientIp } from "../services/geoService";
 import { normalizePhoneE164 } from "../lib/phoneNormalization";
 import { normalizeEmail, caseInsensitiveEmailFilter } from "../lib/emailNormalization";
@@ -41,7 +38,6 @@ import { recordLifecycleEvent } from "../lib/lifecycleAudit";
 import { COMPLIANCE_EMAIL } from "../config/authority";
 import * as crypto from "crypto";
 import { pairedApplicationStatus } from "../lib/carrierOperational";
-import { clientIp, clientUserAgent } from "../lib/clientIp";
 import { censusCarrierReferences, carrierReferenceTotal, describeCarrierReferences, inFlightBlockers } from "../lib/carrierReferences";
 import { assessArchiveInput, CARRIER_ARCHIVED_WITHDRAW_REASON } from "../lib/carrierArchiveGuard";
 import { settleTenders } from "../services/tenderTransitionService";
@@ -361,84 +357,25 @@ export async function registerCarrier(req: Request, res: Response) {
           insuranceAgentEmail: data.insuranceAgentEmail || undefined,
           insuranceAgentPhone: data.insuranceAgentPhone,
           insuranceAgencyName: data.insuranceAgencyName,
-          // v3.8.aja — BCA click-wrap audit trail captured server-side.
-          // agreedAt = server-now (authoritative — not client-supplied).
-          // IP from clientIp(req). This used to read req.ip with a raw
-          // forwarded-header fallback, which was wrong twice over: that header is
-          // client-writable, and production sits behind Cloudflare AND Render
-          // while trust proxy is 1, so req.ip was an edge address. Every BCA
-          // signed before v3.8.awk carries one. See lib/clientIp.ts.
-          // UA from req.headers.
-          //
-          // v3.8.asb — the version is now server-stamped too. It used to be
-          // `data.bcaVersion || null`, a client-supplied string on a consent
-          // record: the same defect the two signing routes in carrierAuth got
-          // a 409 guard for, on the one surface that guard never sees, because
-          // this write comes in on the registration payload rather than
-          // /sign-bca. The onboarding page's fallback constant had drifted
-          // three months stale, so a failed agreement fetch stamped a version
-          // that no longer described the text being shown.
-          //
-          // This route is not a version-negotiation surface — the applicant is
-          // registering, and refusing the whole registration over a stale tab
-          // would be the wrong trade. The page fetches the body and now blocks
-          // the acknowledgement until it has loaded, so the text acknowledged
-          // is this version's text, and the server records the version it
-          // actually serves. The request no longer decides.
-          bcaAgreedAt: new Date(),
-          bcaAgreedFromIp: clientIp(req),
-          bcaAgreedFromUserAgent: (req.headers["user-agent"] as string) || null,
-          bcaVersion: BCA_VERSION,
+          // No Broker-Carrier Agreement fields are written here. Ruled
+          // 2026-09-28: the application does not ask the carrier to accept the
+          // BCA, so there is no assent to record. bcaAgreedAt / bcaAgreedFromIp /
+          // bcaAgreedFromUserAgent / bcaVersion are written once, by POST
+          // /carrier-auth/sign-bca, at the formal signature in the portal after
+          // approval and two-factor setup. Until then they are null, which is
+          // the true state: nothing has been agreed.
         },
       },
     },
     include: { carrierProfile: true },
   });
 
-  // ── v3.8.awo — registration assent gets a row, as ACKNOWLEDGED ──
-  //
-  // Decision 9, resolved. v3.8.awn implemented this as a SIGNED row and reverted
-  // it before commit, for two reasons this version answers directly:
-  //
-  //   * It wrote consentAt for a consent nobody gave — onboarding collects no
-  //     ESIGN §101(c) acknowledgement. THIS ROW WRITES NO consentAt. The absence
-  //     is the honest record: they accepted the terms, they did not separately
-  //     consent to electronic records.
-  //   * A SIGNED row satisfies the tender gate, which would have made a carrier
-  //     tenderable without the in-portal signing awm had just made
-  //     consent-gated. ACKNOWLEDGED satisfies nothing — the gate filters on
-  //     SIGNED (complianceMonitorService.ts:423-427) and a test asserts that
-  //     condition is unchanged.
-  //
-  // Signature fields stay NULL because there is no signature: nobody typed a
-  // legal name here. Filling them from firstName/lastName would dress an
-  // acceptance up as an execution.
-  //
-  // Why this exists at all: three production carriers hold a bcaAgreedAt with no
-  // agreement row, and for them that column is the entire record. From here
-  // forward assent has a row. THE PARALLEL WRITE ABOVE CONTINUES so the two can
-  // be compared — retirement trigger is ONE FULL MONTH from this commit with
-  // zero divergence between bcaAgreedAt and an ACKNOWLEDGED row on
-  // newly-registered carriers. The three historical rows are not touched.
-  await prisma.carrierAgreement
-    .create({
-      data: {
-        carrierId: user.carrierProfile!.id,
-        templateName: "broker-carrier",
-        version: BCA_VERSION,
-        status: "ACKNOWLEDGED",
-        signedAt: new Date(),
-        signerIp: clientIp(req) || "",
-        signerUserAgent: clientUserAgent(req),
-        expiresAt: null,
-      },
-    })
-    .catch((err) => {
-      // Non-fatal: registration has already succeeded, and the profile mirror
-      // still holds the assent — the same state the three historical carriers
-      // are in. Logged so a divergence has a cause rather than a mystery.
-      log.error({ err, userId: user.id }, "[Register] ACKNOWLEDGED agreement row not created — profile mirror still holds assent");
-    });
+  // No agreement row is created at registration (ruled 2026-09-28). From
+  // v3.8.awo until that day this wrote an ACKNOWLEDGED broker-carrier row for
+  // the onboarding click-through; the click-through is gone, so there is no
+  // assent to record. The carrier’s one agreement row is the SIGNED one
+  // POST /carrier-auth/sign-bca writes. The ACKNOWLEDGED rows already written
+  // stay as the record of what those carriers clicked.
 
   // ── v3.8.avl — a failed upload is RECORDED, never silently dropped ──
   //

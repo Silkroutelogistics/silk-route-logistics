@@ -54,7 +54,6 @@ function viasIn(rel: string): string[] {
 
 const EXPECTED: Record<string, string[]> = {
   "controllers/tenderController.ts": ["TENDER_ACCEPT"],
-  "routes/carrierLoads.ts": ["PICKUP_ARRIVAL"],
   "routes/loadBids.ts": ["BID_AWARD_ACCEPT"],
   "routes/rcSign.ts": ["RC_SIGNATURE"],
   "services/waterfallEngineService.ts": ["TENDER_ACCEPT"],
@@ -87,6 +86,11 @@ describe("R8c — the paths that reach DISPATCHED with no carrier act stamp noth
     "controllers/loadController.ts",
     // the single writer of Load.carrierId — assignment is not acceptance
     "services/carrierAssignmentService.ts",
+    // the carrier portal's status route. Ruled 2026-09-28: moving a load to
+    // AT_PICKUP says where the truck is, not that the carrier agreed to the Rate
+    // Confirmation. It stamped PICKUP_ARRIVAL until that day. (Its load-board
+    // self-accept still stamps, through acceptTender in tenderController.)
+    "routes/carrierLoads.ts",
   ];
 
   it.each(MUST_NOT_STAMP)("%s does not record an acceptance", (rel) => {

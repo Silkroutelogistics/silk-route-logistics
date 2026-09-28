@@ -64,7 +64,7 @@ describe("first write wins, and the database is what enforces it", () => {
   it("reports already_stamped without overwriting the first act", async () => {
     const d = db(0, { carrierId: CARRIER, carrierAcceptedAt: new Date("2026-09-01T00:00:00.000Z") });
     const r = await stampCarrierAcceptance(
-      { loadId: LOAD, via: "PICKUP_ARRIVAL", carrierUserId: CARRIER, at: AT },
+      { loadId: LOAD, via: "RC_SIGNATURE", carrierUserId: CARRIER, at: AT },
       d,
     );
     expect(r).toEqual({ stamped: false, reason: "already_stamped" });
@@ -96,9 +96,9 @@ describe("a stamp that names the wrong carrier writes nothing and is never coerc
 });
 
 describe("the vocabulary is closed", () => {
-  it("names exactly the six acts that can establish acceptance", () => {
+  it("names exactly the five acts that can establish acceptance", () => {
     expect([...ACCEPTANCE_VIA].sort()).toEqual([
-      "BID_AWARD_ACCEPT", "PICKUP_ARRIVAL", "RC_SIGNATURE",
+      "BID_AWARD_ACCEPT", "RC_SIGNATURE",
       "STATUS_BOOKED", "STATUS_CONFIRMED", "TENDER_ACCEPT",
     ]);
   });

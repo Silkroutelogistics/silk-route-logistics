@@ -54,7 +54,7 @@ const PUBLIC_CARRIER_AUTH: ReadonlyArray<{ method: string; path: RegExp; why: st
   { method: "POST", path: /^\/verify-email$/, why: "clicked from an email, by someone with no session" },
   // The `$` is load-bearing: it keeps this from matching /agreement/:type/pdf,
   // which is authenticate + authorize("CARRIER") and must stay that way.
-  { method: "GET", path: /^\/agreement\/[^/]+$/, why: "the public onboarding click-through reads this" },
+  { method: "GET", path: /^\/agreement\/[^/]+$/, why: "the published agreement text, readable before a carrier applies" },
 ];
 
 export function isPublicCarrierAuthRoute(method: string, path: string): boolean {

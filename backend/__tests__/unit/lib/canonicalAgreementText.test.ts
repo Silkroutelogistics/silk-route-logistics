@@ -206,35 +206,41 @@ describe("ACKNOWLEDGED records assent without satisfying the tender gate", () =>
     expect(predicate).not.toContain("ACKNOWLEDGED");
   });
 
-  it("registration writes an ACKNOWLEDGED row, never SIGNED", () => {
-    const i = carrierController.indexOf("registration assent gets a row");
-    const block = carrierController.slice(i, i + 2600);
-    expect(block).toContain('status: "ACKNOWLEDGED"');
-    expect(block).not.toContain('status: "SIGNED"');
+});
+
+describe("registration records no agreement (ruled 2026-09-28)", () => {
+  // The carrier accepts the Broker-Carrier Agreement in ONE place: the formal
+  // signature in the portal after approval and two-factor setup
+  // (POST /carrier-auth/sign-bca). From v3.8.awo until this ruling, registration
+  // also wrote an ACKNOWLEDGED row and the four bca* profile columns for an
+  // onboarding click-through; the click-through is gone, so registration writes
+  // neither.
+  const start = carrierController.indexOf("export async function registerCarrier(");
+  const end = carrierController.indexOf("\nexport ", start + 1);
+  const register = codeOnly(carrierController.slice(start, end));
+
+  it("the slice is the registration handler (vacuity)", () => {
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    expect(register).toContain("prisma.user.create(");
+    // the one agreement-adjacent thing registration still does
+    expect(register).toContain("prisma.quickPayEnrollment.create(");
   });
 
-  it("writes NO consentAt — onboarding collects no ESIGN acknowledgement", () => {
-    const i = carrierController.indexOf("registration assent gets a row");
-    const block = codeOnly(carrierController.slice(i, i + 2600));
-    expect(block).not.toContain("consentAt");
-    expect(block).toContain("ACKNOWLEDGED"); // vacuity tripwire
+  it("creates no CarrierAgreement row of any status", () => {
+    expect(register).not.toMatch(/carrierAgreement\s*\.\s*create/);
+    expect(register).not.toContain("ACKNOWLEDGED");
   });
 
-  it("leaves the signature fields null — nobody typed a legal name here", () => {
-    const i = carrierController.indexOf("registration assent gets a row");
-    const block = carrierController.slice(i, i + 2600);
-    expect(block).not.toContain("signedByName");
-    expect(block).not.toContain("signatureData");
+  it("writes none of the bca* assent columns", () => {
+    for (const col of ["bcaAgreedAt", "bcaAgreedFromIp", "bcaAgreedFromUserAgent", "bcaVersion"]) {
+      expect(register, col).not.toContain(`${col}:`);
+    }
   });
 
-  it("writes the row and the column in the same request, with the trigger recorded", () => {
-    expect(carrierController).toContain("bcaAgreedAt: new Date(),");
-    expect(carrierController).toContain("ONE FULL MONTH from this commit");
-  });
-
-  it("a failed row create does not fail the registration", () => {
-    const i = carrierController.indexOf("registration assent gets a row");
-    const block = carrierController.slice(i, i + 2600);
-    expect(block).toContain(".catch((err)");
+  it("the portal signature is still where they are written", () => {
+    const sign = codeOnly(carrierAuth);
+    expect(sign).toContain("bcaAgreedAt:");
+    expect(sign).toContain("bcaVersion:");
   });
 });

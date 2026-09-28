@@ -1,11 +1,11 @@
 /**
  * Acceptance evidence: the record that a carrier agreed to haul this load.
  *
- * WHY THIS IS ONE MODULE AND NOT SIX WRITES. Six paths can establish the act,
- * and the rules that make the record trustworthy -- stamp for the party whose
- * act it was, first write wins, never coerce a mismatch -- have to hold on all
- * six or the record is only as good as the weakest one. Six copies is six
- * chances to forget, and the seventh path added later inherits nothing. This
+ * WHY THIS IS ONE MODULE AND NOT A WRITE PER PATH. Several paths can establish
+ * the act, and the rules that make the record trustworthy -- stamp for the party
+ * whose act it was, first write wins, never coerce a mismatch -- have to hold on
+ * all of them or the record is only as good as the weakest one. A copy per path
+ * is a chance to forget per path, and the next path added inherits nothing. This
  * codebase has unpicked that shape repeatedly (dual suspension columns, dual
  * onboarding status, eleven Load.carrierId writers); one writer is the answer
  * it keeps arriving at.
@@ -23,14 +23,19 @@ import { log } from "./logger";
 /**
  * How the acceptance was established. Exhaustive: a path not named here stamps
  * nothing rather than inventing a value.
+ *
+ * NOT HERE, ON PURPOSE: a carrier moving a load's status in the portal. Arriving
+ * at pickup says where the truck is, not that the carrier agreed to the Rate
+ * Confirmation; the RC binds at tender acceptance or signature (ruled
+ * 2026-09-28). PICKUP_ARRIVAL was removed from this list that day, when no
+ * production load carried it.
  */
 export type AcceptanceVia =
   | "RC_SIGNATURE"
   | "TENDER_ACCEPT"
   | "BID_AWARD_ACCEPT"
   | "STATUS_CONFIRMED"
-  | "STATUS_BOOKED"
-  | "PICKUP_ARRIVAL";
+  | "STATUS_BOOKED";
 
 export const ACCEPTANCE_VIA: readonly AcceptanceVia[] = [
   "RC_SIGNATURE",
@@ -38,7 +43,6 @@ export const ACCEPTANCE_VIA: readonly AcceptanceVia[] = [
   "BID_AWARD_ACCEPT",
   "STATUS_CONFIRMED",
   "STATUS_BOOKED",
-  "PICKUP_ARRIVAL",
 ] as const;
 
 export interface StampAcceptanceInput {

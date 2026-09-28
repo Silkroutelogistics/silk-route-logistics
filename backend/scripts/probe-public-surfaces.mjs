@@ -156,16 +156,16 @@ export const PROBES = [
     hint: "Same mount as carrier login. Verification links already in carriers' inboxes are dead while this is red.",
   },
   {
-    name: "public agreement text (onboarding Step 4)",
-    why: "the reported symptom. A prospect cannot register without this.",
+    name: "public agreement text",
+    why: "the published Broker-Carrier Agreement, readable before a carrier applies. (Onboarding Step 4 read it until 2026-09-28, when the click-through was removed; the Arc 27 outage was first seen there.)",
     method: "GET",
     path: "/carrier-auth/agreement/broker-carrier",
     expectStatus: [200],
     // The version string is the point: a 200 carrying an empty or wrong-shaped
-    // body would still hang the click-through, which is fail-closed by design.
+    // body is a broken agreement page, which the activation pane then signs from.
     mustContain: ['"version"', '"sections"', "Broker-Carrier"],
     mustNotContain: ["No token provided"],
-    hint: "Onboarding Step 4 fails closed by design, so a prospect sees an error and cannot register. If the body is present but reshaped, check getAgreement in backend/src/data/agreements.ts.",
+    hint: "If the body is present but reshaped, check getAgreement in backend/src/data/agreements.ts.",
   },
 
   // ── the nine that were healthy, kept so a future mount change is caught ──

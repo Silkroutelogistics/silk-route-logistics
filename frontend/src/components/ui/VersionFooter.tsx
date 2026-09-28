@@ -19459,7 +19459,13 @@
 // batch bar drops Approve / Mark Paid / Reject; neither sends a status any more.
 // v3.8.bns — ruling 2026-09-27, 6: the factoring page stops sending a status, and a
 // source guard pins every invoice status writer to the act that sets it.
-export const SRL_VERSION = "3.8.bns";
+// v3.8.bnt — Acceptance is recorded where it binds, and the BCA is accepted once.
+//   A Rate Confirmation binds when the carrier accepts the tender or signs it;
+// moving a load to AT_PICKUP in the portal no longer records an acceptance.
+// And the Broker-Carrier Agreement is accepted once, at the signature in the
+// portal after approval: the application stops showing a click-through of it
+// and asks only whether the carrier wants the Quick Pay pilot.
+export const SRL_VERSION = "3.8.bnt";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

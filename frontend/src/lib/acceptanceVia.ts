@@ -22,7 +22,6 @@ export const ACCEPTANCE_VIA_LABEL: Record<string, string> = {
   // enum if one ever appeared would be worse than carrying two dead entries.
   STATUS_CONFIRMED: "Confirmed the load",
   STATUS_BOOKED: "Booked the load",
-  PICKUP_ARRIVAL: "Arrived at pickup",
 };
 
 /**

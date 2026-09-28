@@ -46,20 +46,13 @@ describe("AgreementBody", () => {
     expect(within(table).getAllByRole("row")).toHaveLength(3);
   });
 
-  it("draws the clauses as a list, with bullets where registration showed them (v3.8.bma)", () => {
+  it("draws the clauses as a list (v3.8.bma)", () => {
     // Two clauses in the fixture, one per section.
-    const { unmount } = render(<AgreementBody agreement={AGREEMENT} carrierName="X LLC" size="comfortable" />);
-    const items = screen.getAllByRole("listitem");
-    expect(items.map((li) => li.textContent)).toEqual([
+    render(<AgreementBody agreement={AGREEMENT} carrierName="X LLC" />);
+    expect(screen.getAllByRole("listitem").map((li) => li.textContent)).toEqual([
       "BROKER may update this Schedule on thirty (30) days' written notice.",
       "1. Standard tier payment is free of charge.",
     ]);
-    for (const list of screen.getAllByRole("list")) expect(list.className).toContain("list-disc");
-    unmount();
-
-    // Compact keeps the activation pane's look, and is still a list.
-    render(<AgreementBody agreement={AGREEMENT} carrierName="X LLC" />);
-    expect(screen.getAllByRole("listitem")).toHaveLength(2);
     for (const list of screen.getAllByRole("list")) {
       expect(list.className).not.toContain("list-disc");
       // Safari drops a list's role when list-style is none, and jsdom does not
@@ -70,17 +63,28 @@ describe("AgreementBody", () => {
   });
 
   it("every pane that shows an agreement renders it through this component", () => {
-    // Three panes drawing their own clauses is how two of them came to drop the
+    // Panes drawing their own clauses is how two of them came to drop the
     // tables and the name. One renderer keeps them showing the same words.
     const read = (p: string) => fs.readFileSync(path.resolve(__dirname, p), "utf8");
     const activation = read("../../app/carrier/dashboard/activation/page.tsx");
     expect(activation).toContain("<AgreementBody agreement={bca} carrierName={data.carrier?.legalName} />");
     expect(activation).toContain("<AgreementBody agreement={qp} carrierName={data.carrier?.legalName} />");
-    const onboarding = read("../../app/onboarding/page.tsx");
-    expect(onboarding).toContain('<AgreementBody agreement={bcaContent} carrierName={form.company} size="comfortable" />');
-    // And none of them walks the clauses itself any more.
-    for (const src of [activation, onboarding]) {
-      expect(src).not.toMatch(/\.clauses\.map\(/);
-    }
+    expect(activation).not.toMatch(/\.clauses\.map\(/);
+  });
+
+  it("the application does not show or accept the Broker-Carrier Agreement (ruled 2026-09-28)", () => {
+    // The carrier accepts the BCA in ONE place: the formal signature in the
+    // portal after approval and two-factor setup. The application used to carry
+    // a click-through of the whole agreement too, so the same carrier accepted
+    // it twice. The only agreement-adjacent question left there is the Quick Pay
+    // pilot request.
+    const onboarding = fs.readFileSync(path.resolve(__dirname, "../../app/onboarding/page.tsx"), "utf8");
+    expect(onboarding).not.toContain("AgreementBody");
+    expect(onboarding).not.toContain("/carrier-auth/agreement/");
+    expect(onboarding).not.toContain("agreeTerms");
+    expect(onboarding).not.toMatch(/I agree to the Broker-Carrier Agreement/);
+    // vacuity: this is the application page, and it still asks the pilot question
+    expect(onboarding).toContain("requestQuickPayPilot");
+    expect(onboarding).toContain("Please consider me for the Quick Pay pilot");
   });
 });

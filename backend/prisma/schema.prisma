@@ -810,6 +810,9 @@ enum AgreementStatus {
   // applicant accepted the terms WITHOUT making them tenderable. The in-portal
   // signing step, with its typed name and its separate ESIGN consent, remains
   // the only thing that satisfies the gate.
+  // NO LONGER WRITTEN (ruled 2026-09-28): registration stopped offering the
+  // click-through. The value stays for the rows already written, which are the
+  // record of what those carriers clicked.
   ACKNOWLEDGED
 }
 
@@ -1786,7 +1789,7 @@ model Load {
   // or reassignment moves carrierId, and the record of who accepted must not
   // move with it.
   carrierAcceptedAt        DateTime? @map("carrier_accepted_at")
-  /** RC_SIGNATURE | TENDER_ACCEPT | BID_AWARD_ACCEPT | STATUS_CONFIRMED | STATUS_BOOKED | PICKUP_ARRIVAL */
+  /** RC_SIGNATURE | TENDER_ACCEPT | BID_AWARD_ACCEPT | STATUS_CONFIRMED | STATUS_BOOKED */
   carrierAcceptedVia       String?   @map("carrier_accepted_via") @db.VarChar(32)
   /** The signed-in user who performed it. NULL on the token path, which has no session. */
   carrierAcceptedByUserId  String?   @map("carrier_accepted_by_user_id")

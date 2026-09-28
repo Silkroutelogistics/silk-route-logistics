@@ -83,7 +83,7 @@ describe("an absent fact is stated, never left blank", () => {
     get.mockResolvedValue({
       data: [{ ...SIGNED, signed: false, signedAt: null, signerName: null, signerIp: null, contentHash: null }],
     });
-    mount({ carrierAcceptedAt: "2026-09-19T08:00:00.000Z", carrierAcceptedVia: "PICKUP_ARRIVAL" });
+    mount({ carrierAcceptedAt: "2026-09-19T08:00:00.000Z", carrierAcceptedVia: "TENDER_ACCEPT" });
 
     await waitFor(() => expect(screen.getByTestId("evidence-not-signed")).toBeInTheDocument());
     expect(screen.getByTestId("evidence-not-signed").textContent).toMatch(/Not signed/);

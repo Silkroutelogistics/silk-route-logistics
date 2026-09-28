@@ -5,32 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, ChevronRight, ChevronLeft, Upload, CheckCircle2, X, FileText, Image as ImageIcon, MapPin, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { AgreementBody, type AgreementBodyContent } from "@/components/carrier/AgreementBody";
 import { einDigits, formatEinInput } from "@shared/constants/ein";
 import { mcDigits } from "@/lib/mcNumber";
 
-const steps = ["Company Info", "Equipment & Regions", "Documents", "Terms", "Review"];
-
-// v3.8.aja — BCA click-wrap version identifier. Sent with the
-// registration payload + stored on CarrierProfile.bcaVersion so we
-// can correlate a carrier's accepted text to a specific revision.
-// Bump this constant any time the Step 4 agreement body changes.
-// Format: YYYY-MM-DD-vN (date of revision + revision counter for
-// same-day multi-edits).
-// v3.8.asb — the hardcoded BCA_VERSION fallback that stood here was DELETED.
-//
-// It read `bcaContent?.version ?? BCA_VERSION` and was sent in the
-// registration payload onto CarrierProfile.bcaVersion, so a failed agreement
-// fetch stamped "2026-05-24-v1" — three months stale — onto a consent record,
-// printed that stale string in the print header, and let the applicant tick
-// "I agree to the Broker-Carrier Agreement above" while the body above still
-// read "Loading the agreement…". Consent to nothing, recorded against a version
-// that described different text. This write is on the registration payload, not
-// /sign-bca, so the 409 stale-version guard on the signing routes never saw it.
-//
-// The page now fails CLOSED, which is what the activation pane already did: no
-// body loaded, no acknowledgement possible. The server stamps the version it
-// served (carrierController) so the request cannot decide it either.
+const steps = ["Company Info", "Equipment & Regions", "Documents", "Quick Pay", "Review"];
 
 /* ── v3.8.ain Path 2C — Canonical chrome parity nav for /onboarding ──
    Mirrors the static-HTML `_partials/nav.html` chrome that's injected on
@@ -48,7 +26,7 @@ function OnboardingNav() {
 
   return (
     <>
-      <nav className="bg-[#0A2540] border-b border-[#C5A572]/15 sticky top-0 z-50 print:hidden">
+      <nav className="bg-[#0A2540] border-b border-[#C5A572]/15 sticky top-0 z-50">
         <div className="max-w-[1280px] mx-auto px-6 h-[72px] flex items-center justify-between">
           {/* v3.8.aiq — logo-only per canonical _partials/nav.html parity.
               The "Silk Route Logistics" wordmark span added in v3.8.ain
@@ -245,7 +223,6 @@ interface CarrierFormData {
   address: string; city: string; state: string; zip: string; unit: string;
   numberOfTrucks: string; ein: string;
   equipmentTypes: string[]; operatingRegions: string[];
-  agreeTerms: boolean;
   // v3.8.asb — the Quick Pay pilot REQUEST. A tick, and nothing more. It asks
   // to be considered; it enables nothing, and it is never a gate on submitting
   // the application. The backend records a QuickPayEnrollment{status: PENDING}
@@ -316,7 +293,6 @@ export default function OnboardingPage() {
     address: "", city: "", state: "", zip: "", unit: "",
     numberOfTrucks: "", ein: "",
     equipmentTypes: [], operatingRegions: [],
-    agreeTerms: false,
     requestQuickPayPilot: false,
     autoLiability: { ...emptyInsLine },
     cargoInsurance: { ...emptyInsLine },
@@ -570,86 +546,6 @@ export default function OnboardingPage() {
     setStep(step + 1);
   };
 
-  // v3.8.aqj — fetch the canonical Broker-Carrier Agreement from the backend so
-  // the Step 4 click-through renders ONE source (kills the drifted inline copy +
-  // the stale local version).
-  //
-  // Arc 27 — the comment that stood here said it "falls back to the local
-  // constant if the fetch fails so registration is never blocked". That was true
-  // once and asb deleted the constant, making the page fail CLOSED. Fail-closed
-  // is right — you must not be able to agree to text you were never shown — but
-  // it turns every fetch failure into a permanently disabled checkbox, and the
-  // page said only "Loading the agreement…" forever.
-  //
-  // Four separate paths reached that spinner and none of them said anything: a
-  // non-ok response resolved to null, a network error hit an empty catch, a
-  // missing NEXT_PUBLIC_API_URL returned before fetching, and a hung request
-  // never resolved at all. When the endpoint started 401ing, a prospect saw a
-  // spinner where an error belonged and had no way to know registration was
-  // impossible.
-  //
-  // Now: bounded by a timeout, every failure named, and a retry. Fail-closed is
-  // preserved exactly — the checkbox is still gated on `bcaContent`.
-  const [bcaContent, setBcaContent] = useState<({ version: string } & AgreementBodyContent) | null>(null);
-  const [bcaError, setBcaError] = useState<string | null>(null);
-  const [bcaLoading, setBcaLoading] = useState(true);
-  const [bcaAttempt, setBcaAttempt] = useState(0);
-
-  useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!apiUrl) {
-      // A build-configuration fault, not a network one. Saying so is the
-      // difference between a fixable report and "the site is broken".
-      setBcaLoading(false);
-      setBcaError("This page is missing its API configuration. Please contact operations@silkroutelogistics.ai so we can complete your registration.");
-      return;
-    }
-
-    const controller = new AbortController();
-    // A hung request is the one failure the old code could not even represent:
-    // no rejection, no resolution, spinner forever.
-    const timer = setTimeout(() => controller.abort(), 12_000);
-    let cancelled = false;
-
-    setBcaLoading(true);
-    setBcaError(null);
-
-    fetch(`${apiUrl}/carrier-auth/agreement/broker-carrier`, { signal: controller.signal })
-      .then(async (r) => {
-        if (!r.ok) {
-          // Status carried through deliberately. "401" in a screenshot is what
-          // turned this from a mystery into a one-line diagnosis.
-          throw new Error(`The agreement could not be loaded (server said ${r.status}).`);
-        }
-        const d = await r.json();
-        if (!d?.sections?.length) throw new Error("The agreement came back empty.");
-        return d;
-      })
-      .then((d) => {
-        if (cancelled) return;
-        setBcaContent(d);
-        setBcaLoading(false);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        const aborted = err instanceof DOMException && err.name === "AbortError";
-        setBcaLoading(false);
-        setBcaError(
-          aborted
-            ? "The agreement took too long to load. Check your connection and try again."
-            : err instanceof Error && err.message
-              ? err.message
-              : "The agreement could not be loaded.",
-        );
-      })
-      .finally(() => clearTimeout(timer));
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [bcaAttempt]);
   const toggleArray = (field: "equipmentTypes" | "operatingRegions", val: string) => {
     const arr = form[field];
     set(field, arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
@@ -719,11 +615,6 @@ export default function OnboardingPage() {
       if (form.ein && !einDigits(form.ein)) return false;
       return true;
     }
-    // Fail closed: the agreement body has to be on screen before an
-    // acknowledgement of it means anything. Without this the applicant could
-    // tick "I agree to the Broker-Carrier Agreement above" while the pane still
-    // read "Loading the agreement…".
-    if (step === 3) return form.agreeTerms && !!bcaContent;
     return true;
   };
 
@@ -757,7 +648,7 @@ export default function OnboardingPage() {
       // carrierRegisterSchema hand-parses those two strings rather than using
       // z.coerce.boolean(), which would read "false" as TRUE and file a pilot
       // request for an applicant who explicitly declined one.
-      const { agreeTerms: _, unit: _u, ein: einFromForm,
+      const { unit: _u, ein: einFromForm,
         autoLiability, cargoInsurance, generalLiability, workersComp,
         additionalInsuredSRL, waiverOfSubrogation, thirtyDayCancellationNotice,
         numberOfTrucks: numTrucksStr,
@@ -815,9 +706,9 @@ export default function OnboardingPage() {
         // `req.body = result.data` would strip it and the server gate would
         // reject every legitimate application.
         ...(receipt ? { verificationReceipt: receipt } : {}),
-        // bcaVersion is deliberately NOT sent. The server stamps the version it
-        // served; a request-supplied version on a consent record is the defect
-        // the 409 guard on the signing routes exists to stop.
+        // No agreement version is sent. The application no longer accepts the
+        // Broker-Carrier Agreement (ruled 2026-09-28); the version is stamped by
+        // the server at the formal signature in the carrier portal.
       };
       for (const [key, value] of Object.entries(flatPayload)) {
         if (value === undefined || value === null) continue;
@@ -1117,7 +1008,7 @@ export default function OnboardingPage() {
           visual inconsistency. Removed entirely; the eyebrow strip
           now carries only the page-context cue (program eyebrow +
           Carrier Registration H1). */}
-      <div className="bg-[#F5EEE0] border-b border-[#EFE6D3] print:hidden">
+      <div className="bg-[#F5EEE0] border-b border-[#EFE6D3]">
         <div className="max-w-3xl mx-auto px-6 py-5">
           <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1">Caravan Partner Program</p>
           <h1 className="font-serif font-bold text-xl sm:text-2xl text-[#0A2540] leading-tight">Carrier Registration</h1>
@@ -1128,7 +1019,7 @@ export default function OnboardingPage() {
           rings on completed steps, gold-dark on active, cream-2 hairline
           ring on pending. Connector dashes use --gold tint for visual
           continuity with the Caravan Journey animation on /carriers. */}
-      <div className="max-w-3xl mx-auto px-6 pt-8 print:hidden">
+      <div className="max-w-3xl mx-auto px-6 pt-8">
         <div className="flex items-center justify-between mb-8">
           {steps.map((s, i) => (
             <div key={s} className="flex items-center gap-2 flex-1 last:flex-initial">
@@ -1232,11 +1123,8 @@ export default function OnboardingPage() {
 
         {/* v3.8.ain Path 2C — Form panel with gold-dark top accent
             matching the Caravan Partner Program / commitment-card-flip
-            register on /carriers.
-            v3.8.aja — print: modifiers strip the panel chrome on
-            print so Step 4 prints as clean text without the brand
-            top-accent border + cream-2 frame. */}
-        <div className="bg-white border-t-2 border-[#BA7517] rounded-2xl shadow-sm border-l border-r border-b border-[#EFE6D3] p-8 print:border-0 print:shadow-none print:rounded-none print:p-0">
+            register on /carriers. */}
+        <div className="bg-white border-t-2 border-[#BA7517] rounded-2xl shadow-sm border-l border-r border-b border-[#EFE6D3] p-8">
           {error && <div className="mb-6 p-4 bg-[#F6E3E3] border-l-4 border-[#9B2C2C] text-[#9B2C2C] rounded-lg text-sm">{error}</div>}
 
           {/* Step 0: Company Info */}
@@ -1940,108 +1828,29 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 3: Terms (Broker-Carrier Agreement click-through) */}
+          {/* Step 3: Quick Pay pilot. The ONE agreement-adjacent question the
+              application asks. Ruled 2026-09-28: the Broker-Carrier Agreement is
+              accepted in one place only, the formal signature in the carrier
+              portal after the application is approved and two-factor sign-in is
+              set up. This step used to carry a click-through of the whole
+              agreement, which asked the same carrier to accept it twice. */}
           {step === 3 && (
             <div className="space-y-6">
-              <div className="pb-4 border-b border-[#EFE6D3] print:hidden">
+              <div className="pb-4 border-b border-[#EFE6D3]">
                 <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Step 4 of 5</p>
-                <h2 className="font-serif font-bold text-2xl text-[#0A2540] mb-2">Broker-Carrier Agreement</h2>
-                <p className="text-sm text-[#3A4A5F] leading-relaxed">Click-through agreement. The standalone executed Broker-Carrier Agreement + Caravan Quick Pay Agreement v2 supersede where signed separately.</p>
-              </div>
-              {/* v3.8.aja Sprint E — Print / Download PDF affordance.
-                  Uses window.print() with Tailwind print: modifiers
-                  to hide nav/eyebrow/step indicator/buttons + expand
-                  the scroll-pane to full agreement on print. User's
-                  browser print dialog offers "Save as PDF" as a
-                  destination — no PDF library needed. */}
-              <div className="flex items-center justify-end gap-3 print:hidden">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-[#EFE6D3] hover:border-[#C5A572] hover:bg-[#FBF7F0] rounded-md text-sm font-medium text-[#0A2540] transition"
-                >
-                  <FileText className="w-4 h-4 text-[#BA7517]" />
-                  Print / Save as PDF
-                </button>
-              </div>
-              {/* Hidden print-only header — appears in the printed
-                  PDF only, not on screen. Captures the print date for the
-                  carrier's records; the version is not shown to carriers. */}
-              <div className="hidden print:block mb-4 pb-3 border-b border-[#EFE6D3]">
-                <p className="text-xs text-[#6B7685]">
-                  Silk Route Logistics Inc. — Broker-Carrier Agreement (Click-Through) — Printed {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                <h2 className="font-serif font-bold text-2xl text-[#0A2540] mb-2">Quick Pay pilot</h2>
+                <p className="text-sm text-[#3A4A5F] leading-relaxed">
+                  One question here: whether you want to be considered for Quick Pay. You sign the Broker-Carrier
+                  Agreement once, in your carrier portal, after your application is approved.
                 </p>
               </div>
-              <div className="p-5 rounded-xl bg-[#FBF7F0] border border-[#EFE6D3] max-h-80 overflow-y-auto text-sm text-[#3A4A5F] leading-relaxed space-y-4 print:max-h-none print:overflow-visible print:bg-white print:border-0 print:p-0">
-                <p className="font-serif font-bold text-[#0A2540] text-base">Silk Route Logistics — Broker-Carrier Agreement (Click-Through)</p>
-                {!bcaContent && bcaLoading ? (
-                  <p className="text-[#6B7685]">Loading the agreement…</p>
-                ) : !bcaContent ? (
-                  /* Arc 27 — an explicit failure where a spinner used to sit
-                     forever. It names what went wrong, offers a retry, and
-                     gives a route out that does not depend on this page
-                     working, because the case that produced it was the API
-                     itself being unreachable. */
-                  <div className="rounded-lg border-l-4 border-[#9B2C2C] bg-[#F6E3E3] p-4 not-italic">
-                    <p className="font-semibold text-[#9B2C2C]">The agreement could not be loaded</p>
-                    <p className="mt-1 text-[#3A4A5F]">{bcaError}</p>
-                    <p className="mt-2 text-[#3A4A5F]">
-                      You cannot agree to terms that are not on screen, so registration is paused
-                      here until it loads. Nothing you have entered has been lost.
-                    </p>
-                    <div className="mt-3 flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setBcaAttempt((n) => n + 1)}
-                        className="px-4 py-2 rounded-lg bg-[#BA7517] text-white text-sm font-medium hover:bg-[#854F0B]"
-                      >
-                        Try again
-                      </button>
-                      <a
-                        href="mailto:operations@silkroutelogistics.ai?subject=Carrier%20registration%20%E2%80%94%20agreement%20will%20not%20load"
-                        className="text-sm text-[#BA7517] underline hover:text-[#854F0B]"
-                      >
-                        Email operations@silkroutelogistics.ai
-                      </a>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {/* The company name typed in Step 1 is the legal name the
-                        registration records, so it is the name the agreement's
-                        opening paragraph carries. */}
-                    <AgreementBody agreement={bcaContent} carrierName={form.company} size="comfortable" />
-                    <p className="text-xs text-[#6B7685] mt-4 italic">
-                      Silk Route Logistics Inc. reserves the right to update these terms with 30 days&apos; notice to registered carriers. When the standalone Broker-Carrier Agreement and Caravan Quick Pay Agreement are executed between Broker and Carrier, those agreements govern where they conflict.
-                    </p>
-                  </>
-                )}
-              </div>
-              {/* Fail closed — you cannot agree to text that is not on screen. */}
-              <label
-                className={`flex items-center gap-3 p-4 rounded-lg border border-[#EFE6D3] bg-white transition print:hidden ${
-                  bcaContent ? "cursor-pointer hover:bg-[#FBF7F0]" : "opacity-60 cursor-not-allowed"
-                }`}
-              >
-                <input type="checkbox" checked={form.agreeTerms} disabled={!bcaContent}
-                  onChange={(e) => set("agreeTerms", e.target.checked)}
-                  className="w-5 h-5 rounded border-[#C5A572] text-[#BA7517] focus:ring-[#BA7517] disabled:cursor-not-allowed" />
-                <span className="text-sm font-medium text-[#0A2540]">
-                  {bcaContent
-                    ? "I agree to the Broker-Carrier Agreement above"
-                    : bcaLoading
-                      ? "The agreement is still loading. It has to be on screen before you can agree to it."
-                      : "The agreement could not be loaded, so there is nothing here to agree to yet."}
-                </span>
-              </label>
 
               {/* ── v3.8.asb — Quick Pay pilot REQUEST ──────────────────────
                   A request, not an enrolment, and the copy has to say so in
                   those words. Ticking this asks to be considered; SRL approves
                   or declines and tells the carrier either way.
 
-                  NOT a gate. canNext() for this step is unchanged — it still
-                  checks only agreeTerms + the loaded agreement body. An
+                  NOT a gate. canNext() lets this step through ticked or not. An
                   applicant who leaves this alone is a fully operational
                   carrier on free standard terms.
 
@@ -2050,14 +1859,13 @@ export default function OnboardingPage() {
                   they are approved. Figures are the locked CLAUDE.md §8 ladder.
                   Do not soften them on the theory that a pilot is provisional:
                   a pilot changes who can get in, never what it costs. */}
-              <div className="p-5 rounded-xl border border-[#EFE6D3] bg-white print:hidden">
+              <div className="p-5 rounded-xl border border-[#EFE6D3] bg-white">
                 <div className="flex items-center gap-2 mb-1.5">
                   <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517]">Optional</p>
                   <span className="text-[10px] uppercase tracking-wide font-semibold text-[#B07A1A] bg-[#FBEFD4] border border-[#B07A1A]/30 rounded-full px-2 py-0.5">
                     Limited pilot
                   </span>
                 </div>
-                <h3 className="font-serif font-bold text-lg text-[#0A2540] mb-2">Quick Pay</h3>
                 <p className="text-sm text-[#3A4A5F] leading-relaxed mb-3">
                   Quick Pay pays you early on a load you choose, for a flat fee by tier, once we have your complete and
                   accurate paperwork. It is running as a limited pilot: you ask, we approve or decline, and we tell you
@@ -2226,7 +2034,7 @@ export default function OnboardingPage() {
               carrier is being told the code step was skipped ON PURPOSE, not
               that something was missed. */}
           {inviteState === "accepted" && (
-            <div className="mt-8 rounded-xl border border-[#2F7A4F]/40 bg-[#E6F0E9] p-5 print:hidden">
+            <div className="mt-8 rounded-xl border border-[#2F7A4F]/40 bg-[#E6F0E9] p-5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#2F7A4F]">
                 Invitation confirmed
               </p>
@@ -2238,7 +2046,7 @@ export default function OnboardingPage() {
           )}
 
           {inviteState === "expired" && (
-            <div className="mt-8 rounded-xl border border-[#B07A1A]/40 bg-[#FBEFD4] p-5 print:hidden">
+            <div className="mt-8 rounded-xl border border-[#B07A1A]/40 bg-[#FBEFD4] p-5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#B07A1A]">
                 Invitation expired
               </p>
@@ -2257,7 +2065,7 @@ export default function OnboardingPage() {
           )}
 
           {inviteState === "bad" && (
-            <div className="mt-8 rounded-xl border border-[#EFE6D3] bg-[#FBF7F0] p-5 print:hidden">
+            <div className="mt-8 rounded-xl border border-[#EFE6D3] bg-[#FBF7F0] p-5">
               <p className="text-sm leading-relaxed text-[#3A4A5F]">
                 We couldn&apos;t read that invitation link. You can still apply below — fill in your
                 details and we&apos;ll confirm your email with a code.
@@ -2271,7 +2079,7 @@ export default function OnboardingPage() {
               be proven. Both paths land here — typing the code, or the poll
               noticing the link was clicked on another device. */}
           {verifyOpen && !emailIsVerified && (
-            <div className="mt-8 rounded-xl border border-[#EFE6D3] bg-[#FBF7F0] p-6 print:hidden">
+            <div className="mt-8 rounded-xl border border-[#EFE6D3] bg-[#FBF7F0] p-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BA7517]">
                 Confirm your email
               </p>
@@ -2333,10 +2141,8 @@ export default function OnboardingPage() {
           )}
 
           {/* Navigation — gold-dark CTA matching .nav-login-btn canonical
-              and the Sign In button in OnboardingNav above.
-              v3.8.aja — print:hidden so Back/Next don't appear in
-              the printed BCA. */}
-          <div className="flex justify-between items-center mt-8 pt-6 border-t border-[#EFE6D3] print:hidden">
+              and the Sign In button in OnboardingNav above. */}
+          <div className="flex justify-between items-center mt-8 pt-6 border-t border-[#EFE6D3]">
             <button onClick={() => setStep(step - 1)} disabled={step === 0}
               className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-[#3A4A5F] hover:text-[#0A2540] hover:bg-[#FBF7F0] rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition">
               <ChevronLeft className="w-4 h-4" /> Back

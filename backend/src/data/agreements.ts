@@ -1,7 +1,9 @@
 // v3.8.aqh — Canonical carrier-facing agreement content (backend source of
 // truth). The agreement PDFs (agreementPdfService) render from this, and the
 // carrier portal fetches it (GET /carrier-auth/agreement/:type) so the review
-// pane, the onboarding click-through, and the executed PDF can never disagree.
+// pane and the executed PDF can never disagree. (The onboarding click-through
+// that also read it was removed 2026-09-28: the BCA is accepted once, at the
+// portal signature.)
 // Signing records consent against `version`; per CLAUDE.md §16 the
 // attorney-final (Foster Swift) body swaps in here + bumps the version with
 // no code change.
