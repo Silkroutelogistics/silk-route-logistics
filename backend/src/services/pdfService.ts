@@ -1633,12 +1633,23 @@ export function buildRateConOperationalTerms(
 /**
  * The closing clause of every Rate Confirmation (v3.8.bls). Part of the terms:
  * changing it is a terms-version bump in lib/agreementVersions.
+ *
+ * The two acts that bind are exactly the two BCA Art. 24 names: electronic
+ * acceptance, or pickup of the shipment (owner ruling 2026-09-28, closing
+ * backlog Item 333(f)). The bls text also bound a carrier on dispatching a unit
+ * or arriving at the pickup location. The BCA controls on a conflict, so those
+ * two never bound anyone; they only made the page claim more than the
+ * agreement does. The structure follows the industry "Agreement to be Bound"
+ * clause the owner supplied: acceptance and transport bind even without a
+ * signature, and the master agreement is incorporated by reference.
  */
 export const RC_AGREEMENT_TO_BE_BOUND =
-  "Carrier has read this entire Rate Confirmation. Carrier accepts it, and agrees to be bound by it and by the " +
-  "Broker-Carrier Agreement it incorporates, on the first of these: accepting it electronically through SRL's " +
-  "signing link, dispatching a unit, arriving at the pickup location, or beginning transport. No signature on this " +
-  "document is required. A carrier that does not agree to every term must decline the load before dispatching a unit.";
+  "Carrier has read this entire Rate Confirmation. By accepting it electronically through SRL's signing link, or by " +
+  "picking up the shipment, Carrier agrees to be bound by this Rate Confirmation, even without a signature on it, and " +
+  "to comply with every rate, term, condition, special instruction and other requirement it contains. In addition to " +
+  "the terms of this Rate Confirmation, this shipment is governed by the Broker-Carrier Agreement between SRL and " +
+  "Carrier, which is incorporated in this Rate Confirmation by reference. A carrier that does not agree to every term " +
+  "must decline the load and must not pick it up.";
 
 export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formData: Record<string, any>): PDFDoc {
   const fd = formData || {};
@@ -2789,6 +2800,10 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // v3.8.blz — Art. 24, where the BCA says an accepted Rate Confirmation binds.
   // bls cited Art. 8, which only decides which document wins a conflict, so a
   // carrier following the reference to check the rule found nothing there.
+  // v3.8.bmx — still Art. 24 alone, although the clause now also incorporates
+  // the BCA. That sentence is the Rate Confirmation's own statement: no BCA
+  // article incorporates the BCA into a Rate Confirmation, and Art. 8, which
+  // decides conflicts, is already cited once, by GOVERNING TERMS.
   y = drawSectionHeading(doc, "AGREEMENT TO BE BOUND", MARGIN, y, { ref: "BCA Art. 24" }) + 2;
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
   doc.text(RC_AGREEMENT_TO_BE_BOUND, MARGIN, y, { width: CONTENT_W, lineGap: 0.5 });

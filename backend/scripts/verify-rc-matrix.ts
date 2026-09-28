@@ -59,6 +59,11 @@ const EXPECTED_PAGES: Record<string, number> = {
   // copy adds the 42.2pt statement. So page 3 remains the closing page, now
   // carrying the binding clause and the countersignature rather than ruled
   // lines. A shorter load fits on two pages, as the pinned fixture does.
+  //
+  // v3.8.bmx — re-measured, still 3. The clause now names the two acts BCA
+  // Art. 24 names and incorporates the BCA, so it grew from 30.8pt to 41.1pt
+  // and the closing section to 58.2pt. It was already past what page 2 leaves,
+  // so it closes page 3 as before; the worst case still has 430pt to spare.
   "countersigned": 3,
   "countersigned worst case": 3,
 };

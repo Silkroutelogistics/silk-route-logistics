@@ -19407,7 +19407,12 @@
 //   a data migration by id, only while still OTHER, one audit row each. Elsewhere it changes nothing.
 // v3.8.bmr — The Track & Trace Documents tab names the INVOICE row "Carrier invoice" and gives SRL's copy
 //   its own row, "Customer invoice copy (SRL internal)", which files CUSTOMER_INVOICE_COPY.
-export const SRL_VERSION = "3.8.bmr";
+// v3.8.bmx — The Rate Confirmation's Agreement to be Bound clause binds on the
+//   two acts the Broker-Carrier Agreement names. Accepting electronically, or
+// picking up the shipment, binds the carrier even without a signature; the BCA
+// is incorporated by reference. Dispatching a unit and arriving at the pickup
+// location no longer appear as binding acts, because the BCA never made them so.
+export const SRL_VERSION = "3.8.bmx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

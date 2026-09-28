@@ -379,6 +379,13 @@ on acceptance by conduct. If it becomes a condition, that is a payment term and 
 to sit consistently in the BCA and on the form. If it stays a request, the form needs a
 return address, which is an operational fix SRL can make once you decide the status.
 
+> **Status, 2026-09-28.** Decided by the owner since this brief was written. The
+> Rate Confirmation has had no signature block since v3.8.bls (2026-09-26). A carrier
+> accepts electronically through SRL's signing link, which records the typed name,
+> IP address, user agent and time against the stored document, or by picking up the
+> shipment. The "What SRL does today" paragraph above describes the form as it was on
+> August 14 and is kept as written.
+
 ---
 
 ### Question 6. Precedence, and what happens while the BCA is unsigned
@@ -514,6 +521,15 @@ objection. The corpus offers 24 hours at C.H. Robinson and MoLo and 48 hours at 
 Also whether "whichever occurs first" is the right trigger ordering, given that
 dispatch of a unit can occur before a carrier's authorized signatory has read the
 document.
+
+> **Status, 2026-09-28 (v3.8.bmx).** The trigger half of this question is decided.
+> The Rate Confirmation's Agreement to be Bound clause now binds the carrier on the two
+> acts BCA Art. 24 names: accepting electronically through SRL's signing link, or
+> picking up the shipment. Dispatching a unit, arriving at the pickup location and
+> beginning transport are no longer named. The clause also states that acceptance
+> binds even without a signature on the document, and that the BCA is incorporated by
+> reference. **Still open for you:** whether to add a silence-with-objection window
+> alongside conduct. The quoted clause above is the August 14 text, kept as written.
 
 ---
 

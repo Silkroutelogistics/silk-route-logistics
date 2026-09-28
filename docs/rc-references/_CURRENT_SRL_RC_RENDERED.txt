@@ -1,6 +1,6 @@
 SRL RATE CONFIRMATION — RENDERED CAPTURE
 
-Generated 2026-09-27 from v3.8.bly (commit bb10d76d) PLUS uncommitted changes to backend/src/services/pdfService.ts.
+Generated 2026-09-28 from no version letter in HEAD subject (commit 280452e6) PLUS uncommitted changes to backend/src/services/pdfService.ts.
 Regenerate:  cd backend && npx tsx scripts/verify-rc-matrix.ts --dump
 
 Y coordinates are top-down from the page top, rounded to 0.5pt. Items sharing
@@ -28,7 +28,7 @@ read as a page map and taught the wrong one for several sprints.
 ─────────── PAGE 1 ───────────
    46.5  REFERENCE
      53  SILK ROUTE LOGISTICS INC.
-     61  SRL-121488R
+     61  121488
    64.5  2317 S 35th St, Galesburg, MI 49053
    76.5  +1 (269) 220-6760 | operations@silkroutelogistics.ai | silkroutelogistics.ai
    88.5  MC# 1794414 · DOT# 4526880
@@ -38,7 +38,7 @@ read as a page map and taught the wrong one for several sprints.
     178  AE: Wasi Haider · (269) 220-6760
   189.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
   202.5  DATE ISSUED ⟂ LOAD REF ⟂ PICKUP ⟂ DELIVERY ⟂ PICKUP # ⟂ PO # ⟂ QUICK PAY ⟂ TERMS
-    218  Sep 27, 2026 ⟂ SRL-121488 ⟂ 8/13/2026 ⟂ 8/17/2026 ⟂ — ⟂ PO1770 ⟂ Not elected ⟂ Net-30
+    218  Sep 27, 2026 ⟂ 121488 ⟂ 8/13/2026 ⟂ 8/17/2026 ⟂ — ⟂ PO1770 ⟂ Not elected ⟂ Net-30
     237  PARTIES
   258.5  SHIPPER · PICKUP FROM ⟂ CONSIGNEE · DELIVER TO
     277  Virun ⟂ Mainfreight North Lake
@@ -75,13 +75,13 @@ read as a page map and taught the wrong one for several sprints.
   763.5  Terms version unversioned
 
 ─────────── PAGE 2 ───────────
-     49  SRL-121488R
+     49  121488
      51  SILK ROUTE LOGISTICS INC.
-     60  SRL-121488R · Rate Confirmation (continued)
+     60  121488 · Rate Confirmation (continued)
      95  D O C K & D I S PAT C H ⟂ BCA Art. 20 to 23
   108.5  Before pickup: Driver ____________ Cell ____________ Truck # ________ Trailer # ________
-  120.5  Check in at both stops as Silk Route Logistics, load SRL-121488. The BOL must name SRL as broker. If it names another company or MC number, do not load.
-  130.5  Call (269) 220-6760.
+  120.5  Check in at both stops as Silk Route Logistics, load 121488. The BOL must name SRL as broker. If it names another company or MC number, do not load. Call
+  130.5  (269) 220-6760.
   142.5  Seals: record the number on the BOL at pickup; the receiver removes it, not the driver. Broken or missing seal at delivery: call before the doors open.
     154  Check calls: by 8:00 AM Eastern daily in transit and on arrival at each stop. Running late: call before the appointment.
     166  Detention pay needs proof: have the facility write your in and out times on the BOL. No times on the BOL, no detention.
@@ -114,7 +114,7 @@ read as a page map and taught the wrong one for several sprints.
   554.5  paperwork are due within 24 hours of delivery.
     576  INVOICING
   588.5  Send to: accounting@silkroutelogistics.ai
-  600.5  Subject: Invoice · Load SRL-121488 · MC 596655
+  600.5  Subject: Invoice · Load 121488 · MC 596655
     612  Attach this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.
     624  Put the SRL load number on the invoice. One invoice per load; do not batch loads onto one invoice.
   635.5  Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather than billing a different number.
@@ -126,13 +126,14 @@ read as a page map and taught the wrong one for several sprints.
   763.5  Terms version unversioned
 
 ─────────── PAGE 3 ───────────
-     49  SRL-121488R
+     49  121488
      51  SILK ROUTE LOGISTICS INC.
-     60  SRL-121488R · Rate Confirmation (continued)
+     60  121488 · Rate Confirmation (continued)
      95  A G R E E M E N T T O B E B O U N D ⟂ BCA Art. 24
-  112.5  Carrier has read this entire Rate Confirmation. Carrier accepts it, and agrees to be bound by it and by the Broker-Carrier Agreement it incorporates, on the
-    123  first of these: accepting it electronically through SRL's signing link, dispatching a unit, arriving at the pickup location, or beginning transport. No signature on
-    133  this document is required. A carrier that does not agree to every term must decline the load before dispatching a unit.
+  112.5  Carrier has read this entire Rate Confirmation. By accepting it electronically through SRL's signing link, or by picking up the shipment, Carrier agrees to be
+    123  bound by this Rate Confirmation, even without a signature on it, and to comply with every rate, term, condition, special instruction and other requirement it
+    133  contains. In addition to the terms of this Rate Confirmation, this shipment is governed by the Broker-Carrier Agreement between SRL and Carrier, which is
+  143.5  incorporated in this Rate Confirmation by reference. A carrier that does not agree to every term must decline the load and must not pick it up.
     754  Template v1.4
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 3 of 3
   763.5  Terms version unversioned
@@ -143,7 +144,7 @@ read as a page map and taught the wrong one for several sprints.
 ─────────── PAGE 1 ───────────
    46.5  REFERENCE
      53  SILK ROUTE LOGISTICS INC.
-     61  SRL-121488R
+     61  121488
    64.5  2317 S 35th St, Galesburg, MI 49053
    76.5  +1 (269) 220-6760 | operations@silkroutelogistics.ai | silkroutelogistics.ai
    88.5  MC# 1794414 · DOT# 4526880
@@ -153,7 +154,7 @@ read as a page map and taught the wrong one for several sprints.
     178  AE: Wasi Haider · (269) 220-6760
   189.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
   202.5  DATE ISSUED ⟂ LOAD REF ⟂ PICKUP ⟂ DELIVERY ⟂ PICKUP # ⟂ PO # ⟂ QUICK PAY ⟂ TERMS
-    218  Sep 27, 2026 ⟂ SRL-121488 ⟂ 8/13/2026 ⟂ 8/17/2026 ⟂ — ⟂ PO1770 ⟂ Not elected ⟂ Net-30
+    218  Sep 27, 2026 ⟂ 121488 ⟂ 8/13/2026 ⟂ 8/17/2026 ⟂ — ⟂ PO1770 ⟂ Not elected ⟂ Net-30
     237  PARTIES
   258.5  SHIPPER · PICKUP FROM ⟂ CONSIGNEE · DELIVER TO
     277  Virun ⟂ Mainfreight North Lake
@@ -190,13 +191,13 @@ read as a page map and taught the wrong one for several sprints.
   763.5  Terms version unversioned
 
 ─────────── PAGE 2 ───────────
-     49  SRL-121488R
+     49  121488
      51  SILK ROUTE LOGISTICS INC.
-     60  SRL-121488R · Rate Confirmation (continued)
+     60  121488 · Rate Confirmation (continued)
      95  D O C K & D I S PAT C H ⟂ BCA Art. 20 to 23
   108.5  Before pickup: Driver ____________ Cell ____________ Truck # ________ Trailer # ________
-  120.5  Check in at both stops as Silk Route Logistics, load SRL-121488. The BOL must name SRL as broker. If it names another company or MC number, do not load.
-  130.5  Call (269) 220-6760.
+  120.5  Check in at both stops as Silk Route Logistics, load 121488. The BOL must name SRL as broker. If it names another company or MC number, do not load. Call
+  130.5  (269) 220-6760.
   142.5  Seals: record the number on the BOL at pickup; the receiver removes it, not the driver. Broken or missing seal at delivery: call before the doors open.
     154  Check calls: by 8:00 AM Eastern daily in transit and on arrival at each stop. Running late: call before the appointment.
     166  Detention pay needs proof: have the facility write your in and out times on the BOL. No times on the BOL, no detention.
@@ -236,12 +237,12 @@ read as a page map and taught the wrong one for several sprints.
   763.5  Terms version unversioned
 
 ─────────── PAGE 3 ───────────
-     49  SRL-121488R
+     49  121488
      51  SILK ROUTE LOGISTICS INC.
-     60  SRL-121488R · Rate Confirmation (continued)
+     60  121488 · Rate Confirmation (continued)
      95  INVOICING
   107.5  Send to: accounting@silkroutelogistics.ai
-    119  Subject: Invoice · Load SRL-121488 · MC 596655
+    119  Subject: Invoice · Load 121488 · MC 596655
     131  Attach this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.
   142.5  Put the SRL load number on the invoice. One invoice per load; do not batch loads onto one invoice.
   154.5  Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather than billing a different number.
@@ -249,9 +250,10 @@ read as a page map and taught the wrong one for several sprints.
   187.5  SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, call SRL at
   196.5  (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before you move the freight.
     218  A G R E E M E N T T O B E B O U N D ⟂ BCA Art. 24
-  235.5  Carrier has read this entire Rate Confirmation. Carrier accepts it, and agrees to be bound by it and by the Broker-Carrier Agreement it incorporates, on the
-    246  first of these: accepting it electronically through SRL's signing link, dispatching a unit, arriving at the pickup location, or beginning transport. No signature on
-  256.5  this document is required. A carrier that does not agree to every term must decline the load before dispatching a unit.
+  235.5  Carrier has read this entire Rate Confirmation. By accepting it electronically through SRL's signing link, or by picking up the shipment, Carrier agrees to be
+    246  bound by this Rate Confirmation, even without a signature on it, and to comply with every rate, term, condition, special instruction and other requirement it
+  256.5  contains. In addition to the terms of this Rate Confirmation, this shipment is governed by the Broker-Carrier Agreement between SRL and Carrier, which is
+  266.5  incorporated in this Rate Confirmation by reference. A carrier that does not agree to every term must decline the load and must not pick it up.
     754  Template v1.4
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 3 of 3
   763.5  Terms version unversioned
@@ -262,7 +264,7 @@ read as a page map and taught the wrong one for several sprints.
 ─────────── PAGE 1 ───────────
    46.5  REFERENCE
      53  SILK ROUTE LOGISTICS INC.
-     61  SRL-121488R
+     61  121488
    64.5  2317 S 35th St, Galesburg, MI 49053
    76.5  +1 (269) 220-6760 | operations@silkroutelogistics.ai | silkroutelogistics.ai
    88.5  MC# 1794414 · DOT# 4526880
@@ -272,7 +274,7 @@ read as a page map and taught the wrong one for several sprints.
     178  AE: Wasi Haider · (269) 220-6760
   189.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
   202.5  DATE ISSUED ⟂ LOAD REF ⟂ PICKUP ⟂ DELIVERY ⟂ PICKUP # ⟂ PO # ⟂ QUICK PAY ⟂ TERMS
-    218  Sep 27, 2026 ⟂ SRL-121488 ⟂ 8/13/2026 ⟂ 8/17/2026 ⟂ — ⟂ PO1770 ⟂ 3% · 7-day ⟂ 7 days
+    218  Sep 27, 2026 ⟂ 121488 ⟂ 8/13/2026 ⟂ 8/17/2026 ⟂ — ⟂ PO1770 ⟂ 3% · 7-day ⟂ 7 days
     237  PARTIES
   258.5  SHIPPER · PICKUP FROM ⟂ CONSIGNEE · DELIVER TO
     277  Virun ⟂ Mainfreight North Lake
@@ -310,13 +312,13 @@ read as a page map and taught the wrong one for several sprints.
   763.5  Terms version unversioned
 
 ─────────── PAGE 2 ───────────
-     49  SRL-121488R
+     49  121488
      51  SILK ROUTE LOGISTICS INC.
-     60  SRL-121488R · Rate Confirmation (continued)
+     60  121488 · Rate Confirmation (continued)
      95  D O C K & D I S PAT C H ⟂ BCA Art. 20 to 23
   108.5  Before pickup: Driver ____________ Cell ____________ Truck # ________ Trailer # ________
-  120.5  Check in at both stops as Silk Route Logistics, load SRL-121488. The BOL must name SRL as broker. If it names another company or MC number, do not load.
-  130.5  Call (269) 220-6760.
+  120.5  Check in at both stops as Silk Route Logistics, load 121488. The BOL must name SRL as broker. If it names another company or MC number, do not load. Call
+  130.5  (269) 220-6760.
   142.5  Seals: record the number on the BOL at pickup; the receiver removes it, not the driver. Broken or missing seal at delivery: call before the doors open.
     154  Check calls: by 8:00 AM Eastern daily in transit and on arrival at each stop. Running late: call before the appointment.
     166  Detention pay needs proof: have the facility write your in and out times on the BOL. No times on the BOL, no detention.
@@ -349,7 +351,7 @@ read as a page map and taught the wrong one for several sprints.
   554.5  paperwork are due within 24 hours of delivery.
     576  INVOICING
   588.5  Send to: accounting@silkroutelogistics.ai
-  600.5  Subject: Invoice · Load SRL-121488 · MC 596655
+  600.5  Subject: Invoice · Load 121488 · MC 596655
     612  Attach this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.
     624  Put the SRL load number on the invoice. One invoice per load; do not batch loads onto one invoice.
   635.5  Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather than billing a different number.
@@ -361,13 +363,14 @@ read as a page map and taught the wrong one for several sprints.
   763.5  Terms version unversioned
 
 ─────────── PAGE 3 ───────────
-     49  SRL-121488R
+     49  121488
      51  SILK ROUTE LOGISTICS INC.
-     60  SRL-121488R · Rate Confirmation (continued)
+     60  121488 · Rate Confirmation (continued)
      95  A G R E E M E N T T O B E B O U N D ⟂ BCA Art. 24
-  112.5  Carrier has read this entire Rate Confirmation. Carrier accepts it, and agrees to be bound by it and by the Broker-Carrier Agreement it incorporates, on the
-    123  first of these: accepting it electronically through SRL's signing link, dispatching a unit, arriving at the pickup location, or beginning transport. No signature on
-    133  this document is required. A carrier that does not agree to every term must decline the load before dispatching a unit.
+  112.5  Carrier has read this entire Rate Confirmation. By accepting it electronically through SRL's signing link, or by picking up the shipment, Carrier agrees to be
+    123  bound by this Rate Confirmation, even without a signature on it, and to comply with every rate, term, condition, special instruction and other requirement it
+    133  contains. In addition to the terms of this Rate Confirmation, this shipment is governed by the Broker-Carrier Agreement between SRL and Carrier, which is
+  143.5  incorporated in this Rate Confirmation by reference. A carrier that does not agree to every term must decline the load and must not pick it up.
     754  Template v1.4
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 3 of 3
   763.5  Terms version unversioned

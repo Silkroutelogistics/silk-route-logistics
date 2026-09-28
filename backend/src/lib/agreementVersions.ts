@@ -55,7 +55,12 @@ export const CURRENT_VERSIONS: Record<string, string> = {
 // became the closing Agreement to be Bound section; the signature strip is
 // gone. Detention, layover and TONU figures moved in the same week (v3.8.blk)
 // and are carried by this version as well.
-export const RC_TERMS_VERSION = "2026-09-26-v2";
+//
+// v3 (2026-09-28) — the Agreement to be Bound clause binds on the two acts BCA
+// Art. 24 names, electronic acceptance or pickup of the shipment, instead of
+// four. It now says acceptance binds even without a signature, and restates
+// that the BCA is incorporated by reference.
+export const RC_TERMS_VERSION = "2026-09-28-v3";
 
 export type DocumentKey = keyof typeof CURRENT_VERSIONS;
 
