@@ -23,8 +23,3 @@ export const submitForFactoringSchema = z.object({
 export const updateLineItemsSchema = z.object({
   lineItems: z.array(lineItemSchema).min(1),
 });
-
-export const batchInvoiceStatusSchema = z.object({
-  ids: z.array(z.string().cuid()).min(1),
-  status: z.enum(["DRAFT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED", "PAID", "REJECTED"]),
-});

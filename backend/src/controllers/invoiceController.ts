@@ -2,7 +2,7 @@ import { Response } from "express";
 import { prisma } from "../config/database";
 import { resolveBillingRecipients } from "../services/customerRecipientResolver";
 import { AuthRequest } from "../middleware/auth";
-import { createInvoiceSchema, submitForFactoringSchema, updateLineItemsSchema, batchInvoiceStatusSchema } from "../validators/invoice";
+import { createInvoiceSchema, submitForFactoringSchema, updateLineItemsSchema } from "../validators/invoice";
 import { generateInvoicePdf } from "../services/pdfService";
 import { assessLoadBillable } from "../services/invoiceService";
 import { sendEmail, wrap } from "../services/emailService";
@@ -142,31 +142,9 @@ export async function getAllInvoices(req: AuthRequest, res: Response) {
   res.json({ invoices, total, page: parseInt(page as string), totalPages: Math.ceil(total / parseInt(limit as string)) });
 }
 
-/** Admin/broker: update invoice status */
-export async function updateInvoiceStatus(req: AuthRequest, res: Response) {
-  const { status } = req.body;
-  const valid = ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED", "PAID", "REJECTED"];
-  if (!valid.includes(status)) {
-    res.status(400).json({ error: "Invalid status" });
-    return;
-  }
-  // go-live audit (NOTE 7): a generic status update must not flip an invoice to
-  // PAID — that path records no paidAmount and never credits the factoring fund
-  // (onInvoicePaid). Route payment recording through the mark-paid endpoint.
-  if (status === "PAID") {
-    res.status(400).json({ error: "Use the mark-paid endpoint to record a payment (it captures the amount and credits the fund)." });
-    return;
-  }
-
-  const invoice = await prisma.invoice.findUnique({ where: { id: req.params.id } });
-  if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
-
-  const data: Record<string, unknown> = { status };
-  if (status === "PAID") data.paidAt = new Date();
-
-  const updated = await prisma.invoice.update({ where: { id: req.params.id }, data, include: { load: true, user: { select: { id: true, firstName: true, lastName: true, company: true } } } });
-  res.json(updated);
-}
+// v3.8.bnq — updateInvoiceStatus and batchUpdateInvoiceStatus are gone with
+// their routes (bno). Ruling 2026-09-27, 6: an invoice's status is set only by
+// send, payment posting, void and the aging job, never from a request body.
 
 /** Update line items for an invoice (replace strategy) */
 export async function updateInvoiceLineItems(req: AuthRequest, res: Response) {
@@ -204,20 +182,6 @@ export async function updateInvoiceLineItems(req: AuthRequest, res: Response) {
   });
 
   res.json(updated);
-}
-
-/** Batch update invoice statuses */
-export async function batchUpdateInvoiceStatus(req: AuthRequest, res: Response) {
-  const { ids, status } = batchInvoiceStatusSchema.parse(req.body);
-
-  const data: Record<string, unknown> = { status };
-  if (status === "PAID") data.paidAt = new Date();
-
-  const result = await prisma.$transaction(
-    ids.map((id) => prisma.invoice.update({ where: { id }, data }))
-  );
-
-  res.json({ updated: result.length, invoices: result });
 }
 
 /** Get invoice summary stats */

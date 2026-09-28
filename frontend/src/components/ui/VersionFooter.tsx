@@ -19453,7 +19453,9 @@
 // POST /invoices/batch/status are removed.
 // v3.8.bnp — ruling 2026-09-27, 6: the accounting router's invoice routes refuse a
 // write whose body names status, the same guard as /invoices.
-export const SRL_VERSION = "3.8.bnp";
+// v3.8.bnq — ruling 2026-09-27, 6: updateInvoiceStatus, batchUpdateInvoiceStatus and
+// batchInvoiceStatusSchema are deleted with their routes.
+export const SRL_VERSION = "3.8.bnq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

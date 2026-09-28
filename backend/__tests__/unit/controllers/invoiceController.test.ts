@@ -16,7 +16,6 @@ vi.mock("../../../src/validators/invoice", () => ({
   createInvoiceSchema: { parse: (v: any) => v },
   submitForFactoringSchema: { parse: (v: any) => v },
   updateLineItemsSchema: { parse: (v: any) => v },
-  batchInvoiceStatusSchema: { parse: (v: any) => v },
 }));
 
 import {
@@ -24,8 +23,8 @@ import {
   getInvoices,
   getInvoiceById,
   getAllInvoices,
-  updateInvoiceStatus,
 } from "../../../src/controllers/invoiceController";
+import * as invoiceController from "../../../src/controllers/invoiceController";
 
 const mockPrisma = vi.mocked(prisma);
 
@@ -209,5 +208,21 @@ describe("invoiceController", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ total: 2, page: 1 })
     );
+  });
+});
+
+// v3.8.bnq — ruling 2026-09-27, 6: the two handlers that wrote a status taken
+// from the request body are deleted with their routes, and nothing left in this
+// controller reads one.
+describe("invoiceController — no handler takes a status from the body", () => {
+  it("updateInvoiceStatus and batchUpdateInvoiceStatus are gone", () => {
+    expect(Object.keys(invoiceController)).not.toContain("updateInvoiceStatus");
+    expect(Object.keys(invoiceController)).not.toContain("batchUpdateInvoiceStatus");
+  });
+
+  it("no handler reads status off req.body (source guard)", () => {
+    const src = require("fs").readFileSync(require("path").join(__dirname, "../../../src/controllers/invoiceController.ts"), "utf8");
+    expect(src).not.toMatch(/req\.body\??\.status\b/);
+    expect(src).not.toMatch(/\{[^}]*\bstatus\b[^}]*\}\s*=\s*(req\.body|[A-Za-z]+Schema\.parse\(req\.body\))/);
   });
 });
