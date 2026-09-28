@@ -381,7 +381,13 @@ export async function downloadDocument(req: AuthRequest, res: Response) {
     // RATE_CON included, which carries carrier pay. That is the margin exposure
     // SHIPPER_VISIBLE_DOC_TYPES exists to prevent, and widening the match is
     // exactly how it would have been introduced.
-    if (isLoadCustomer && !isOwner && !isLoadParticipant &&
+    //
+    // F-D2: a SHIPPER is bounded on EVERY path, not only as the load's customer. A
+    // shipper who POSTED the load (SHIPPER may POST /loads) is a participant, and the
+    // participant branch skipped the allowlist, so it could download the RATE_CON and
+    // the carrier's INVOICE on its own load: carrier pay again.
+    const boundedToShipperAllowlist = role === "SHIPPER" || (isLoadCustomer && !isLoadParticipant);
+    if (boundedToShipperAllowlist && !isOwner &&
         !SHIPPER_VISIBLE_DOC_TYPES.includes(doc.docType ?? "")) {
       res.status(403).json({ error: "Not authorized to download this document" });
       return;

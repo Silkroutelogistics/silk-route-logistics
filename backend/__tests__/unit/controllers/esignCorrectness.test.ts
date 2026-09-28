@@ -29,7 +29,8 @@ function gate(opts: {
   const isLoadParticipant = !!load && (load.posterId === userId || load.carrierId === userId);
   const isLoadCustomer = !!load?.customer && load.customer.userId === userId;
   if (!isOwner && !isLoadParticipant && !isLoadCustomer) return 403;
-  if (isLoadCustomer && !isOwner && !isLoadParticipant &&
+  const boundedToShipperAllowlist = role === "SHIPPER" || (isLoadCustomer && !isLoadParticipant);
+  if (boundedToShipperAllowlist && !isOwner &&
       !SHIPPER_VISIBLE_DOC_TYPES.includes(docType ?? "")) return 403;
   return 200;
 }
@@ -48,10 +49,22 @@ describe("fix 1 — a shipper who owns the load can retrieve allowlisted documen
     expect(gate({ role: "SHIPPER", userId: SHIPPER, docUserId: POSTER, docType: "BOL", load: ownLoad })).toBe(200);
   });
 
-  it("shipper on OWN load gets POD and INVOICE too", () => {
-    for (const t of ["POD", "INVOICE"]) {
-      expect(gate({ role: "SHIPPER", userId: SHIPPER, docUserId: POSTER, docType: t, load: ownLoad }), t).toBe(200);
-    }
+  // SUPERSEDED 2026-09-28 (F-D2). This case read "shipper on OWN load gets POD and INVOICE
+  // too" and asserted 200 for INVOICE. Since ruling 6, INVOICE is the CARRIER's invoice to
+  // SRL, which is carrier pay, so the old assertion pinned a disclosure. POD stays allowed;
+  // INVOICE is now asserted refused.
+  it("shipper on OWN load gets POD, but not the carrier's INVOICE", () => {
+    expect(gate({ role: "SHIPPER", userId: SHIPPER, docUserId: POSTER, docType: "POD", load: ownLoad })).toBe(200);
+    expect(gate({ role: "SHIPPER", userId: SHIPPER, docUserId: POSTER, docType: "INVOICE", load: ownLoad })).toBe(403);
+  });
+
+  it("a shipper who POSTED the load is bounded by the same allowlist", () => {
+    // The participant branch used to skip the allowlist, so a shipper-poster could pull
+    // the RATE_CON and the carrier's INVOICE on its own load.
+    const postedByShipper = { posterId: SHIPPER, carrierId: CARRIER, customer: null };
+    expect(gate({ role: "SHIPPER", userId: SHIPPER, docUserId: POSTER, docType: "RATE_CON", load: postedByShipper })).toBe(403);
+    expect(gate({ role: "SHIPPER", userId: SHIPPER, docUserId: POSTER, docType: "INVOICE", load: postedByShipper })).toBe(403);
+    expect(gate({ role: "SHIPPER", userId: SHIPPER, docUserId: POSTER, docType: "BOL", load: postedByShipper })).toBe(200);
   });
 
   it("shipper on ANOTHER customer's load is refused", () => {
@@ -87,6 +100,7 @@ describe("fix 1 — a shipper who owns the load can retrieve allowlisted documen
     const src = fs.readFileSync(path.resolve(__dirname, "../../../src/controllers/documentController.ts"), "utf8");
     expect(src).toContain("const isLoadCustomer = !!doc.load?.customer && doc.load.customer.userId === userId;");
     expect(src).toContain("!SHIPPER_VISIBLE_DOC_TYPES.includes(doc.docType ?? \"\")");
+    expect(src).toContain("const boundedToShipperAllowlist = role === \"SHIPPER\" || (isLoadCustomer && !isLoadParticipant);");
     expect(src).toContain("customer: { select: { userId: true } }");
   });
 });

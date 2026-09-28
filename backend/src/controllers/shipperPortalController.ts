@@ -99,14 +99,17 @@ function mapLoadToShipment(load: any) {
 
 function mapTenderToQuote(tender: any) {
   const load = tender.load;
+  // F-D2: the rate a shipper sees is what THEY pay, the load's customerRate. It used to be
+  // the tender's offeredRate (SRL's offer to the carrier) and counterRate (the carrier's
+  // counter): carrier pay, the margin, on the customer's own dashboard. The tender's rates
+  // are never read here.
+  const customerRate = load?.customerRate;
   return {
     id: `QT-${tender.id.slice(-4).toUpperCase()}`,
     origin: `${load?.originCity || ""}${load?.originState ? ", " + load.originState : ""}`,
     dest: `${load?.destCity || ""}${load?.destState ? ", " + load.destState : ""}`,
     equipment: load?.equipmentType || "—",
-    rate: tender.counterRate
-      ? `$${tender.offeredRate.toLocaleString()} - $${tender.counterRate.toLocaleString()}`
-      : `$${tender.offeredRate.toLocaleString()}`,
+    rate: customerRate != null ? `$${Number(customerRate).toLocaleString()}` : "—",
     status: tender.status === "OFFERED" ? "Quoted" : tender.status === "ACCEPTED" ? "Booked" : tender.status,
     expires: formatDate(tender.expiresAt),
     distance: load?.distance ? `${load.distance} mi` : "—",
@@ -190,7 +193,7 @@ export async function getShipperDashboard(req: AuthRequest, res: Response) {
     const openQuotes = loadIds.length > 0
       ? await prisma.loadTender.findMany({
           where: { loadId: { in: loadIds }, status: { in: ["OFFERED", "COUNTERED"] }, deletedAt: null },
-          include: { load: { select: { originCity: true, originState: true, destCity: true, destState: true, equipmentType: true, distance: true } } },
+          include: { load: { select: { originCity: true, originState: true, destCity: true, destState: true, equipmentType: true, distance: true, customerRate: true } } },
           orderBy: { createdAt: "desc" },
           take: 5,
         })
@@ -775,15 +778,17 @@ export async function generateTrackingLink(req: AuthRequest, res: Response) {
 /**
  * Documents a shipper may see on their own load.
  *
- * The bill of lading, the proof of delivery, and their own invoice. NOT the
- * rate confirmation — that is the carrier's pay document and it prints SRL's
- * margin.
+ * The bill of lading and the proof of delivery. NOT the rate confirmation — that
+ * is the carrier's pay document and it prints SRL's margin. And NOT INVOICE
+ * (F-D2): since ruling 6 that docType is the CARRIER's invoice to SRL, which is
+ * carrier pay. The shipper's own invoice is an Invoice row served as a PDF by
+ * /pdf/invoice/:id, not a document on the load.
  */
 // Exported so the shared /documents/:id/download route gates a shipper on the
 // SAME list this portal serves. A second copy would be a second answer to "what
 // may a customer see", and the two would drift — the dual-source-of-truth shape
 // this codebase keeps having to unpick.
-export const SHIPPER_VISIBLE_DOC_TYPES = ["BOL", "POD", "INVOICE"];
+export const SHIPPER_VISIBLE_DOC_TYPES = ["BOL", "POD"];
 export async function getShipperDocuments(req: AuthRequest, res: Response) {
   try {
     const userId = req.user!.id;
@@ -1042,8 +1047,10 @@ export async function getShipperDisputes(req: AuthRequest, res: Response) {
       where: {
         loadId: { in: loadIds },
       },
+      // F-D2: carrierPayment.netAmount is the carrier's net pay and must never reach a
+      // shipper. paymentNumber alone identifies the payment; nothing else is selected.
       include: {
-        carrierPayment: { select: { paymentNumber: true, netAmount: true } },
+        carrierPayment: { select: { paymentNumber: true } },
       },
       orderBy: { createdAt: "desc" },
     });

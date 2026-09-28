@@ -19465,7 +19465,10 @@
 // And the Broker-Carrier Agreement is accepted once, at the signature in the
 // portal after approval: the application stops showing a click-through of it
 // and asks only whether the carrier wants the Quick Pay pilot.
-export const SRL_VERSION = "3.8.bnt";
+// v3.8.bnu — F-D2: the shipper portal stops showing carrier pay. Open Quotes shows the
+// load's customer rate, INVOICE leaves the shipper allowlist, the disputes API drops the
+// carrier's net pay, and a shipper who posted a load is bounded by the allowlist too.
+export const SRL_VERSION = "3.8.bnu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

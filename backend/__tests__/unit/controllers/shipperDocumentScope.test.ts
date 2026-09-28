@@ -48,7 +48,10 @@ describe("shipper document scope", () => {
   });
 
   it("never exposes carrier settlement or pay documents", () => {
-    for (const t of ["SETTLEMENT", "CARRIER_INVOICE", "CARRIER_PAY"]) {
+    // INVOICE added 2026-09-28 (F-D2). Since ruling 6 the carrier's invoice to SRL is filed
+    // as INVOICE. This list named CARRIER_INVOICE, a type that has never existed in the
+    // vocabulary, so it could not fail while INVOICE sat in the allowlist.
+    for (const t of ["INVOICE", "SETTLEMENT", "CARRIER_INVOICE", "CARRIER_PAY"]) {
       expect(allowlist(), `${t} is carrier-side and must not be shipper-visible`).not.toContain(t);
     }
   });
