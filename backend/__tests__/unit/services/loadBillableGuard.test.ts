@@ -16,7 +16,7 @@ vi.mock("../../../src/services/pdfService", () => ({ generateInvoicePdf: vi.fn()
 vi.mock("../../../src/services/emailService", () => ({ sendEmail: vi.fn(), sendInvoiceEmail: vi.fn() }));
 vi.mock("../../../src/validators/invoice", () => ({
   createInvoiceSchema: { parse: (v: any) => v }, submitForFactoringSchema: { parse: (v: any) => v },
-  updateLineItemsSchema: { parse: (v: any) => v }, batchInvoiceStatusSchema: { parse: (v: any) => v },
+  updateLineItemsSchema: { parse: (v: any) => v },
 }));
 vi.mock("../../../src/validators/carrierPay", () => ({
   createCarrierPaySchema: { parse: (v: any) => v }, updateCarrierPaySchema: { parse: (v: any) => v },

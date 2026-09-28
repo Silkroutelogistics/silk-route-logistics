@@ -19457,7 +19457,9 @@
 // batchInvoiceStatusSchema are deleted with their routes.
 // v3.8.bnr — ruling 2026-09-27, 6: the invoices page drops its status ladder and the
 // batch bar drops Approve / Mark Paid / Reject; neither sends a status any more.
-export const SRL_VERSION = "3.8.bnr";
+// v3.8.bns — ruling 2026-09-27, 6: the factoring page stops sending a status, and a
+// source guard pins every invoice status writer to the act that sets it.
+export const SRL_VERSION = "3.8.bns";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

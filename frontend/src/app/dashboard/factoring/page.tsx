@@ -29,8 +29,9 @@ export default function FactoringPage() {
   });
 
   const submitForFactoring = useMutation({
+    // v3.8.bns — ruling 2026-09-27, 6: no status in the body; the server refuses
+    // one. (No PATCH /invoices/:id route exists either; banked, not fixed here.)
     mutationFn: (id: string) => api.patch(`/invoices/${id}`, {
-      status: "APPROVED",
       factoringFee: selectedInvoice ? selectedInvoice.amount * (FACTORING_FEE_PCT / 100) : 0,
       advanceRate: ADVANCE_RATE_PCT,
       advanceAmount: selectedInvoice ? selectedInvoice.amount * (ADVANCE_RATE_PCT / 100) : 0,
