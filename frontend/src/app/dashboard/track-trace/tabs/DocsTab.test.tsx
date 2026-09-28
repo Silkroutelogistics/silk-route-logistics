@@ -60,3 +60,55 @@ describe("T&T DocsTab — the carrier's invoice and SRL's copy are two rows", ()
     expect((post.mock.calls[0][1] as FormData).get("docType")).toBe("INVOICE");
   });
 });
+
+/**
+ * F-D3 (ruled 2026-09-28). A POD upload no longer emails the customer; staff send one POD
+ * from its row, after a confirm, and the row says who received it.
+ */
+describe("T&T DocsTab — sending the POD to the customer is a deliberate act", () => {
+  const POD = { id: "d-pod-44", docType: "POD", status: "PENDING" };
+  beforeEach(() => {
+    post.mockReset();
+    vi.restoreAllMocks();
+  });
+
+  it("no POD on file: no Send to customer anywhere, even with a signed delivery BOL", () => {
+    renderTab([{ id: "d-bol", docType: "SIGNED_BOL_DEL", status: "PENDING" }]);
+    expect(screen.queryByText("Send to customer")).toBeNull();
+  });
+
+  it("a POD on file: the button sits on the POD row and nowhere else", () => {
+    renderTab([POD, { id: "d-bol", docType: "SIGNED_BOL_DEL", status: "PENDING" }]);
+    expect(screen.getAllByText("Send to customer")).toHaveLength(1);
+    expect(rowOf("Proof of delivery (POD)").textContent).toContain("Send to customer");
+  });
+
+  it("confirmed: posts to the POD's send route and shows who got it, and who did not", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    post.mockResolvedValue({ data: { sent: 1, recipients: ["ops@cust.test"], failed: ["lead@cust.test"] } });
+    renderTab([POD]);
+    fireEvent.click(screen.getByText("Send to customer"));
+    await waitFor(() => expect(post).toHaveBeenCalledWith("/documents/d-pod-44/send-to-customer"));
+    await waitFor(() => expect(rowOf("Proof of delivery (POD)").textContent).toContain("Sent to ops@cust.test. Not sent to lead@cust.test."));
+  });
+
+  it("declined confirm: nothing is posted", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    post.mockResolvedValue({ data: { sent: 1, recipients: ["ops@cust.test"], failed: [] } });
+    renderTab([POD]);
+    fireEvent.click(screen.getByText("Send to customer"));
+    expect(confirm).toHaveBeenCalledTimes(1);
+    // The mutation runs after the click returns; asserting at once would pass even if
+    // the confirm were skipped (it did, on the first draft). Give it the time to post.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it("a refusal is shown in the row, in the server's words", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    post.mockRejectedValue({ response: { data: { error: "This customer has no operational contact to send it to." } } });
+    renderTab([POD]);
+    fireEvent.click(screen.getByText("Send to customer"));
+    await waitFor(() => expect(rowOf("Proof of delivery (POD)").textContent).toContain("Not sent: This customer has no operational contact"));
+  });
+});
