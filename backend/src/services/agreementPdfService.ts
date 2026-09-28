@@ -28,6 +28,7 @@ import {
 } from "../lib/canonicalAgreementText";
 import { SIGNATORY_NAME, SIGNATORY_TITLE } from "../config/authority";
 import { roleFieldKey, type SignatureMark, type SignatureRole } from "../lib/srl-chrome";
+import { mcDigits } from "../lib/mcNumber";
 import fs from "fs";
 import path from "path";
 
@@ -532,7 +533,11 @@ function renderLegalAgreement(
     // below appear in BOTH roles and must be role-scoped — do not copy this
     // bare pattern for them.
     prefilled["CARRIER LEGAL NAME"] = carrier.legalName;
-    if (carrier.mcNumber) prefilled["MC #"] = carrier.mcNumber;
+    // The label is "MC #", so the value is the digits: most carriers store
+    // "MC-116980" (v3.8.bmy). Display only; the canonical text keeps the stored
+    // value, so no content hash moves.
+    const mcShown = mcDigits(carrier.mcNumber);
+    if (mcShown) prefilled["MC #"] = mcShown;
     if (carrier.dotNumber) prefilled["DOT #"] = carrier.dotNumber;
     if (carrier.ein) prefilled["EIN"] = carrier.ein;
   }

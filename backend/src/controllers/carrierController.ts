@@ -47,6 +47,7 @@ import { assessArchiveInput, CARRIER_ARCHIVED_WITHDRAW_REASON } from "../lib/car
 import { settleTenders } from "../services/tenderTransitionService";
 import { advanceWaterfall } from "../services/waterfallEngineService";
 import { logWaterfallEvent } from "../services/waterfallEventService";
+import { mcDigits } from "../lib/mcNumber";
 import {
   closeOpenInfoRequestsForStatus,
   STATUSES_CLOSED_TO_INFO_REQUESTS,
@@ -927,7 +928,7 @@ export async function registerCarrier(req: Request, res: Response) {
           logType: "INTEGRATION",
           severity: "WARNING",
           source: "compass-auto-vet",
-          message: `Auto-vetting failed during carrier registration (DOT: ${dot}, MC: ${mc || "n/a"}) — manual re-vet required`,
+          message: `Auto-vetting failed during carrier registration (DOT: ${dot}, MC: ${mcDigits(mc) || "n/a"}) — manual re-vet required`,
           details: {
             carrierProfileId: profileId,
             userId: user.id,

@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import { INSURANCE_MINIMUMS } from "../lib/insurancePolicy";
 import { log } from "../lib/logger";
+import { mcDigits } from "../lib/mcNumber";
 import { monitoredCarrierWhere } from "../lib/carrierOperational";
 import {
   ENTITY_NAME,
@@ -277,7 +278,7 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
       to: [carrier.insuranceAgentEmail],
       cc: [COMPLIANCE_EMAIL, carrier.user.email].filter(Boolean),
       reply_to: COMPLIANCE_EMAIL,
-      subject: `Certificate of Insurance Verification Request — ${carrierName} (MC# ${carrier.mcNumber || "N/A"})`,
+      subject: `Certificate of Insurance Verification Request — ${carrierName} (MC# ${mcDigits(carrier.mcNumber) || "N/A"})`,
       html,
     }),
   });

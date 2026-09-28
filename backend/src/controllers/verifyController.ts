@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import crypto from "crypto";
 import { prisma } from "../config/database";
 import { ENTITY_NAME, MC_NUMBER, DOT_NUMBER, OPERATIONS_EMAIL } from "../config/authority";
+import { mcDigits } from "../lib/mcNumber";
 
 /**
  * Sprint 51 (Item 129) — RC verification token + public verifier endpoint.
@@ -98,7 +99,7 @@ export async function verifyRC(req: Request, res: Response) {
     carrier: match.carrier
       ? {
           company: match.carrier.company,
-          mc: match.carrier.carrierProfile?.mcNumber,
+          mc: mcDigits(match.carrier.carrierProfile?.mcNumber),
           dot: match.carrier.carrierProfile?.dotNumber,
         }
       : null,

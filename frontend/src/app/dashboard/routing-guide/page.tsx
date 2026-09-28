@@ -11,6 +11,7 @@ import {
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
+import { mcDigits } from "@/lib/mcNumber";
 
 /* ── Types ───────────────────────────────────────────────── */
 
@@ -422,7 +423,7 @@ export default function RoutingGuidePage() {
                           <span className={cn("text-[10px] px-1.5 py-0.5 rounded border", TIER_COLORS[entry.carrier.tier] || "bg-gray-100 text-gray-400 border-gray-200")}>{entry.carrier.tier}</span>
                         </div>
                         <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                          {entry.carrier.mcNumber && <span>MC# {entry.carrier.mcNumber}</span>}
+                          {mcDigits(entry.carrier.mcNumber) && <span>MC# {mcDigits(entry.carrier.mcNumber)}</span>}
                           {entry.carrier.contactPhone && (
                             <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {entry.carrier.contactPhone}</span>
                           )}

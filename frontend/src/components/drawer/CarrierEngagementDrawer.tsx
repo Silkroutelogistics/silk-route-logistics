@@ -6,6 +6,7 @@ import { X, AlertCircle, AlertTriangle, ShieldAlert, Loader2 } from "lucide-reac
 import { useForm } from "react-hook-form";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { mcDigits } from "@/lib/mcNumber";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { type CustomerSummary } from "@/components/shared/CustomerPicker";
 import { OverrideComplianceModal, type BlockedCode } from "@/components/loads/OverrideComplianceModal";
@@ -167,14 +168,6 @@ export interface CarrierEngagementDrawerProps {
 }
 
 // Sprint 63 (v3.8.afi) — SectionKey deprecated. Drawer no longer uses IconTabs.
-
-// Strip leading "MC-" / "MC " / "MC#" / "MC# " from carrier.mcNumber so
-// header rendering produces "MC# 596655" not "MC# MC-596655". Some
-// CarrierProfile rows store the prefix verbatim from FMCSA snapshots.
-function cleanMcNumber(raw: string | null | undefined): string {
-  if (!raw) return "not on file";
-  return String(raw).replace(/^MC[#\s-]*/i, "").trim() || "not on file";
-}
 
 type InstructionsAudience = "special" | "pickup" | "delivery";
 
@@ -498,7 +491,7 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
                 <span className="text-[#BA7517] font-medium">
                   {selectedCarrier.company ?? "Carrier"}
                 </span>
-                <span className="text-slate-500"> · MC# {cleanMcNumber(selectedCarrier.mcNumber)}</span>
+                <span className="text-slate-500"> · MC# {mcDigits(selectedCarrier.mcNumber) ?? "not on file"}</span>
               </div>
             )}
           </div>
@@ -851,7 +844,7 @@ function CarrierSection({ selected, onSelect }: CarrierSectionProps) {
               )}
             </div>
             <div className="text-[11px] text-slate-600 mt-0.5">
-              MC# {cleanMcNumber(selected.mcNumber)} · DOT# {selected.dotNumber ?? "n/a"}
+              MC# {mcDigits(selected.mcNumber) ?? "not on file"} · DOT# {selected.dotNumber ?? "n/a"}
               {selected.email && ` · ${selected.email}`}
             </div>
           </div>
@@ -891,7 +884,7 @@ function CarrierSection({ selected, onSelect }: CarrierSectionProps) {
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-slate-900 truncate">{c.company ?? "Carrier"}</div>
-                    <div className="text-[11px] text-slate-500">MC# {cleanMcNumber(c.mcNumber)} · DOT# {c.dotNumber ?? "n/a"}</div>
+                    <div className="text-[11px] text-slate-500">MC# {mcDigits(c.mcNumber) ?? "not on file"} · DOT# {c.dotNumber ?? "n/a"}</div>
                   </div>
                   {c.tier && (
                     <span className={`px-2 py-0.5 text-[11px] rounded font-medium shrink-0 ${c.tier === "PLATINUM" || c.tier === "GOLD" ? "bg-[#C5A572]/20 text-[#BA7517]" : "bg-slate-100 text-slate-600"}`}>

@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { money, perMile, carrierPay } from "@/lib/rateDisplay";
+import { mcDigits } from "@/lib/mcNumber";
 
 // ─── Caravan Partner Program — Tier Mapping & Config (v3.7.a) ─────────────────
 
@@ -177,7 +178,7 @@ export default function CarrierOverviewPage() {
           Welcome back{user?.firstName ? `, ${user.firstName}` : ""}
         </h1>
         <p className="text-[13px] text-gray-500">
-          {profile?.companyName || user?.company || "Carrier Portal"} &middot; MC-{profile?.mcNumber || "\u2014"}
+          {profile?.companyName || user?.company || "Carrier Portal"} &middot; MC-{mcDigits(profile?.mcNumber) || "\u2014"}
         </p>
       </div>
 

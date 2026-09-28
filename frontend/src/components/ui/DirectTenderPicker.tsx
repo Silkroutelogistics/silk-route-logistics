@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ChevronDown } from "lucide-react";
+import { mcDigits } from "@/lib/mcNumber";
 
 /**
  * Shared searchable carrier picker for direct-tender flows.
@@ -94,7 +95,7 @@ export function DirectTenderPicker({ value, onChange, theme = "dark" }: Props) {
         {selected ? (
           <span className="flex items-center gap-2 min-w-0">
             <span className="truncate">{selected.companyName ?? "—"}</span>
-            {selected.mcNumber && <span className={`text-[10px] ${mutedText}`}>MC-{selected.mcNumber}</span>}
+            {mcDigits(selected.mcNumber) && <span className={`text-[10px] ${mutedText}`}>MC-{mcDigits(selected.mcNumber)}</span>}
             <span className={`px-1.5 py-0.5 text-[9px] rounded ${tierStyle(selected.cppTier)}`}>{selected.cppTier}</span>
           </span>
         ) : (
@@ -130,7 +131,7 @@ export function DirectTenderPicker({ value, onChange, theme = "dark" }: Props) {
               >
                 <div className="min-w-0">
                   <div className={`text-sm truncate ${bodyText}`}>{c.companyName ?? "—"}</div>
-                  {c.mcNumber && <div className={`text-[10px] ${mutedText}`}>MC-{c.mcNumber}</div>}
+                  {mcDigits(c.mcNumber) && <div className={`text-[10px] ${mutedText}`}>MC-{mcDigits(c.mcNumber)}</div>}
                 </div>
                 <span className={`px-1.5 py-0.5 text-[10px] rounded shrink-0 ${tierStyle(c.cppTier)}`}>{c.cppTier}</span>
               </button>

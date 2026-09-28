@@ -29,6 +29,7 @@ import {
   Search,
   Loader2,
 } from "lucide-react";
+import { mcDigits } from "@/lib/mcNumber";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TYPES
@@ -1775,7 +1776,7 @@ function SectionCarrier({ form, set }: { form: FormState; set: <K extends keyof 
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-slate-900 truncate">{c.company || c.user?.company || "Unknown"}</p>
                         <p className="text-xs text-slate-500">
-                          MC: {c.mcNumber || "N/A"} | DOT: {c.dotNumber || "N/A"}
+                          MC: {mcDigits(c.mcNumber) || "N/A"} | DOT: {c.dotNumber || "N/A"}
                           {c.tier && <span className="ml-2">{c.tier}</span>}
                         </p>
                       </div>

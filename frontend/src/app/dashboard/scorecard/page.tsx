@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Users,
 } from "lucide-react";
+import { mcDigits } from "@/lib/mcNumber";
 
 // ─── Types ───────────────────────────────────────────
 
@@ -262,7 +263,7 @@ export default function ScorecardPage() {
                     </p>
                     {c.mc && (
                       <p className="text-xs text-slate-500 truncate">
-                        MC# {c.mc}
+                        MC# {mcDigits(c.mc) ?? "—"}
                       </p>
                     )}
                   </div>

@@ -28,6 +28,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../config/database";
 import { sendEmail, wrap } from "./emailService";
 import { log } from "../lib/logger";
+import { mcDigits } from "../lib/mcNumber";
 import { confirmInfoRequestAnswered, notifyInfoRequestWithdrawn } from "./onboardingLifecycleService";
 // Single definition, both trees. Reached here by rootDir="../" + include, and by
 // the frontend through the @shared alias — the same bridge
@@ -636,7 +637,7 @@ interface InfoRequestResolvedEmailArgs {
 
 async function sendInfoRequestResolvedEmail(args: InfoRequestResolvedEmailArgs) {
   const dashboardUrl = "https://silkroutelogistics.ai/dashboard/carriers";
-  const carrierRef = [args.carrierMc && `MC# ${args.carrierMc.replace(/^MC-?/i, "")}`, args.carrierDot && `DOT# ${args.carrierDot}`].filter(Boolean).join(" · ");
+  const carrierRef = [mcDigits(args.carrierMc) && `MC# ${mcDigits(args.carrierMc)}`, args.carrierDot && `DOT# ${args.carrierDot}`].filter(Boolean).join(" · ");
 
   // v3.8.aji — Attachment count summary in the email body.
   // Carrier-uploaded files surface via the existing /dashboard/carriers

@@ -8,6 +8,7 @@ import crypto from "crypto";
 import { prisma } from "../config/database";
 import { sendEmail, wrap } from "./emailService";
 import { log } from "../lib/logger";
+import { mcDigits } from "../lib/mcNumber";
 
 // ── Helpers ──
 
@@ -419,7 +420,7 @@ async function sendChameleonAlertEmail(
       <h2 style="margin:0;font-size:18px">CHAMELEON ALERT: ${riskLevel} RISK</h2>
     </div>
     <div style="padding:20px">
-      <p style="color:#64748b;margin:0 0 16px">Potential identity fraud detected for carrier <strong>${carrierName}</strong> (MC# ${carrier.mcNumber || "N/A"}, DOT# ${carrier.dotNumber || "N/A"}).</p>
+      <p style="color:#64748b;margin:0 0 16px">Potential identity fraud detected for carrier <strong>${carrierName}</strong> (MC# ${mcDigits(carrier.mcNumber) || "N/A"}, DOT# ${carrier.dotNumber || "N/A"}).</p>
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
         <tr style="background:#f1f5f9">
           <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e2e8f0">Matched Carrier</th>

@@ -32,6 +32,7 @@ import { deriveLoadStatus, ATTENTION_LABEL, actionsFor, ACTION_LABEL, WIRED_ACTI
 
 import type { Load as BaseLoad, LoadTender } from "@/types/entities";
 import { money, pct, perMile, customerBilled, carrierPay, margin, marginPct } from "@/lib/rateDisplay";
+import { mcDigits } from "@/lib/mcNumber";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -1905,7 +1906,7 @@ function PanelCarrier({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-[#0A2540]">{r.carrierName}</p>
-                    <p className="text-xs text-slate-500">MC: {r.mcNumber} | DOT: {r.dotNumber}</p>
+                    <p className="text-xs text-slate-500">MC: {mcDigits(r.mcNumber)} | DOT: {r.dotNumber}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-[#BA7517] font-medium">${r.offeredRate.toLocaleString()}</p>
@@ -2176,7 +2177,7 @@ function TenderForm({
                 )}
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                MC: {selectedCarrier.mcNumber || "N/A"} | DOT: {selectedCarrier.dotNumber || "N/A"}
+                MC: {mcDigits(selectedCarrier.mcNumber) || "N/A"} | DOT: {selectedCarrier.dotNumber || "N/A"}
               </p>
             </div>
             <button
@@ -2229,7 +2230,7 @@ function TenderForm({
                             )}
                           </div>
                           <p className="text-xs text-slate-500">
-                            MC: {c.mcNumber || "N/A"} | DOT: {c.dotNumber || "N/A"}
+                            MC: {mcDigits(c.mcNumber) || "N/A"} | DOT: {c.dotNumber || "N/A"}
                           </p>
                         </div>
                         {c.tier && (

@@ -22,6 +22,7 @@ import { api } from "@/lib/api";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { Logo } from "@/components/ui/Logo";
 import { Clock, CheckCircle2, AlertCircle, XCircle, Mail, Phone, MailCheck, RefreshCw, Paperclip, X as XIcon } from "lucide-react";
+import { mcDigits } from "@/lib/mcNumber";
 
 interface StatusResponse {
   user: { id: string; email: string; firstName: string; lastName: string; company: string | null };
@@ -148,7 +149,7 @@ export default function ApplicationStatusPage() {
             <p className="mt-1 text-sm text-[#3A4A5F]">
               {data.carrier.companyName || data.user.company || "Your carrier application"}
               {data.carrier.mcNumber && (
-                <span className="text-[#6B7685]"> · MC# {data.carrier.mcNumber.replace(/^MC-?/i, "")}</span>
+                <span className="text-[#6B7685]"> · MC# {mcDigits(data.carrier.mcNumber)}</span>
               )}
               {data.carrier.dotNumber && (
                 <span className="text-[#6B7685]"> · DOT# {data.carrier.dotNumber}</span>

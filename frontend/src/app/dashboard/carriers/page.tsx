@@ -32,6 +32,7 @@ import { InviteCarrierModal } from "@/components/carriers/InviteCarrierModal";
 import { SecuritySignalsCard } from "@/components/carriers/SecuritySignalsCard";
 import { CarrierPreferencesPanel } from "@/components/carriers/CarrierPreferencesPanel";
 import { TrainingTab } from "@/components/carriers/TrainingTab";
+import { mcDigits } from "@/lib/mcNumber";
 
 
 interface CarrierPerformance {
@@ -1129,7 +1130,7 @@ export default function CarrierPoolPage() {
                     )}
                   </p>
                   <p className="text-[11px] text-gray-500">
-                    {e.carrierProfile?.mcNumber ? `MC-${e.carrierProfile.mcNumber}` : "MC —"}
+                    {mcDigits(e.carrierProfile?.mcNumber) ? `MC-${mcDigits(e.carrierProfile?.mcNumber)}` : "MC —"}
                     {e.carrierProfile?.tier ? ` · ${e.carrierProfile.tier}` : ""}
                     {" · asked "}
                     {new Date(e.requestedAt).toLocaleDateString()}
@@ -1273,7 +1274,7 @@ export default function CarrierPoolPage() {
                   </div>
                   <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] text-gray-600">
                     <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> {carrier.equipmentTypes.join(", ")}</span>
-                    {carrier.mcNumber && <span className="flex items-center gap-1"><Hash className="w-3 h-3" /> MC-{carrier.mcNumber}</span>}
+                    {mcDigits(carrier.mcNumber) && <span className="flex items-center gap-1"><Hash className="w-3 h-3" /> MC-{mcDigits(carrier.mcNumber)}</span>}
                     {!selectedCarrier && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {carrier.operatingRegions.slice(0, 3).join(", ")}{carrier.operatingRegions.length > 3 ? ` +${carrier.operatingRegions.length - 3}` : ""}</span>}
                   </div>
                 </div>
@@ -1401,7 +1402,7 @@ export default function CarrierPoolPage() {
                       <InfoRow label="Contact" value={selectedCarrier.contactName} />
                       <InfoRow label="Email" value={<a href={`mailto:${selectedCarrier.email}`} className="text-gold hover:underline text-xs">{selectedCarrier.email}</a>} />
                       <InfoRow label="Phone" value={selectedCarrier.phone || "—"} />
-                      <InfoRow label="MC#" value={selectedCarrier.mcNumber ? `MC-${selectedCarrier.mcNumber}` : "—"} />
+                      <InfoRow label="MC#" value={mcDigits(selectedCarrier.mcNumber) ? `MC-${mcDigits(selectedCarrier.mcNumber)}` : "—"} />
                       <InfoRow label="DOT#" value={selectedCarrier.dotNumber || "—"} />
                       <InfoRow label="Location" value={selectedCarrier.city && selectedCarrier.state ? `${selectedCarrier.city}, ${selectedCarrier.state} ${selectedCarrier.zip || ""}` : "—"} />
                     </div>

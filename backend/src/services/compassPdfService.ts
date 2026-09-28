@@ -5,6 +5,7 @@
 
 import PDFDocument from "pdfkit";
 import { drawSrlMark } from "../lib/srlMark";
+import { mcDigits } from "../lib/mcNumber";
 import type { CarrierVettingReport, VettingCheck, CheckResult, DataSource } from "./carrierVettingService";
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
@@ -201,7 +202,7 @@ export function generateCompassReport(
   // Compact carrier info line
   doc.fontSize(7).fillColor(COLOR.darkText).font("Helvetica");
   doc.text(
-    `DOT#: ${carrierData.dotNumber}  |  MC#: ${carrierData.mcNumber}  |  Contact: ${carrierData.contactName}  |  Tier: ${carrierData.tier}  |  Milestone: ${carrierData.milestone}`,
+    `DOT#: ${carrierData.dotNumber}  |  MC#: ${mcDigits(carrierData.mcNumber) || "—"}  |  Contact: ${carrierData.contactName}  |  Tier: ${carrierData.tier}  |  Milestone: ${carrierData.milestone}`,
     50, y
   );
   y += 10;

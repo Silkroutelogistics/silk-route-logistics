@@ -19412,7 +19412,12 @@
 // picking up the shipment, binds the carrier even without a signature; the BCA
 // is incorporated by reference. Dispatching a unit and arriving at the pickup
 // location no longer appear as binding acts, because the BCA never made them so.
-export const SRL_VERSION = "3.8.bmx";
+// v3.8.bmy — A carrier's MC number prints once, with one prefix.
+//   Most carriers store it as "MC-116980", and screens that put "MC-" or "MC# "
+// in front of it showed "MC-MC-116980", on the carrier's own home page among
+// others. Every labelled MC number now goes through one rule, mcDigits, in
+// both trees, and a guard fails the build on a new one that does not.
+export const SRL_VERSION = "3.8.bmy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

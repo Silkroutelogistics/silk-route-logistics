@@ -8,6 +8,7 @@ import { CarrierCard } from "@/components/carrier";
 import { CarrierWelcomeTour } from "@/components/carrier/CarrierWelcomeTour";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { api } from "@/lib/api";
+import { mcDigits } from "@/lib/mcNumber";
 
 export default function CarrierSettingsPage() {
   const { user, changePassword } = useCarrierAuth();
@@ -121,7 +122,7 @@ export default function CarrierSettingsPage() {
             </div>
             <div>
               <label className="text-gray-700 block mb-1">MC Number</label>
-              <div className="text-[#0A2540] font-medium">{profile?.mcNumber || "—"}</div>
+              <div className="text-[#0A2540] font-medium">{mcDigits(profile?.mcNumber) || "—"}</div>
             </div>
             <div>
               <label className="text-gray-700 block mb-1">DOT Number</label>

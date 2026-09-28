@@ -22,6 +22,7 @@ import { api } from "@/lib/api";
 import { useStepUp } from "@/hooks/useStepUp";
 import { StepUpPrompt } from "@/components/carrier/StepUpPrompt";
 import { Globe, AlertTriangle, ShieldCheck, MapPin, Clock, FileText, KeyRound, UserX, Smartphone } from "lucide-react";
+import { mcDigits } from "@/lib/mcNumber";
 
 interface SecuritySignals {
   geo: {
@@ -293,7 +294,7 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
                   </div>
                   <p className="text-[11px] text-gray-700 truncate">
                     Matches <strong>{m.matchedCarrier.companyName || "—"}</strong>
-                    {m.matchedCarrier.mcNumber && <span className="text-gray-500"> · MC# {m.matchedCarrier.mcNumber.replace(/^MC-?/i, "")}</span>}
+                    {mcDigits(m.matchedCarrier.mcNumber) && <span className="text-gray-500"> · MC# {mcDigits(m.matchedCarrier.mcNumber)}</span>}
                     <span className="text-gray-500"> · {m.matchedCarrier.onboardingStatus}</span>
                   </p>
                 </div>

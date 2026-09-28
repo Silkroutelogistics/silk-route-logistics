@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { useStepUp } from "@/hooks/useStepUp";
 import { StepUpPrompt } from "@/components/carrier";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
+import { mcDigits } from "@/lib/mcNumber";
 
 const scoreLabels: Record<string, string> = {
   unsafeDriving: "Unsafe Driving",
@@ -297,7 +298,7 @@ export default function CarrierCompliancePage() {
             </div>
             <div>
               <div className="text-sm font-bold text-[#0A2540]">{carrier?.company || "—"}</div>
-              <div className="text-[11px] text-gray-700">MC-{carrier?.mcNumber || "—"} &middot; DOT-{carrier?.dotNumber || "—"}</div>
+              <div className="text-[11px] text-gray-700">MC-{mcDigits(carrier?.mcNumber) || "—"} &middot; DOT-{carrier?.dotNumber || "—"}</div>
             </div>
           </div>
           <div className="space-y-2 text-xs">

@@ -7,6 +7,7 @@ import { Check, ChevronRight, ChevronLeft, Upload, CheckCircle2, X, FileText, Im
 import { cn } from "@/lib/utils";
 import { AgreementBody, type AgreementBodyContent } from "@/components/carrier/AgreementBody";
 import { einDigits, formatEinInput } from "@shared/constants/ein";
+import { mcDigits } from "@/lib/mcNumber";
 
 const steps = ["Company Info", "Equipment & Regions", "Documents", "Terms", "Review"];
 
@@ -1289,7 +1290,7 @@ export default function OnboardingPage() {
                     <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 ml-7 text-[#3A4A5F]">
                       <p><span className="font-medium">Legal Name:</span> {fmcsaResult.legalName}</p>
                       {fmcsaResult.dbaName && <p><span className="font-medium">DBA:</span> {fmcsaResult.dbaName}</p>}
-                      {fmcsaResult.mcNumber && <p><span className="font-medium">MC#:</span> {fmcsaResult.mcNumber}</p>}
+                      {mcDigits(fmcsaResult.mcNumber) && <p><span className="font-medium">MC#:</span> {mcDigits(fmcsaResult.mcNumber)}</p>}
                       <p><span className="font-medium">Status:</span> {fmcsaResult.operatingStatus}</p>
                       {fmcsaResult.entityType && <p><span className="font-medium">Type:</span> {fmcsaResult.entityType}</p>}
                       <p><span className="font-medium">Insurance:</span> {fmcsaResult.insuranceOnFile ? "On File" : "Not on File"}</p>
@@ -2139,7 +2140,7 @@ export default function OnboardingPage() {
                     {form.address && `${form.address}, `}{form.unit && `${form.unit}, `}{form.city && `${form.city}, `}{form.state} {form.zip}
                   </p>
                   <p className="text-sm text-[#3A4A5F] mt-1">
-                    DOT: {form.dotNumber}{form.mcNumber && ` | MC: ${form.mcNumber}`}
+                    DOT: {form.dotNumber}{mcDigits(form.mcNumber) && ` | MC: ${mcDigits(form.mcNumber)}`}
                     {form.numberOfTrucks && ` | Trucks: ${form.numberOfTrucks}`}
                     {einDigits(form.ein) && ` | EIN: ${form.ein}`}
                     {fmcsaResult?.verified && <span className="ml-2 text-[#2F7A4F] font-semibold">FMCSA Verified</span>}

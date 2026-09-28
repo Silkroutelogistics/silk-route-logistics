@@ -123,6 +123,7 @@ import {
   rcCountersignStatement,
   type RcCountersign,
 } from "../lib/rcCountersign";
+import { mcDigits } from "../lib/mcNumber";
 
 // The load reference a page prints (§21.2, corrected 2026-09-26). A page whose
 // own number is in the bare scheme (it begins with the load's digits) or that
@@ -192,10 +193,9 @@ function addFooter(doc: PDFDoc) {
 // Item 120.a precision regex: digit lookahead /^MC[-#\s]*(?=\d)/i ensures
 // we only strip the prefix when an actual MC number digit follows, avoiding
 // over-match on edge cases like a carrier company name starting with "MC".
-function normalizeMcNumber(val: string | null | undefined): string {
-  if (!val) return "";
-  return String(val).replace(/^MC[-#\s]*(?=\d)/i, "").trim();
-}
+// v3.8.bmy — that rule moved to lib/mcNumber (mcDigits) unchanged, so every
+// surface that prints a carrier's MC number shares it; this was the only one
+// that had it right.
 function normalizeDotNumber(val: string | null | undefined): string {
   if (!val) return "";
   return String(val).replace(/^DOT[-#\s]*(?=\d)/i, "").trim();
@@ -1098,7 +1098,7 @@ export async function generateBOLFromLoad(
         const carrierLegalName = safe(load.carrierLegalName ?? load.carrier?.company).trim();
         drawSigField(bx, by, sigColW, "CARRIER LEGAL NAME", carrierLegalName); by += SIG_ROW;
         const halfW = (sigColW - 8) / 2;
-        const mcNo = safe(load.carrier?.carrierProfile?.mcNumber).trim();
+        const mcNo = mcDigits(safe(load.carrier?.carrierProfile?.mcNumber)) ?? "";
         const dotNo = safe(load.carrier?.carrierProfile?.dotNumber).trim();
         drawSigField(bx, by, halfW, "MC #", mcNo);
         drawSigField(bx + halfW + 8, by, halfW, "DOT #", dotNo);
@@ -1306,7 +1306,8 @@ export function generateRateConfirmation(load: LoadData): PDFDoc {
   doc.fontSize(10).fillColor("#1E1E2F");
   if (load.carrier) {
     doc.text(load.carrier.company || `${load.carrier.firstName} ${load.carrier.lastName}`, 310, y);
-    if (load.carrier.carrierProfile?.mcNumber) doc.text(`MC#: ${load.carrier.carrierProfile.mcNumber}`, 310, y + 14);
+    const legacyMc = mcDigits(load.carrier.carrierProfile?.mcNumber);
+    if (legacyMc) doc.text(`MC#: ${legacyMc}`, 310, y + 14);
     if (load.carrier.phone) doc.text(`Tel: ${load.carrier.phone}`, 310, y + 28);
   }
 
@@ -2088,7 +2089,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // cases like a carrier company name starting with "MC".
   const rawMc = fd.carrierMcNumber || load.carrier?.carrierProfile?.mcNumber;
   const rawDot = fd.carrierDotNumber || load.carrier?.carrierProfile?.dotNumber;
-  const carrierMc = normalizeMcNumber(rawMc) || "—";
+  const carrierMcDigits = mcDigits(rawMc) || "—";
   const carrierDot = normalizeDotNumber(rawDot) || "—";
   const carrierPhone = fd.carrierPhone || load.carrier?.phone || "—";
   const carrierContact = fd.carrierContact
@@ -2118,7 +2119,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   doc.font(FONT_BODY_BOLD, 11).fillColor(TOKENS.fg1);
   doc.text(carrierName, MARGIN + 12, carrierPanelY + 9, { lineBreak: false });
   doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg2);
-  doc.text(`MC# ${carrierMc}    DOT# ${carrierDot}`, MARGIN + 12, carrierPanelY + 26, { lineBreak: false });
+  doc.text(`MC# ${carrierMcDigits}    DOT# ${carrierDot}`, MARGIN + 12, carrierPanelY + 26, { lineBreak: false });
 
   // Sprint 49.b (Item 138) — contact + phone line empty-suppression. When
   // both values fall through to em-dash sentinel (profile-only carriers
@@ -2639,9 +2640,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // undefined clock underneath a PUBLISHED §8 Net-30/21/14 commitment.
   // Operational only: no new contractual obligation is created here.
 
-  const invoiceMcRaw = String(
-    fd.carrierMcNumber || load.carrier?.carrierProfile?.mcNumber || "",
-  ).replace(/^MC-?/i, "").trim();
+  const invoiceMcRaw = mcDigits(fd.carrierMcNumber || load.carrier?.carrierProfile?.mcNumber) ?? "";
   const invoiceSubject = invoiceMcRaw
     ? "Subject: Invoice · Load " + stem + " · MC " + invoiceMcRaw
     : "Subject: Invoice · Load " + stem;
