@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { CreateInvoiceModal } from "@/components/invoices/CreateInvoiceModal";
@@ -9,7 +9,7 @@ import { BatchActionsBar } from "@/components/invoices/BatchActionsBar";
 import { cn } from "@/lib/utils";
 import type { Invoice } from "@/types/entities";
 import {
-  Download, FileText, DollarSign, Clock, CheckCircle2, AlertTriangle,
+  Download, FileText, DollarSign, AlertTriangle,
   ChevronDown, ChevronUp, Filter, TrendingUp, CreditCard, BarChart3, List, Printer,
 } from "lucide-react";
 import { InvoiceTemplate } from "@/components/templates";
@@ -76,7 +76,6 @@ function AgingBar({ label, amount, count, color }: { label: string; amount: numb
 
 export default function InvoicesPage() {
   const { user } = useAuthStore();
-  const queryClient = useQueryClient();
   const isEmployee = ["ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING"].includes(user?.role || "");
   const [showCreate, setShowCreate] = useState(false);
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -100,15 +99,6 @@ export default function InvoicesPage() {
   const { data: stats } = useQuery({
     queryKey: ["invoice-stats"],
     queryFn: () => api.get<InvoiceStats>("/invoices/stats").then((r) => r.data),
-  });
-
-  const updateStatus = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      api.patch(`/invoices/${id}/status`, { status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoice-stats"] });
-    },
   });
 
   const invoices = invoiceData?.invoices || [];
@@ -396,36 +386,8 @@ export default function InvoicesPage() {
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-gold/20 text-gold rounded-lg text-xs hover:bg-gold/30 transition">
                         <Printer className="w-3.5 h-3.5" /> Print Invoice
                       </button>
-                      {isEmployee && inv.status === "SUBMITTED" && (
-                        <button onClick={() => updateStatus.mutate({ id: inv.id, status: "UNDER_REVIEW" })}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/20 text-purple-400 rounded-lg text-xs hover:bg-purple-500/30 transition">
-                          <Clock className="w-3.5 h-3.5" /> Mark Under Review
-                        </button>
-                      )}
-                      {isEmployee && inv.status === "UNDER_REVIEW" && (
-                        <button onClick={() => updateStatus.mutate({ id: inv.id, status: "APPROVED" })}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs hover:bg-green-500/30 transition">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Approve
-                        </button>
-                      )}
-                      {isEmployee && inv.status === "APPROVED" && (
-                        <button onClick={() => updateStatus.mutate({ id: inv.id, status: "FUNDED" })}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition">
-                          <DollarSign className="w-3.5 h-3.5" /> Mark Funded
-                        </button>
-                      )}
-                      {isEmployee && (inv.status === "FUNDED" || inv.status === "APPROVED") && (
-                        <button onClick={() => updateStatus.mutate({ id: inv.id, status: "PAID" })}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs hover:bg-green-500/30 transition">
-                          <CreditCard className="w-3.5 h-3.5" /> Mark Paid
-                        </button>
-                      )}
-                      {isEmployee && !["PAID", "REJECTED"].includes(inv.status) && (
-                        <button onClick={() => updateStatus.mutate({ id: inv.id, status: "REJECTED" })}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition">
-                          <AlertTriangle className="w-3.5 h-3.5" /> Reject
-                        </button>
-                      )}
+                      {/* v3.8.bnr — ruling 2026-09-27, 6: no status buttons. Send, record a payment
+                          and void live on /accounting/invoices; the aging job marks OVERDUE. */}
                     </div>
                   </div>
                 )}

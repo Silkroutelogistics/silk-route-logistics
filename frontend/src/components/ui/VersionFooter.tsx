@@ -19455,7 +19455,9 @@
 // write whose body names status, the same guard as /invoices.
 // v3.8.bnq — ruling 2026-09-27, 6: updateInvoiceStatus, batchUpdateInvoiceStatus and
 // batchInvoiceStatusSchema are deleted with their routes.
-export const SRL_VERSION = "3.8.bnq";
+// v3.8.bnr — ruling 2026-09-27, 6: the invoices page drops its status ladder and the
+// batch bar drops Approve / Mark Paid / Reject; neither sends a status any more.
+export const SRL_VERSION = "3.8.bnr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

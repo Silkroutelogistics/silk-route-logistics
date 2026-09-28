@@ -1,8 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { CheckCircle2, XCircle, DollarSign, Download, X } from "lucide-react";
+import { Download, X } from "lucide-react";
 
 interface Props {
   selectedIds: string[];
@@ -10,18 +8,10 @@ interface Props {
   invoices: { id: string; invoiceNumber: string; amount: number; status: string; createdAt: string; load?: { originCity: string; originState: string; destCity: string; destState: string } }[];
 }
 
+// v3.8.bnr — ruling 2026-09-27, 6: an invoice's status is not set from a
+// request, so the batch Approve / Mark Paid / Reject buttons are gone. The
+// batch Mark Paid wrote PAID with no amount and credited no fund.
 export function BatchActionsBar({ selectedIds, onClear, invoices }: Props) {
-  const queryClient = useQueryClient();
-
-  const batchUpdate = useMutation({
-    mutationFn: (status: string) => api.post("/invoices/batch/status", { ids: selectedIds, status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoice-stats"] });
-      onClear();
-    },
-  });
-
   const exportSelected = () => {
     const selected = invoices.filter((i) => selectedIds.includes(i.id));
     const headers = "Invoice #,Status,Amount,Lane,Date\n";
@@ -49,27 +39,6 @@ export function BatchActionsBar({ selectedIds, onClear, invoices }: Props) {
       </span>
 
       <div className="flex-1 flex items-center gap-2 flex-wrap">
-        <button
-          onClick={() => batchUpdate.mutate("APPROVED")}
-          disabled={batchUpdate.isPending}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs hover:bg-green-500/30 transition disabled:opacity-50"
-        >
-          <CheckCircle2 className="w-3.5 h-3.5" /> Approve
-        </button>
-        <button
-          onClick={() => batchUpdate.mutate("PAID")}
-          disabled={batchUpdate.isPending}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition disabled:opacity-50"
-        >
-          <DollarSign className="w-3.5 h-3.5" /> Mark Paid
-        </button>
-        <button
-          onClick={() => batchUpdate.mutate("REJECTED")}
-          disabled={batchUpdate.isPending}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition disabled:opacity-50"
-        >
-          <XCircle className="w-3.5 h-3.5" /> Reject
-        </button>
         <button
           onClick={exportSelected}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 text-white rounded-lg text-xs hover:bg-white/20 transition"
