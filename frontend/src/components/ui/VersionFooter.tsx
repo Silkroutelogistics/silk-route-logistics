@@ -19385,7 +19385,9 @@
 // own job and no longer needs an email on file.
 // v3.8.bmf — A customer billed through Tipalti is not credit-blocked when an invoice
 // passes 90 days overdue: Tipalti pays on its own cycle, not the customer's.
-export const SRL_VERSION = "3.8.bmf";
+// v3.8.bmg — A Tipalti customer's late settlement is not counted as a late payment,
+// and adds no days-to-pay sample; an on-time one still counts.
+export const SRL_VERSION = "3.8.bmg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -11,14 +11,19 @@ import { onInvoicePaid } from "../../../src/services/integrationService";
 const mockPrisma = prisma as any;
 const DAY = 86_400_000;
 
-function setup(dueInDays: number) {
-  mockPrisma.invoice.findUnique.mockResolvedValue({
+function setup(dueInDays: number, channel: "EMAIL" | "TIPALTI" = "EMAIL") {
+  // The customer's channel comes back only when the query includes it, so code
+  // that stopped asking for it would read a Tipalti customer as EMAIL here too.
+  mockPrisma.invoice.findUnique.mockImplementation(async ({ include }: any) => ({
     id: "inv-1",
     invoiceNumber: "121498I",
     dueDate: new Date(Date.now() + dueInDays * DAY),
     createdAt: new Date(Date.now() - 40 * DAY),
-    load: { id: "load-1", referenceNumber: "SRL-121498", customerId: "cust-1", carrierId: null },
-  });
+    load: {
+      id: "load-1", referenceNumber: "SRL-121498", customerId: "cust-1", carrierId: null,
+      ...(include?.load?.select?.customer?.select?.defaultInvoiceChannel ? { customer: { defaultInvoiceChannel: channel } } : {}),
+    },
+  }));
   mockPrisma.factoringFund.findFirst.mockResolvedValue(null);
   mockPrisma.factoringFund.create.mockResolvedValue({});
   mockPrisma.carrierPay.findFirst.mockResolvedValue(null);
@@ -77,5 +82,31 @@ describe("onInvoicePaid — payment record counted once, at settlement", () => {
     expect(credit().latePayments).toBe(2); // 1 before + 1 for this bill
     expect(credit().onTimePayments).toBe(4); // untouched
     expect(credit().currentUtilized).toBe(2000); // both payments released
+  });
+});
+
+// v3.8.bmg — ruling 2026-09-27: customers whose default invoice channel is
+// TIPALTI are exempt from the late-payment count. The EMAIL late case above is
+// the control.
+describe("onInvoicePaid — customers billed through Tipalti", () => {
+  it("a late settlement records no late mark and no days-to-pay sample; credit is still released", async () => {
+    setup(-10, "TIPALTI");
+    await onInvoicePaid("inv-1", 3000, true);
+
+    const [data] = updates();
+    expect(data.currentUtilized).toBe(2000);
+    expect(data).not.toHaveProperty("latePayments");
+    expect(data).not.toHaveProperty("onTimePayments");
+    expect(data).not.toHaveProperty("avgDaysToPay");
+  });
+
+  it("an on-time settlement is still counted on time, with its days-to-pay sample", async () => {
+    setup(5, "TIPALTI");
+    await onInvoicePaid("inv-1", 3000, true);
+
+    const [data] = updates();
+    expect(data.onTimePayments).toEqual({ increment: 1 });
+    expect(data).not.toHaveProperty("latePayments");
+    expect(typeof data.avgDaysToPay).toBe("number");
   });
 });

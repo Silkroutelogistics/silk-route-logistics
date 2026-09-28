@@ -1216,7 +1216,12 @@ export async function onInvoicePaid(invoiceId: string, paidAmount: number, settl
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
     include: {
-      load: { select: { id: true, referenceNumber: true, customerId: true, carrierId: true } },
+      load: {
+        select: {
+          id: true, referenceNumber: true, customerId: true, carrierId: true,
+          customer: { select: { defaultInvoiceChannel: true } },
+        },
+      },
     },
   });
   if (!invoice) return;
@@ -1255,8 +1260,16 @@ export async function onInvoicePaid(invoiceId: string, paidAmount: number, settl
       // late marks; and a daily job added another at 30 days overdue. That job
       // no longer counts anything (services/overdueCreditBlock), so this is the
       // only place a late payment is recorded.
-      if (settled) {
-        if (invoice.dueDate && new Date() > invoice.dueDate) {
+      //
+      // v3.8.bmg (ruling 2026-09-27): a customer billed through Tipalti is paid
+      // on Tipalti's cycle, so a late settlement is not counted against them.
+      // The average below is taken over exactly the payments counted here, so
+      // an uncounted payment adds no sample to it either. On time still counts.
+      const late = !!invoice.dueDate && new Date() > invoice.dueDate;
+      const tipalti = invoice.load.customer?.defaultInvoiceChannel === "TIPALTI";
+      const counted = settled && !(late && tipalti);
+      if (counted) {
+        if (late) {
           updateData.latePayments = { increment: 1 };
         } else {
           updateData.onTimePayments = { increment: 1 };
@@ -1271,9 +1284,9 @@ export async function onInvoicePaid(invoiceId: string, paidAmount: number, settl
         log.info(`[Integration] Shipper credit UNBLOCKED for customer ${invoice.load.customerId}`);
       }
 
-      // Update avg days to pay — one sample per settled invoice, matching the
+      // Update avg days to pay — one sample per counted settlement, matching the
       // count above that it is averaged over.
-      if (settled) {
+      if (counted) {
         const daysToPay = invoice.dueDate
           ? Math.max(0, Math.floor((Date.now() - invoice.createdAt.getTime()) / (1000 * 60 * 60 * 24)))
           : 30;
