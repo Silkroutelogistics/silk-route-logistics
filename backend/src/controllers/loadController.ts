@@ -38,6 +38,7 @@ import { shipmentSyncFor } from "../lib/shipmentStatusFor";
 import { uncancelLoad } from "../services/uncancelLoad";
 import { UNCANCEL_WINDOW_HOURS, assessUncancel } from "../lib/uncancelPolicy";
 import { createNotification } from "../services/notificationService";
+import { isSrlInternalDocType, isSrlStaffRole } from "../lib/documentTypes";
 
 const RELEASED_VALUE_BASIS_VALUES = ["PER_POUND", "PER_PIECE", "TOTAL", "NVD"] as const;
 type ReleasedValueBasisLiteral = (typeof RELEASED_VALUE_BASIS_VALUES)[number];
@@ -571,6 +572,15 @@ export async function getLoadById(req: AuthRequest, res: Response) {
 
   if (!load) {
     res.status(404).json({ error: "Load not found" });
+    return;
+  }
+  // This route has no authorize() and no ownership scope (it is in the frozen ungated
+  // inventory), so any authenticated session can read a load it knows the id of. The
+  // packets are the one part of that closed here: SRL-internal documents
+  // (CUSTOMER_INVOICE_COPY) are withheld from every non-staff caller. The wider
+  // exposure, the customer rate and the rest of the load, is its own decision.
+  if (!isSrlStaffRole(req.user?.role)) {
+    res.json({ ...load, documents: load.documents.filter((d) => !isSrlInternalDocType(d.docType)) });
     return;
   }
   res.json(load);

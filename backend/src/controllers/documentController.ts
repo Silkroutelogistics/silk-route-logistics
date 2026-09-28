@@ -8,18 +8,17 @@ import { uploadFile, uploadFileToPath, getDownloadUrl, getFileStream, deleteFile
 import { recordLoadDocument, LoadDocumentRefusal } from "../services/loadDocumentService";
 import { log } from "../lib/logger";
 import { flagSensitiveActionAfterNewLogin } from "../lib/loginFlags";
-import { normalizeDocType, isAllowedDocType, docTypeClassFor } from "../lib/documentTypes";
+import { normalizeDocType, isAllowedDocType, docTypeClassFor, isSrlInternalDocType, isSrlStaffRole } from "../lib/documentTypes";
 import { SHIPPER_VISIBLE_DOC_TYPES } from "./shipperPortalController";
 
 /**
  * Roles that operate SRL internally and legitimately need visibility across all
  * tenants. Everyone else (CARRIER, SHIPPER, FACTOR) must be scoped to what they own.
  */
-// v3.8.aue — ACCOUNT_EXECUTIVE added (POD/document access is operational).
-const AE_INTERNAL_ROLES = ["ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING", "AE", "ACCOUNT_EXECUTIVE"];
-
+// The list lives in lib/documentTypes (SRL_STAFF_ROLES) so the upload seam, this controller
+// and getLoadById read one set. v3.8.aue added ACCOUNT_EXECUTIVE there.
 function isAeInternal(role: string): boolean {
-  return AE_INTERNAL_ROLES.includes(role);
+  return isSrlStaffRole(role);
 }
 
 /**
@@ -147,6 +146,14 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
   // class. An absent docType stays null, as before — absent is not unknown.
   if (docType && !isAllowedDocType(docType, docTypeClassFor({ loadId, entityType }))) {
     res.status(400).json({ error: `Unknown document type "${docType}"`, code: "UNKNOWN_DOC_TYPE" });
+    return;
+  }
+
+  // CUSTOMER_INVOICE_COPY and any other SRL-internal type: staff only, on every path.
+  // The load path is refused again in the seam; the entity path (an invoice, a
+  // customer) does not pass through it.
+  if (docType && isSrlInternalDocType(docType) && !isSrlStaffRole(req.user!.role)) {
+    res.status(400).json({ error: `"${docType}" is an SRL record and can only be filed by SRL staff.`, code: "DOC_TYPE_SRL_ONLY" });
     return;
   }
 
@@ -379,6 +386,14 @@ export async function downloadDocument(req: AuthRequest, res: Response) {
       res.status(403).json({ error: "Not authorized to download this document" });
       return;
     }
+  }
+
+  // SRL-internal documents (CUSTOMER_INVOICE_COPY) never reach a carrier or a customer.
+  // Checked on the role, not on ownership: the load's carrier is a participant and the
+  // customer is a party, and neither may read SRL's own copy of what it sent.
+  if (isSrlInternalDocType(doc.docType) && !isSrlStaffRole(role)) {
+    res.status(403).json({ error: "Not authorized to download this document" });
+    return;
   }
 
   // S3 files: redirect to presigned URL

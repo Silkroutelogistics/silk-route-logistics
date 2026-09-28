@@ -19400,7 +19400,10 @@
 //   and only SRL staff can file it. The Documents tab's "Invoice" row files INVOICE, the carrier's
 // invoice, and on 2026-09-27 four customer invoice packets went in that way. The new type is not
 // paperwork, not a settlement type, not carrier-uploadable and not shipper-visible.
-export const SRL_VERSION = "3.8.bmo";
+// v3.8.bmp — A customer invoice copy never reaches a carrier or a customer. The download refuses it to
+//   any non-staff role, the load's carrier and customer included. GET /loads/:id (ungated, unscoped) now
+// withholds it from non-staff callers, and an upload to an invoice or customer is refused too.
+export const SRL_VERSION = "3.8.bmp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
