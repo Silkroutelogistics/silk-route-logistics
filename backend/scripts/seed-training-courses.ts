@@ -14,12 +14,30 @@
  *
  * Reads DATABASE_URL from the environment, falling back to backend/.env (same
  * pattern as the other backend/scripts diagnostics). --dry-run never connects.
+ *
+ *   Seed ONE course (added 2026-09-28):
+ *     npx tsx scripts/seed-training-courses.ts --only=<slug>
+ *
+ * --only exists so a content fix to one course reaches production without
+ * rewriting the other thirty-one. A full run upserts every course, which
+ * re-stamps their updatedAt and overwrites any edit an admin made in the
+ * Academy console, even where the curriculum file did not change. An unknown
+ * slug is refused rather than seeding nothing and reporting success.
+ *
+ * Before writing, it prints the host it is about to write to. Never the URL.
  */
 import fs from "fs";
 import path from "path";
 import { CURRICULUM } from "../src/data/trainingCurriculum";
 
 const DRY = process.argv.includes("--dry-run");
+const ONLY = process.argv.find((a) => a.startsWith("--only="))?.slice("--only=".length) ?? null;
+const SELECTED = ONLY ? CURRICULUM.filter((c) => c.slug === ONLY) : CURRICULUM;
+if (ONLY && SELECTED.length !== 1) {
+  console.error(`--only=${ONLY}: no course with that slug in CURRICULUM. Known slugs:`);
+  for (const c of CURRICULUM) console.error(`  ${c.slug}`);
+  process.exit(1);
+}
 
 function validate(): { lessons: number; questions: number } {
   let lessons = 0;
@@ -72,11 +90,12 @@ async function main(): Promise<void> {
   }
 
   loadDbUrl();
+  console.log(`\nWriting ${SELECTED.length} course(s) to host ${new URL(process.env.DATABASE_URL as string).hostname}`);
   // Lazy import so --dry-run never loads the client / connects.
   const { PrismaClient } = await import("@prisma/client");
   const prisma = new PrismaClient();
   try {
-    for (const c of CURRICULUM) {
+    for (const c of SELECTED) {
       const courseData = {
         title: c.title,
         category: c.category,
