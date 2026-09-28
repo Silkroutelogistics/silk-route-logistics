@@ -19443,7 +19443,10 @@
 // payment on the evening of the due day is on time.
 // v3.8.bnl — The aging page shows each due date as the day the invoice prints, not the day before
 // on devices west of UTC.
-export const SRL_VERSION = "3.8.bnl";
+// v3.8.bnm — ruling 2026-09-27, 4: Tipalti settlements count in the average
+// days to pay. The average is taken over every settled invoice of the customer;
+// Tipalti stays exempt only from the late count and the credit block.
+export const SRL_VERSION = "3.8.bnm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

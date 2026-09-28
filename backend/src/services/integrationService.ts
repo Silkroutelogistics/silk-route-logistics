@@ -1208,6 +1208,11 @@ async function updateShipperCreditOnDelivery(load: any) {
 // LOOP 3 — Factoring Fund: credit on invoice paid
 // ──────────────────────────────────────────────────
 
+/** Days from issue to settlement for one invoice; 30 when it has no due date (unchanged). */
+function daysToPaySample(dueDate: Date | null, createdAt: Date, paidAt: Date): number {
+  return dueDate ? Math.max(0, Math.floor((paidAt.getTime() - createdAt.getTime()) / 86_400_000)) : 30;
+}
+
 /**
  * @param settled true when THIS payment brought the invoice to PAID. The caller
  *   knows (it just wrote the status) and says so, rather than this function
@@ -1264,8 +1269,7 @@ export async function onInvoicePaid(invoiceId: string, paidAmount: number, settl
       //
       // v3.8.bmg (ruling 2026-09-27): a customer billed through Tipalti is paid
       // on Tipalti's cycle, so a late settlement is not counted against them.
-      // The average below is taken over exactly the payments counted here, so
-      // an uncounted payment adds no sample to it either. On time still counts.
+      // On time still counts. The average days to pay below is not affected.
       // v3.8.bnk — late once the due day is over on the America/Toronto clock,
       // the rule every surface reads (ruling 2026-09-27, 3). It had compared the
       // stored instant, so a midnight-UTC due date made a payment at 9 PM
@@ -1289,14 +1293,27 @@ export async function onInvoicePaid(invoiceId: string, paidAmount: number, settl
         log.info(`[Integration] Shipper credit UNBLOCKED for customer ${invoice.load.customerId}`);
       }
 
-      // Update avg days to pay — one sample per counted settlement, matching the
-      // count above that it is averaged over.
-      if (counted) {
-        const daysToPay = invoice.dueDate
-          ? Math.max(0, Math.floor((Date.now() - invoice.createdAt.getTime()) / (1000 * 60 * 60 * 24)))
-          : 30;
-        const totalPayments = credit.onTimePayments + credit.latePayments + 1;
-        updateData.avgDaysToPay = Math.round(((credit.avgDaysToPay * (totalPayments - 1)) + daysToPay) / totalPayments * 100) / 100;
+      // v3.8.bnm — ruling 2026-09-27, 4: the average days to pay is taken over
+      // every settled invoice of this customer, Tipalti's included. Tipalti is
+      // exempt only from the late count above and the credit block
+      // (services/overdueCreditBlock). It was a running mean over the counted
+      // settlements, so a Tipalti invoice settled late added no sample.
+      if (settled) {
+        const earlier = await prisma.invoice.findMany({
+          where: {
+            id: { not: invoice.id },
+            status: "PAID",
+            paidAt: { not: null },
+            deletedAt: null,
+            load: { customerId: invoice.load.customerId },
+          },
+          select: { dueDate: true, createdAt: true, paidAt: true },
+        });
+        const samples = [
+          ...earlier.map((i) => daysToPaySample(i.dueDate, i.createdAt, i.paidAt!)),
+          daysToPaySample(invoice.dueDate, invoice.createdAt, new Date()),
+        ];
+        updateData.avgDaysToPay = Math.round((samples.reduce((a, b) => a + b, 0) / samples.length) * 100) / 100;
       }
 
       await prisma.shipperCredit.update({

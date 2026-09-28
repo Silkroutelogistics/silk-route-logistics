@@ -11,7 +11,18 @@ import { onInvoicePaid } from "../../../src/services/integrationService";
 const mockPrisma = prisma as any;
 const DAY = 86_400_000;
 
-function setup(due: number | Date, channel: "EMAIL" | "TIPALTI" = "EMAIL") {
+interface Settled { id: string; customerId: string; status: string; deletedAt: Date | null; dueDate: Date | null; createdAt: Date; paidAt: Date | null }
+
+function setup(due: number | Date, channel: "EMAIL" | "TIPALTI" = "EMAIL", history: Settled[] = []) {
+  // The customer's earlier invoices, answered through the query's own WHERE,
+  // so code that dropped a filter would average rows it should not.
+  mockPrisma.invoice.findMany.mockImplementation(async ({ where }: any) =>
+    history.filter((r) =>
+      (where.id?.not === undefined || r.id !== where.id.not) &&
+      (where.status === undefined || r.status === where.status) &&
+      (where.paidAt?.not !== null || r.paidAt !== null) &&
+      (where.deletedAt !== null || r.deletedAt === null) &&
+      (where.load?.customerId === undefined || r.customerId === where.load.customerId)));
   // The customer's channel comes back only when the query includes it, so code
   // that stopped asking for it would read a Tipalti customer as EMAIL here too.
   mockPrisma.invoice.findUnique.mockImplementation(async ({ include }: any) => ({
@@ -120,9 +131,10 @@ describe("onInvoicePaid — late is judged by the due day on the Toronto clock",
 
 // v3.8.bmg — ruling 2026-09-27: customers whose default invoice channel is
 // TIPALTI are exempt from the late-payment count. The EMAIL late case above is
-// the control.
+// the control. v3.8.bnm — ruling 2026-09-27, 4: they are exempt from that count
+// only; their settlements count in the average days to pay.
 describe("onInvoicePaid — customers billed through Tipalti", () => {
-  it("a late settlement records no late mark and no days-to-pay sample; credit is still released", async () => {
+  it("a late settlement records no late mark but does count in days to pay; credit is still released", async () => {
     setup(-10, "TIPALTI");
     await onInvoicePaid("inv-1", 3000, true);
 
@@ -130,7 +142,7 @@ describe("onInvoicePaid — customers billed through Tipalti", () => {
     expect(data.currentUtilized).toBe(2000);
     expect(data).not.toHaveProperty("latePayments");
     expect(data).not.toHaveProperty("onTimePayments");
-    expect(data).not.toHaveProperty("avgDaysToPay");
+    expect(data.avgDaysToPay).toBe(40); // issued 40 days ago, settled now
   });
 
   it("an on-time settlement is still counted on time, with its days-to-pay sample", async () => {
@@ -141,5 +153,48 @@ describe("onInvoicePaid — customers billed through Tipalti", () => {
     expect(data.onTimePayments).toEqual({ increment: 1 });
     expect(data).not.toHaveProperty("latePayments");
     expect(typeof data.avgDaysToPay).toBe("number");
+  });
+});
+
+// v3.8.bnm — ruling 2026-09-27, 4: the average is taken over every settled
+// invoice of the customer, whichever channel it went through.
+describe("onInvoicePaid — average days to pay over the customer's settled invoices", () => {
+  const NOW = new Date("2026-10-20T12:00:00.000Z");
+  const row = (id: string, created: string, paid: string | null, over: Partial<Settled> = {}): Settled => ({
+    id, customerId: "cust-1", status: "PAID", deletedAt: null,
+    dueDate: new Date("2026-09-01T00:00:00.000Z"), createdAt: new Date(created), paidAt: paid ? new Date(paid) : null, ...over,
+  });
+  const HISTORY: Settled[] = [
+    row("a", "2026-08-01T00:00:00.000Z", "2026-08-11T00:00:00.000Z"),                     // 10 days
+    row("b", "2026-08-01T00:00:00.000Z", "2026-08-21T12:00:00.000Z"),                     // 20 days
+    row("c", "2026-08-01T00:00:00.000Z", "2026-08-02T00:00:00.000Z", { dueDate: null }),  // no due date: 30
+    // Not samples: a void, a deleted invoice, another customer's, this invoice
+    // itself (sampled once, at now), and one marked PAID with no payment date.
+    row("void", "2026-08-01T00:00:00.000Z", "2026-08-05T00:00:00.000Z", { status: "VOID" }),
+    row("gone", "2026-08-01T00:00:00.000Z", "2026-08-06T00:00:00.000Z", { deletedAt: new Date("2026-08-07T00:00:00.000Z") }),
+    row("other", "2026-08-01T00:00:00.000Z", "2026-08-02T00:00:00.000Z", { customerId: "cust-2" }),
+    row("inv-1", "2026-06-01T00:00:00.000Z", "2026-09-08T00:00:00.000Z"),
+    row("nodate", "2026-08-01T00:00:00.000Z", null),
+  ];
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(NOW); });
+  afterEach(() => vi.useRealTimers());
+
+  it.each(["EMAIL", "TIPALTI"] as const)("%s: a late settlement averages in with the rest (10, 20, 30, 40 → 25)", async (channel) => {
+    setup(-10, channel, HISTORY); // this invoice: issued 40 days ago, settled now
+    await onInvoicePaid("inv-1", 3000, true);
+    expect(updates()[0].avgDaysToPay).toBe(25);
+  });
+
+  it("rounds to two places (10, 20, 40 → 23.33)", async () => {
+    setup(-10, "TIPALTI", HISTORY.filter((r) => r.id !== "c"));
+    await onInvoicePaid("inv-1", 3000, true);
+    expect(updates()[0].avgDaysToPay).toBe(23.33);
+  });
+
+  it("a partial payment adds no sample and does not query the history", async () => {
+    setup(-10, "TIPALTI", HISTORY);
+    await onInvoicePaid("inv-1", 2000, false);
+    expect(updates()[0]).not.toHaveProperty("avgDaysToPay");
+    expect(mockPrisma.invoice.findMany).not.toHaveBeenCalled();
   });
 });
