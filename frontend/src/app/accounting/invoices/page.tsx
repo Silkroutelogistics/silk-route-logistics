@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/Toast";
 import type { Invoice } from "@/types/entities";
 import { cn } from "@/lib/utils";
 import { decodeHtmlEntities } from "@/lib/htmlEntities";
+import { invoiceBalance } from "@shared/constants/invoiceBalance";
 
 /* ── Constants ────────────────────────────────────────────── */
 
@@ -65,6 +66,16 @@ function customerName(inv: Invoice): string {
     `${inv.user?.firstName || ""} ${inv.user?.lastName || ""}`.trim() ||
     "—";
   return decodeHtmlEntities(raw);
+}
+
+/**
+ * v3.8.bnd — what is left on a partly paid invoice (ruling 2026-09-27, 2). Once
+ * it turns OVERDUE its status no longer says PARTIAL, so the balance is shown
+ * wherever the amount is. Null when nothing has been paid or it is settled.
+ */
+function partlyPaidBalance(inv: Invoice): number | null {
+  if (!inv.paidAmount || inv.status === "PAID" || inv.status === "VOID") return null;
+  return invoiceBalance(inv);
 }
 
 /* ── Main Component ───────────────────────────────────────── */
@@ -352,6 +363,11 @@ export default function InvoicesPage() {
                           </td>
                           <td className="px-5 py-3 text-sm text-white font-medium tabular-nums">
                             {fmt(inv.amount)}
+                            {partlyPaidBalance(inv) !== null && (
+                              <span className="block text-[11px] font-normal text-slate-400">
+                                Balance {fmt(partlyPaidBalance(inv)!)}
+                              </span>
+                            )}
                           </td>
                           {!panelOpen && (
                             <td className="px-5 py-3 text-sm">
@@ -636,6 +652,9 @@ function SummaryTab({ invoice }: { invoice: Invoice }) {
           <div className="grid grid-cols-2 gap-3">
             {invoice.paidAmount !== null && invoice.paidAmount !== undefined && (
               <DetailField label="Paid Amount" value={fmt(invoice.paidAmount)} />
+            )}
+            {partlyPaidBalance(invoice) !== null && (
+              <DetailField label="Balance" value={fmt(partlyPaidBalance(invoice)!)} highlight />
             )}
             {invoice.paidAt && (
               <DetailField label="Paid Date" value={fmtDate(invoice.paidAt)} />

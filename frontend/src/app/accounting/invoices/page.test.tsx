@@ -6,7 +6,7 @@
  * the user when that fails rather than failing silently again.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -35,6 +35,32 @@ async function openPdf() {
   await userEvent.click(await screen.findByText("SRL-121494I"));
   await userEvent.click(await screen.findByRole("button", { name: /^pdf$/i }));
 }
+
+// v3.8.bnd — ruling 2026-09-27, 2: a partly paid invoice past its due day is
+// OVERDUE "with the balance shown". $1,000 with $600 paid leaves $400.
+describe("a partly paid invoice shows its balance", () => {
+  const PART = { ...INV, id: "inv-part", invoiceNumber: "SRL-121495I", status: "OVERDUE", amount: 1000, totalAmount: 1000, paidAmount: 600, paidAt: "2026-10-20T15:00:00Z" };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(api.get).mockResolvedValue({ data: { invoices: [PART, INV], total: 2, totalPages: 1 } } as any);
+  });
+
+  it("in the list, under its amount, and only on the partly paid row", async () => {
+    mount();
+    const row = (await screen.findByText("SRL-121495I")).closest("tr")!;
+    expect(within(row).getByText("Balance $400.00")).toBeTruthy();
+    const unpaid = screen.getByText("SRL-121494I").closest("tr")!;
+    expect(within(unpaid).queryByText(/^Balance/)).toBeNull();
+  });
+
+  it("in the detail panel, beside what was paid", async () => {
+    mount();
+    await userEvent.click(await screen.findByText("SRL-121495I"));
+    const label = await screen.findByText("Balance");
+    expect(label.parentElement!.textContent).toContain("$400.00");
+  });
+});
 
 describe("accounting invoice PDF button", () => {
   beforeEach(() => {

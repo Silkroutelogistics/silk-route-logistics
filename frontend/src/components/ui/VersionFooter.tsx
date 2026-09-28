@@ -19425,7 +19425,9 @@
 // the totals add balances, so a partly paid invoice counts for what is left.
 // v3.8.bnc — The aging page's overdue table shows each invoice's balance, under a Balance
 // column, so a partly paid invoice shows what is left to collect.
-export const SRL_VERSION = "3.8.bnc";
+// v3.8.bnd — The accounting invoices page shows a partly paid invoice's balance, under its
+// amount in the list and beside what was paid in the detail panel.
+export const SRL_VERSION = "3.8.bnd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
