@@ -62,6 +62,7 @@ import {
   getQuickPayRevenue,
 } from "../controllers/accountingController";
 import { auditLog } from "../middleware/audit";
+import { rejectInvoiceStatusWrite } from "../middleware/invoiceStatusWrite";
 import type { AuthRequest } from "../middleware/auth";
 import type { Response } from "express";
 import { getArReminderSwitch, setArReminderSwitch } from "../lib/arReminderSwitch";
@@ -93,6 +94,9 @@ router.get("/dashboard", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getD
 router.get("/dashboard/enhanced", authorize("ADMIN", "CEO", "ACCOUNTING"), getAccountingDashboardEnhanced);
 
 // --- Invoices (AR) ---
+// v3.8.bnp — ruling 2026-09-27, 6: send, mark-paid, void and the aging job set
+// an invoice's status; no write here takes one from its body.
+router.use("/invoices", rejectInvoiceStatusWrite);
 router.get("/invoices/aging", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getInvoiceAging);
 router.get("/invoices", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getInvoices);
 router.get("/invoices/:id", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getInvoiceById);

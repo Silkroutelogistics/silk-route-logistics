@@ -16,17 +16,23 @@ vi.mock("../../../src/middleware/auth", () => ({
   authorize: () => (_req: any, _res: any, next: any) => next(),
 }));
 vi.mock("../../../src/middleware/audit", () => ({ auditLog: () => (_req: any, _res: any, next: any) => next() }));
-vi.mock("../../../src/controllers/invoiceController", async (importOriginal) => {
-  const real = (await importOriginal()) as Record<string, unknown>;
-  return Object.fromEntries(Object.entries(real).map(([name, v]) =>
-    [name, typeof v === "function" ? (_req: any, res: any) => res.status(200).json({ reached: name }) : v]));
-});
+const { markers } = vi.hoisted(() => ({
+  markers: async (importOriginal: () => Promise<unknown>) => {
+    const real = (await importOriginal()) as Record<string, unknown>;
+    return Object.fromEntries(Object.entries(real).map(([name, v]) =>
+      [name, typeof v === "function" ? (_req: any, res: any) => res.status(200).json({ reached: name }) : v]));
+  },
+}));
+vi.mock("../../../src/controllers/invoiceController", markers);
+vi.mock("../../../src/controllers/accountingController", markers);
 
 import invoiceRoutes from "../../../src/routes/invoices";
+import accountingRoutes from "../../../src/routes/accounting";
 
 const app = express();
 app.use(express.json());
 app.use("/api/invoices", invoiceRoutes);
+app.use("/api/accounting", accountingRoutes);
 
 const WRITES: Array<[string, "post" | "put" | "patch", string, string]> = [
   ["create", "post", "/api/invoices", "createInvoice"],
@@ -66,5 +72,43 @@ describe("/invoices — status cannot be written from a request body", () => {
     const res = await request(app).get("/api/invoices?status=OVERDUE");
     expect(res.status).toBe(200);
     expect(res.body.reached).toBe("getInvoices");
+  });
+});
+
+// v3.8.bnp — the accounting router's invoice routes carry the same guard. The
+// edit (PUT /invoices/:id) read named fields and dropped a status silently, and
+// mark-sent stripped it through its schema; both now refuse it.
+const ACCOUNTING_WRITES: Array<[string, "post" | "put", string, string]> = [
+  ["create", "post", "/api/accounting/invoices", "createInvoice"],
+  ["edit", "put", "/api/accounting/invoices/inv-1", "updateInvoice"],
+  ["send", "post", "/api/accounting/invoices/inv-1/send", "sendInvoice"],
+  ["mark sent", "post", "/api/accounting/invoices/inv-1/mark-sent", "markInvoiceSent"],
+  ["record a payment", "put", "/api/accounting/invoices/inv-1/mark-paid", "markInvoicePaid"],
+  ["void", "post", "/api/accounting/invoices/inv-1/void", "voidInvoice"],
+];
+
+describe("/accounting/invoices — status cannot be written from a request body", () => {
+  it.each(ACCOUNTING_WRITES)("%s: a body naming status is refused with 400 and reaches no handler", async (_n, verb, url) => {
+    const res = await request(app)[verb](url).send({ status: "PAID" });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("INVOICE_STATUS_NOT_WRITABLE");
+    expect(res.body.reached).toBeUndefined();
+  });
+
+  it.each(ACCOUNTING_WRITES)("%s: the same write without status still reaches its handler", async (_n, verb, url, handler) => {
+    const res = await request(app)[verb](url).send({ paidAmount: 100 });
+    expect(res.status).toBe(200);
+    expect(res.body.reached).toBe(handler);
+  });
+
+  it("the invoice list's status filter is left alone", async () => {
+    const res = await request(app).get("/api/accounting/invoices?status=OVERDUE");
+    expect(res.body.reached).toBe("getInvoices");
+  });
+
+  it("a write elsewhere on the router that names a status is not this guard's business", async () => {
+    const res = await request(app).put("/api/accounting/payments/pay-1").send({ status: "APPROVED" });
+    expect(res.status).toBe(200);
+    expect(res.body.reached).toBe("updatePayment");
   });
 });

@@ -19451,7 +19451,9 @@
 // v3.8.bno — ruling 2026-09-27, 6: the /invoices router refuses any write whose body
 // names status (400 INVOICE_STATUS_NOT_WRITABLE); PATCH /invoices/:id/status and
 // POST /invoices/batch/status are removed.
-export const SRL_VERSION = "3.8.bno";
+// v3.8.bnp — ruling 2026-09-27, 6: the accounting router's invoice routes refuse a
+// write whose body names status, the same guard as /invoices.
+export const SRL_VERSION = "3.8.bnp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
