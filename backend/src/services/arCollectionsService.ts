@@ -257,18 +257,9 @@ export async function processArReminders(): Promise<{ processed: number; reminde
     // RECONCILE step 4: a TIPALTI customer is billed through its AP portal and has
     // no email recipient, so no reminder is emailed and none is recorded as sent
     // (no flag, no notice, no log). The invoice still turns OVERDUE once past due,
-    // so aging and the console show it: that never depended on an email.
-    if (inv.load.customer.defaultInvoiceChannel === "TIPALTI") {
-      if (daysOverdue > 0 && inv.status !== "OVERDUE") {
-        try {
-          await prisma.invoice.update({ where: { id: inv.id }, data: { status: "OVERDUE" } });
-        } catch (err) {
-          errors++;
-          log.error({ err }, `[ARCollections] Could not mark ${inv.invoiceNumber} OVERDUE:`);
-        }
-      }
-      continue;
-    }
+    // so aging and the console show it: the hourly aging job does that for every
+    // customer (v3.8.bmh, ruling 2026-09-27), and this job writes no status.
+    if (inv.load.customer.defaultInvoiceChannel === "TIPALTI") continue;
 
     let stage: ReminderStage | null = null;
     let flagField: string | null = null;
@@ -330,15 +321,12 @@ export async function processArReminders(): Promise<{ processed: number; reminde
         await sendEmail(r.email, subject, html);
       }
 
-      // Update invoice reminder flag
+      // Update invoice reminder flag. No status: overdue is set only by the
+      // hourly aging job, on the due date (v3.8.bmh, ruling 2026-09-27).
       const updateData: Record<string, any> = {
         [flagField]: true,
         lastReminderAt: now,
       };
-      // Mark as OVERDUE if past due
-      if (daysOverdue > 0 && inv.status !== "OVERDUE") {
-        updateData.status = "OVERDUE";
-      }
       await prisma.invoice.update({ where: { id: inv.id }, data: updateData });
 
       // Create notifications for ADMIN/BROKER

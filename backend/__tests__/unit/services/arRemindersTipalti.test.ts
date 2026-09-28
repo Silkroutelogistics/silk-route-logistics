@@ -2,6 +2,10 @@
  * RECONCILE step 4 (2026-09-26): no automated email reminder for a customer
  * whose default invoice channel is TIPALTI. Aging and overdue status still
  * show: the invoice turns OVERDUE when past due, whatever the channel.
+ *
+ * v3.8.bmh (ruling 2026-09-27): the hourly aging job is what turns it OVERDUE,
+ * for every customer. This job writes no status on any path; the aging job is
+ * tested in invoiceAging.test.ts.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { prisma } from "../../../src/config/database";
@@ -43,12 +47,25 @@ describe("AR reminders skip TIPALTI customers", () => {
     expect(out).toMatchObject({ processed: 1, remindersSent: 0, errors: 0 });
   });
 
-  it("past due: it still turns OVERDUE, with no reminder flag and no email", async () => {
+  it("past due: no email, no reminder flag, and no status written here", async () => {
     mockPrisma.invoice.findMany.mockResolvedValue([invoice("TIPALTI", -5)]);
-    await processArReminders();
+    const out = await processArReminders();
     expect(sendEmail).not.toHaveBeenCalled();
+    expect(mockPrisma.invoice.update).not.toHaveBeenCalled();
+    expect(mockPrisma.notification.create).not.toHaveBeenCalled();
+    expect(out).toMatchObject({ processed: 1, remindersSent: 0, errors: 0 });
+  });
+
+  it("an EMAIL customer's past-due reminder records the reminder and writes no status", async () => {
+    mockPrisma.invoice.findMany.mockResolvedValue([invoice("EMAIL", -10)]);
+    const out = await processArReminders();
+    expect(sendEmail).toHaveBeenCalledTimes(1);
     expect(mockPrisma.invoice.update).toHaveBeenCalledTimes(1);
-    expect(mockPrisma.invoice.update.mock.calls[0][0]).toEqual({ where: { id: "inv-1" }, data: { status: "OVERDUE" } });
+    const data = mockPrisma.invoice.update.mock.calls[0][0].data;
+    expect(data).toMatchObject({ reminderSent7: true });
+    expect(data.lastReminderAt).toBeInstanceOf(Date);
+    expect(data).not.toHaveProperty("status");
+    expect(out.remindersSent).toBe(1);
   });
 
   it("control: an EMAIL customer's invoice coming due is emailed and flagged", async () => {

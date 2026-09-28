@@ -19387,7 +19387,9 @@
 // passes 90 days overdue: Tipalti pays on its own cycle, not the customer's.
 // v3.8.bmg — A Tipalti customer's late settlement is not counted as a late payment,
 // and adds no days-to-pay sample; an on-time one still counts.
-export const SRL_VERSION = "3.8.bmg";
+// v3.8.bmh — The payment reminder emailer no longer marks an invoice overdue, for any
+// customer; that is left to the hourly aging job.
+export const SRL_VERSION = "3.8.bmh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
