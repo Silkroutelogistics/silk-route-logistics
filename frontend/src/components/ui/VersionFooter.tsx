@@ -19471,7 +19471,10 @@
 // v3.8.bnv — F-D6 (ruled b): GET /loads/:id is scoped by party. A non-party gets 403;
 // the assigned carrier sees no customer money, margin or other carriers' tenders; the
 // shipper sees no carrier money, margin, tenders or carrier terms. Staff see it whole.
-export const SRL_VERSION = "3.8.bnv";
+// v3.8.bnw — F-D6: GET /loads applies the same rule per row. A carrier's rows drop the
+// customer rate, billed total and margin; a shipper's drop the carrier rate and margin;
+// any role that is neither staff, carrier nor shipper lists nothing.
+export const SRL_VERSION = "3.8.bnw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

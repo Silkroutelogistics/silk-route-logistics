@@ -39,7 +39,7 @@ import { uncancelLoad } from "../services/uncancelLoad";
 import { UNCANCEL_WINDOW_HOURS, assessUncancel } from "../lib/uncancelPolicy";
 import { createNotification } from "../services/notificationService";
 import { isSrlInternalDocType, isSrlStaffRole } from "../lib/documentTypes";
-import { loadPartyOf, redactLoadForParty } from "../lib/loadPartyView";
+import { loadPartyOf, redactLoadForParty, type LoadParty } from "../lib/loadPartyView";
 
 const RELEASED_VALUE_BASIS_VALUES = ["PER_POUND", "PER_PIECE", "TOTAL", "NVD"] as const;
 type ReleasedValueBasisLiteral = (typeof RELEASED_VALUE_BASIS_VALUES)[number];
@@ -445,6 +445,17 @@ export async function getLoads(req: AuthRequest, res: Response) {
   if (req.user!.role === "SHIPPER") {
     where.posterId = req.user!.id;
   }
+  // F-D6: staff see every load; a carrier and a shipper see the rows scoped above; any
+  // other role is a party to no load and gets none. It used to fall through with no
+  // filter at all, so a FACTOR or CARRIER_REVIEWER session listed every load, whole.
+  const listParty: LoadParty | null = isSrlStaffRole(req.user!.role) ? "STAFF"
+    : req.user!.role === "CARRIER" ? "CARRIER"
+    : req.user!.role === "SHIPPER" ? "SHIPPER"
+    : null;
+  if (!listParty) {
+    res.json({ loads: [], total: 0, page: query.page, totalPages: 0 });
+    return;
+  }
 
   // The reversal queue. Overrides the status and soft-delete filters above
   // because it asks a different question: not "what is live" but "what can
@@ -533,11 +544,13 @@ export async function getLoads(req: AuthRequest, res: Response) {
   // decides if the reverse action can be offered at all. Sending the blob to
   // every row of the reversal queue would be payload for nothing and would put
   // the shape of SRC internals in front of a browser.
-  const withTotals = loads.map(({ cancellationSnapshot, ...l }) => ({
+  // F-D6: each row loses the other side's money (loadPartyView). A carrier's rows carry no
+  // customer rate, billed total or margin; a shipper's carry no carrier rate or margin.
+  const withTotals = loads.map(({ cancellationSnapshot, ...l }) => redactLoadForParty({
     ...l,
     invoicedTotal: billed.get(l.id) ?? null,
     reversible: cancellationSnapshot !== null && cancellationSnapshot !== undefined,
-  }));
+  }, listParty));
 
   res.json({ loads: withTotals, total, page: query.page, totalPages: Math.ceil(total / query.limit) });
 }
