@@ -5,11 +5,24 @@ Nothing below is a regression introduced by the arc it sits under.
 
 ---
 
-## Tender email + magic link arc (Items 329, 330) — Phase A only, halted (2026-09-26), branch `fix/tender-link`, not pushed
+## Tender email + magic link arc (Items 329, 330) — Phase B built (2026-09-27), branch `fix/tender-link`, not pushed
+
+**Phase B, 2026-09-27: built, gated, not pushed.** Four commits, taken in the order of the rulings.
+- **330a `v3.8.bmb`:** GET shows a confirm page; the POST acts and claims the token, which is single-use.
+- **330b `v3.8.bmc`:** a replay shows the stored outcome; each press is audited with its IP and user agent.
+- **329a `v3.8.bmd`:** tender emails and in-app rows go to staff; staff get a separate offer copy with no links.
+- **329b `v3.8.bme`:** risk and fall-off alerts go to staff.
+- Letters: blw to blz were reserved by message behind -bd's blu and blv. -d4 committed bma first, and the guard refuses a letter below the highest claim, so the reservation was released. These four took the guard's next free letters after -d4's block, at commit time.
+- Found, not fixed: carrier-payment dispute notices go to the poster (Item 334).
+
+**Deviations.**
+- A dry run of the closing docs script hit the worktree once instead of the copies. One command in a chain ran without `DOCS_ROOT`, and the script defaulted to the worktree. It changed `docs/claude/backlog-open.md` and `scratchpad/arc-handoff.md`. Both were restored from HEAD before any commit, and nothing else was touched. **Guard:** the script now has no default target and refuses to run without `DOCS_ROOT`, verified by running it bare.
+- The ungated-route inventory in `routeAuthorizeCoverage.test.ts` grew by one: `tenderAction.ts POST /:token`. The test says the list may shrink but never grow. This entry is the listed GET's twin, moved from GET to POST rather than widened, and was added with its reason, as `rcSign`'s POST was.
+- 329a is 67 insertions and 36 deletions in source, 103 lines of churn. The 100-LOC limit was read as insertions; most deletions are the offer email's parameter list, moved into one shared object.
 
 - Worktree `../srl-tender`, branch `fix/tender-link` off `76e4d68a`. Housekeeping `4dab7347`:
   322 closed, the srl-cleanup line dropped, `fix/item-290` and `fix/notifications-r3` deleted.
-  **Phase B not started:** the halt condition fired, because token links beyond tenders act
+  **Phase A halted first:** the halt condition fired, because token links beyond tenders act
   without a click. They are banked as **Item 331**.
 
 **329, every send path to a poster.** `notifyTenderAction` is the only tender sender that
