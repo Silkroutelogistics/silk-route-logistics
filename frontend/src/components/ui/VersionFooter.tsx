@@ -19389,7 +19389,9 @@
 // and adds no days-to-pay sample; an on-time one still counts.
 // v3.8.bmh — The payment reminder emailer no longer marks an invoice overdue, for any
 // customer; that is left to the hourly aging job.
-export const SRL_VERSION = "3.8.bmh";
+// v3.8.bmi — An invoice turns overdue once its due day is over in Eastern time, not the
+// evening before; the hourly aging job does it for every customer, Tipalti included.
+export const SRL_VERSION = "3.8.bmi";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

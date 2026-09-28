@@ -324,19 +324,12 @@ export function initCronJobs() {
   // ─── Hourly: Invoice aging & overdue detection ───────────────
   cron.schedule("0 * * * *", () => withGuard("invoice-aging", async () => {
     try {
-      const now = new Date();
-
-      // Mark overdue invoices
-      const overdueInvoices = await prisma.invoice.updateMany({
-        where: {
-          status: { in: ["SENT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED"] },
-          dueDate: { lt: now },
-        },
-        data: { status: "OVERDUE" },
-      });
-
-      if (overdueInvoices.count > 0) {
-        log.info(`[Cron Hourly] Marked ${overdueInvoices.count} invoices as overdue`);
+      // v3.8.bmi — the only place an invoice turns OVERDUE, for every customer,
+      // once its due day is over in Eastern time (ruling 2026-09-27).
+      const { markPastDueInvoicesOverdue } = require("../services/invoiceAging");
+      const marked: number = await markPastDueInvoicesOverdue();
+      if (marked > 0) {
+        log.info(`[Cron Hourly] Marked ${marked} invoices as overdue`);
       }
     } catch (err) {
       log.error({ err }, "[Cron Hourly] Invoice aging error:");
