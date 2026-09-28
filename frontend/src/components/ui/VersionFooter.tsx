@@ -19439,7 +19439,9 @@
 // invoices page and the aging report.
 // v3.8.bnj — The employee dashboard's Overdue Invoices count uses the same rule as the accounting
 // pages: open invoices past their due day on the Toronto clock, never a void or a draft.
-export const SRL_VERSION = "3.8.bnj";
+// v3.8.bnk — A payment counts as late only once its due day is over on the Toronto clock: a
+// payment on the evening of the due day is on time.
+export const SRL_VERSION = "3.8.bnk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

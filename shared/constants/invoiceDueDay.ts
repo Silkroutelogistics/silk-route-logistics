@@ -54,8 +54,11 @@ export function daysPastDue(dueDate: Date | string, now: Date): number {
   return Math.round((pastDueCutoff(now).getTime() - dueDay) / DAY_MS);
 }
 
-/** True once the due day is over on the due-day clock. False with no due date. */
-function isPastDue(dueDate: Date | string | null | undefined, now: Date): boolean {
+/**
+ * True once the due day is over on the due-day clock. False with no due date.
+ * A payment made when this holds is late.
+ */
+export function isPastDue(dueDate: Date | string | null | undefined, now: Date): boolean {
   return !!dueDate && daysPastDue(dueDate, now) > 0;
 }
 

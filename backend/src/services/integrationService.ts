@@ -16,6 +16,7 @@ import { raiseTonuCustomerCharge } from "./invoiceService";
 import { withdrawLiveTenders } from "./tenderTransitionService";
 import { mergeCancellationSnapshot } from "./cancelCascade";
 import { HOLDS_LOAD, LIVE_STATES } from "../lib/tenderLifecycle";
+import { isPastDue } from "../../../shared/constants/invoiceDueDay";
 import {
   standardNetDays,
   quickPayAutoApprovePerLoad,
@@ -1265,7 +1266,11 @@ export async function onInvoicePaid(invoiceId: string, paidAmount: number, settl
       // on Tipalti's cycle, so a late settlement is not counted against them.
       // The average below is taken over exactly the payments counted here, so
       // an uncounted payment adds no sample to it either. On time still counts.
-      const late = !!invoice.dueDate && new Date() > invoice.dueDate;
+      // v3.8.bnk — late once the due day is over on the America/Toronto clock,
+      // the rule every surface reads (ruling 2026-09-27, 3). It had compared the
+      // stored instant, so a midnight-UTC due date made a payment at 9 PM
+      // Eastern on the due day late.
+      const late = isPastDue(invoice.dueDate, new Date());
       const tipalti = invoice.load.customer?.defaultInvoiceChannel === "TIPALTI";
       const counted = settled && !(late && tipalti);
       if (counted) {

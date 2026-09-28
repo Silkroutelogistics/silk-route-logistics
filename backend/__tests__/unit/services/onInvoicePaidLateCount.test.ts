@@ -4,20 +4,20 @@
  * two late marks, on top of the one a daily job added at 30 days overdue.
  * Money received still releases credit on every payment.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { prisma } from "../../../src/config/database";
 import { onInvoicePaid } from "../../../src/services/integrationService";
 
 const mockPrisma = prisma as any;
 const DAY = 86_400_000;
 
-function setup(dueInDays: number, channel: "EMAIL" | "TIPALTI" = "EMAIL") {
+function setup(due: number | Date, channel: "EMAIL" | "TIPALTI" = "EMAIL") {
   // The customer's channel comes back only when the query includes it, so code
   // that stopped asking for it would read a Tipalti customer as EMAIL here too.
   mockPrisma.invoice.findUnique.mockImplementation(async ({ include }: any) => ({
     id: "inv-1",
     invoiceNumber: "121498I",
-    dueDate: new Date(Date.now() + dueInDays * DAY),
+    dueDate: typeof due === "number" ? new Date(Date.now() + due * DAY) : due,
     createdAt: new Date(Date.now() - 40 * DAY),
     load: {
       id: "load-1", referenceNumber: "SRL-121498", customerId: "cust-1", carrierId: null,
@@ -82,6 +82,39 @@ describe("onInvoicePaid — payment record counted once, at settlement", () => {
     expect(credit().latePayments).toBe(2); // 1 before + 1 for this bill
     expect(credit().onTimePayments).toBe(4); // untouched
     expect(credit().currentUtilized).toBe(2000); // both payments released
+  });
+});
+
+// v3.8.bnk — ruling 2026-09-27, 3: late means paid after the due day is over
+// on the America/Toronto clock, the rule every surface reads.
+describe("onInvoicePaid — late is judged by the due day on the Toronto clock", () => {
+  const DUE_OCT25 = new Date("2026-10-25T00:00:00.000Z"); // Beekeepers' shape: midnight UTC
+  const settleAt = async (now: string, due: Date) => {
+    vi.clearAllMocks();
+    vi.setSystemTime(new Date(now));
+    setup(due);
+    await onInvoicePaid("inv-1", 3000, true);
+    return updates()[0];
+  };
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("a settlement at 9 PM Toronto on the due day is on time", async () => {
+    const data = await settleAt("2026-10-26T01:00:00.000Z", DUE_OCT25);
+    expect(data.onTimePayments).toEqual({ increment: 1 });
+    expect(data).not.toHaveProperty("latePayments");
+  });
+
+  it("a settlement from 00:00 Toronto the day after is late", async () => {
+    const data = await settleAt("2026-10-26T04:00:00.000Z", DUE_OCT25);
+    expect(data.latePayments).toEqual({ increment: 1 });
+    expect(data).not.toHaveProperty("onTimePayments");
+  });
+
+  it("uses the Toronto clock, not New York's (January 1974, when the two differed)", async () => {
+    const due = new Date("1974-01-09T00:00:00.000Z");
+    expect((await settleAt("1974-01-10T04:30:00.000Z", due)).onTimePayments).toEqual({ increment: 1 });
+    expect((await settleAt("1974-01-10T05:00:00.000Z", due)).latePayments).toEqual({ increment: 1 });
   });
 });
 
