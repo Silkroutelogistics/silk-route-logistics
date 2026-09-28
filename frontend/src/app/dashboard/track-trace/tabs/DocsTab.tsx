@@ -4,7 +4,7 @@ import { useInlineDocumentUrl } from "@/lib/useInlineDocument";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Upload, FileText, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Upload, FileText, CheckCircle2, XCircle, Clock, Send } from "lucide-react";
 
 interface Props {
   load: any;
@@ -65,6 +65,19 @@ export function DocsTab({ load, loadId, onChange }: Props) {
     onSuccess: onChange,
   });
 
+  // F-D3 (ruled 2026-09-28): a POD upload no longer emails the customer. Sending it is
+  // this deliberate act, one document, and the customer gets the file attached.
+  const [podSendNote, setPodSendNote] = useState<string | null>(null);
+  const sendPod = useMutation({
+    mutationFn: async (id: string) =>
+      (await api.post(`/documents/${id}/send-to-customer`)).data as { recipients: string[]; failed: string[] },
+    onSuccess: (r) => {
+      setPodSendNote(`Sent to ${r.recipients.join(", ")}${r.failed.length ? `. Not sent to ${r.failed.join(", ")}` : ""}.`);
+      onChange();
+    },
+    onError: (e: any) => setPodSendNote(`Not sent: ${e?.response?.data?.error ?? "the request failed"}`),
+  });
+
   const statusPill = (doc: any) => {
     if (!doc) return <span className="inline-flex items-center gap-1 text-[11px] text-gray-400"><Clock className="w-3 h-3" /> Missing</span>;
     if (doc.status === "VERIFIED") return <span className="inline-flex items-center gap-1 text-[11px] text-green-700"><CheckCircle2 className="w-3 h-3" /> Verified</span>;
@@ -110,6 +123,7 @@ export function DocsTab({ load, loadId, onChange }: Props) {
                     <div className="min-w-0">
                       <div className="font-medium text-gray-900 truncate">{d.label}</div>
                       <div>{statusPill(doc)}</div>
+                      {d.code === "POD" && podSendNote && <div className="text-[11px] text-gray-600">{podSendNote}</div>}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -121,6 +135,18 @@ export function DocsTab({ load, loadId, onChange }: Props) {
                             onClick={() => patchStatus.mutate({ id: doc.id, status: "VERIFIED" })}
                             className="px-2 py-1 text-xs text-green-700 border border-green-200 rounded hover:bg-green-50"
                           >Verify</button>
+                        )}
+                        {d.code === "POD" && (
+                          <button
+                            onClick={() => {
+                              if (window.confirm("Email this POD, attached, to the customer's operational contacts?")) {
+                                setPodSendNote(null);
+                                sendPod.mutate(doc.id);
+                              }
+                            }}
+                            disabled={sendPod.isPending}
+                            className="px-2 py-1 text-xs text-[#BA7517] border border-[#BA7517]/40 rounded hover:bg-[#FAEEDA] disabled:opacity-50"
+                          ><Send className="w-3 h-3 inline mr-1" />{sendPod.isPending ? "Sending…" : "Send to customer"}</button>
                         )}
                       </>
                     )}

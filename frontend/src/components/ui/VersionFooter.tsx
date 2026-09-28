@@ -19480,7 +19480,9 @@
 // v3.8.bny — F-D3: recording a POD no longer emails the customer. Staff send one POD
 // deliberately (POST /documents/:id/send-to-customer) and the file is attached, in
 // place of the old "Download POD" link, which pointed at nothing.
-export const SRL_VERSION = "3.8.bny";
+// v3.8.bnz — F-D3: the T&T Docs tab's POD row gets "Send to customer". It asks first,
+// then shows who received the POD and who did not, or the server's refusal.
+export const SRL_VERSION = "3.8.bnz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
