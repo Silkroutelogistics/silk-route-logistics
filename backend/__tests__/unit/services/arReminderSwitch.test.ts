@@ -109,6 +109,28 @@ describe("seedCronRegistry never turns reminder emails on", () => {
     for (const c of others) expect(c[0].create.enabled).toBe(true);
   });
 
+  // v3.8.bnn — ruling 2026-09-27, 5: the ar-reminders-daily row describes the
+  // job that runs in its slot. It said "AR overdue reminders"; that slot has run
+  // only the 90-day credit block since v3.8.blg and emails nobody.
+  it("ar-reminders-daily describes the credit block that runs at 11:00 UTC, and says it sends no reminders", async () => {
+    mockPrisma.cronRegistry.upsert.mockResolvedValue({});
+    await seedCronRegistry();
+    const call = mockPrisma.cronRegistry.upsert.mock.calls.find((c: any[]) => c[0].where.jobName === "ar-reminders-daily");
+    const { schedule, description } = call[0].update;
+    expect(call[0].create.description).toBe(description);
+    expect(schedule).toBe("0 11 * * *");
+    expect(description).toMatch(/90-day credit block/);
+    expect(description).toMatch(/11:00 UTC/);
+    expect(description).toMatch(/Tipalti exempt/);
+    expect(description).toMatch(/Sends no reminders/);
+    expect(description).not.toMatch(/overdue reminders/i);
+  });
+
+  it("the 11:00 UTC slot it describes runs the credit block (source guard)", () => {
+    const src = readFileSync(join(__dirname, "../../../src/services/schedulerService.ts"), "utf8");
+    expect(src).toMatch(/cron\.schedule\("0 11 \* \* \*", async \(\) => \{\s*await withLock\("overdue-credit-block-daily"[^\n]*\n\s*const r = await applyOverdueCreditBlocks\(\);/);
+  });
+
   it("the gate is the first thing processArReminders does (source guard)", () => {
     const src = readFileSync(join(__dirname, "../../../src/services/arCollectionsService.ts"), "utf8");
     const body = src.slice(src.indexOf("export async function processArReminders"));

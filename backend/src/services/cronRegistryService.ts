@@ -172,7 +172,10 @@ export async function seedCronRegistry() {
     { jobName: "password-expiry", schedule: "0 9 * * *", description: "Password expiry reminders daily at 9 AM" },
     { jobName: "otp-cleanup", schedule: "0 3 * * *", description: "Clean expired OTP codes daily at 3 AM" },
     { jobName: "daily-cpp-tiers", schedule: "0 6 * * *", description: "CPP tier updates + log cleanup daily 6 AM" },
-    { jobName: "ar-reminders-daily", schedule: "0 11 * * *", description: "AR overdue reminders daily 6 AM ET" },
+    // v3.8.bnn — ruling 2026-09-27, 5: this slot runs the 90-day credit block
+    // (schedulerService, overdueCreditBlock) and has emailed nobody since
+    // v3.8.blg. The row keeps its name so the existing registry row is updated.
+    { jobName: "ar-reminders-daily", schedule: "0 11 * * *", description: "90-day credit block, daily 11:00 UTC (7 AM EDT / 6 AM EST): blocks a customer's credit once an invoice is 90 days past due. Tipalti exempt. Sends no reminders." },
     { jobName: "ap-aging-weekly", schedule: "0 12 * * 1", description: "AP aging check weekly Monday 7 AM ET" },
     { jobName: "weekly-report", schedule: "0 7 * * 1", description: "Weekly report snapshot Monday 7 AM" },
     { jobName: "cpp-weekly-recalc", schedule: "0 11 * * 0", description: "CPP tier recalculation weekly Sunday 6 AM ET" },

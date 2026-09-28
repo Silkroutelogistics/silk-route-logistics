@@ -19446,7 +19446,9 @@
 // v3.8.bnm — ruling 2026-09-27, 4: Tipalti settlements count in the average
 // days to pay. The average is taken over every settled invoice of the customer;
 // Tipalti stays exempt only from the late count and the credit block.
-export const SRL_VERSION = "3.8.bnm";
+// v3.8.bnn — ruling 2026-09-27, 5: the ar-reminders-daily registry row
+// describes the job in its slot, the 90-day credit block, which sends no reminders.
+export const SRL_VERSION = "3.8.bnn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
