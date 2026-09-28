@@ -19405,7 +19405,9 @@
 // withholds it from non-staff callers, and an upload to an invoice or customer is refused too.
 // v3.8.bmq — The four Beekeepers packets move from OTHER to CUSTOMER_INVOICE_COPY in the same deploy:
 //   a data migration by id, only while still OTHER, one audit row each. Elsewhere it changes nothing.
-export const SRL_VERSION = "3.8.bmq";
+// v3.8.bmr — The Track & Trace Documents tab names the INVOICE row "Carrier invoice" and gives SRL's copy
+//   its own row, "Customer invoice copy (SRL internal)", which files CUSTOMER_INVOICE_COPY.
+export const SRL_VERSION = "3.8.bmr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

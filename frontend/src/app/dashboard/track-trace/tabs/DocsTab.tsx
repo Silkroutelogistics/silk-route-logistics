@@ -23,7 +23,13 @@ const LIFECYCLE = [
   ]},
   { phase: "Post-delivery", docs: [
     { code: "POD",     label: "Proof of delivery (POD)" },
-    { code: "INVOICE", label: "Invoice" },
+    // INVOICE is the CARRIER's invoice everywhere else: the pay gate, the carrier's
+    // paperwork panel, the accounting email, the carrier portal. "Invoice" alone read as
+    // SRL's own, and on 2026-09-27 SRL's customer invoices were filed here.
+    { code: "INVOICE", label: "Carrier invoice" },
+    // SRL's copy of its invoice to the customer. Staff only; no carrier or customer
+    // surface lists or serves it (lib/documentTypes SRL_INTERNAL_LOAD_DOC_TYPES).
+    { code: "CUSTOMER_INVOICE_COPY", label: "Customer invoice copy (SRL internal)" },
   ]},
 ];
 
