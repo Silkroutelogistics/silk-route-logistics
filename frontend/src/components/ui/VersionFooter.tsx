@@ -19477,7 +19477,10 @@
 // v3.8.bnx — F-D4: a shipper uploads a BOL or OTHER only, never a POD or an INVOICE, on
 // the load path and the entity path alike; any other non-staff, non-carrier role
 // uploads nothing. One rule (documentUploadRefusal), applied in the seam and the route.
-export const SRL_VERSION = "3.8.bnx";
+// v3.8.bny — F-D3: recording a POD no longer emails the customer. Staff send one POD
+// deliberately (POST /documents/:id/send-to-customer) and the file is attached, in
+// place of the old "Download POD" link, which pointed at nothing.
+export const SRL_VERSION = "3.8.bny";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

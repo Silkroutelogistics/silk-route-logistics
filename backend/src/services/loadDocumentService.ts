@@ -55,7 +55,6 @@ import { broadcastSSE } from "../routes/trackTraceSSE";
 import { onLoadDelivered, onPODUploaded, syncSettlementDocFlags } from "./integrationService";
 import { notifyAccountingOfCarrierInvoice } from "./carrierInvoiceNotifyService";
 import { autoGenerateInvoice } from "./invoiceService";
-import { sendPODToContact } from "./shipperLoadNotifyService";
 
 /** A POD uploaded at any of these advances the load to POD_RECEIVED. */
 export const POD_ADVANCING_STATUSES = ["AT_DELIVERY", "DELIVERED", "LOADED"] as const;
@@ -224,9 +223,9 @@ export async function recordLoadDocument(input: RecordLoadDocumentInput): Promis
       });
     }
 
-    // One POD email, through the Item 8.3 recipient resolver. The AE route used
-    // to send a second one through a second sender to the same people.
-    sendPODToContact(load.id).catch((e) => log.error({ err: e, loadId: load.id }, "[ShipperNotify] POD"));
+    // F-D3 (ruled 2026-09-28): no POD email here. Recording a POD used to email the
+    // customer on every upload, with a link that served nothing. Sending the POD is now
+    // a staff act on one document: POST /documents/:id/send-to-customer.
   }
 
   // Recomputed from what exists, so a re-upload or a second document of the

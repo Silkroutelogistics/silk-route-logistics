@@ -6,6 +6,9 @@ import { requireStepUpForCarrierComplianceDoc } from "../middleware/complianceDo
 import { upload } from "../config/upload";
 import { prisma } from "../config/database";
 import { logLoadActivity } from "../services/loadActivityService";
+import { sendPODToContact } from "../services/shipperLoadNotifyService";
+import { SRL_STAFF_ROLES } from "../lib/documentTypes";
+import { log } from "../lib/logger";
 
 const router = Router();
 
@@ -87,6 +90,35 @@ router.get("/:id/download", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPE
 
 // v3.8.avo — POST /rate-con/:loadId retired with its renderer. The Rate
 // Confirmation has one source: the PDF chrome. See documentController.
+
+// F-D3 (ruled 2026-09-28) — send one POD to the customer, attached. Staff only: the
+// customer used to be emailed automatically on every POD upload, with a broken link.
+// Now an SRL user decides, per document, and the load's activity says who sent it.
+router.post("/:id/send-to-customer", authorize(...SRL_STAFF_ROLES) as any, async (req: AuthRequest, res: Response) => {
+  const doc = await prisma.document.findUnique({ where: { id: req.params.id }, select: { loadId: true } });
+  if (!doc?.loadId) return res.status(404).json({ error: "No such document on a load.", code: "POD_NOT_FOUND" });
+  let r: Awaited<ReturnType<typeof sendPODToContact>>;
+  try {
+    r = await sendPODToContact(doc.loadId, req.params.id);
+  } catch (err) {
+    // The sender catches each email; what reaches here is the stored file failing to
+    // read, before any email went out.
+    log.error({ err, documentId: req.params.id }, "[Documents] POD send failed");
+    return res.status(502).json({ error: "The POD file could not be read. Nothing was sent.", code: "POD_SEND_FAILED" });
+  }
+  if (!r.ok) return res.status(r.status).json({ error: r.error, code: r.code });
+  // Recording the send must never make a sent email look unsent.
+  await logLoadActivity({
+    loadId: doc.loadId,
+    eventType: "pod_sent_to_customer",
+    description: `POD sent to the customer (${r.recipients.length} recipient${r.recipients.length === 1 ? "" : "s"})`,
+    actorType: "USER",
+    actorId: req.user?.id,
+    actorName: req.user?.email,
+    metadata: { documentId: req.params.id, recipients: r.recipients, failed: r.failed },
+  }).catch((err) => log.error({ err, loadId: doc.loadId }, "[Documents] POD send not logged"));
+  res.json({ sent: r.recipients.length, recipients: r.recipients, failed: r.failed });
+});
 
 // Delete a document (admin/management only)
 router.delete("/:id", authorize("ADMIN", "CEO") as any, deleteDocument as any);

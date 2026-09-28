@@ -138,14 +138,18 @@ describe("the P1: every POD starts the clock and flips the flags, on every route
   beforeEach(() => vi.clearAllMocks());
 
   for (const status of ["AT_DELIVERY", "DELIVERED"]) {
-    it(`POD at ${status}: onPODUploaded, syncSettlementDocFlags, invoice, AE row, ONE shipper email`, async () => {
+    // Superseded by F-D3 (ruled 2026-09-28): this case asserted ONE shipper email per
+    // POD. Recording a POD now emails no one; the customer gets it when staff send it
+    // (POST /documents/:id/send-to-customer). The mocked sender records any call, so a
+    // send put back into the seam turns this red.
+    it(`POD at ${status}: onPODUploaded, syncSettlementDocFlags, invoice, AE row, and NO shipper email`, async () => {
       armLoad(status);
       await record("POD");
       expect(hooks.onPODUploaded).toHaveBeenCalledWith("load-1");
       expect(hooks.syncSettlementDocFlags).toHaveBeenCalledWith("load-1");
       expect(hooks.autoGenerateInvoice).toHaveBeenCalledWith("load-1");
       expect(mockPrisma.notification.create).toHaveBeenCalledTimes(1);
-      expect(hooks.sendPODToContact).toHaveBeenCalledTimes(1);
+      expect(hooks.sendPODToContact).not.toHaveBeenCalled();
     });
   }
 

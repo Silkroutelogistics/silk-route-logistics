@@ -1,5 +1,7 @@
+import path from "path";
 import { prisma } from "../config/database";
 import { sendEmail, wrap } from "./emailService";
+import { getFileStream } from "./storageService";
 import { log } from "../lib/logger";
 import { resolveOperationalRecipients } from "./customerRecipientResolver";
 
@@ -135,34 +137,66 @@ export async function sendDeliveryETAUpdate(loadId: string) {
   log.info(`[ShipperLoadNotify] ETA update sent to ${to.join(", ")} for ${load.referenceNumber}`);
 }
 
-// ─── 6. POD Uploaded Notification ──────────────────────────────
+// ─── 6. Proof of Delivery to the customer (manual, staff only) ─────
 
-export async function sendPODToContact(loadId: string) {
+/**
+ * F-D3 (ruled 2026-09-28). This used to run on every POD upload, from the load seam,
+ * so a customer was emailed each time a POD landed, including a second or corrected
+ * one. Its "Download POD" button was PORTAL_BASE + podUrl: the marketing host plus a
+ * storage key, which served nothing. Now an SRL user sends one POD deliberately
+ * (POST /documents/:id/send-to-customer) and the file is ATTACHED, so the customer
+ * has nothing to log in to and no link that expires or opens more than this file.
+ */
+export type PodSendResult =
+  | { ok: true; recipients: string[]; failed: string[]; referenceNumber: string }
+  | { ok: false; status: number; code: string; error: string };
+
+export async function sendPODToContact(loadId: string, documentId: string): Promise<PodSendResult> {
+  const doc = await prisma.document.findFirst({
+    where: { id: documentId, loadId },
+    select: { docType: true, fileUrl: true, fileName: true, fileType: true },
+  });
+  if (!doc) return { ok: false, status: 404, code: "POD_NOT_FOUND", error: "No such document on this load." };
+  if (doc.docType !== "POD") {
+    return { ok: false, status: 400, code: "NOT_A_POD", error: "Only a proof of delivery can be sent to the customer from here." };
+  }
+  // A storage-refused upload leaves a row with no file (Item 248): nothing to attach.
+  if (!doc.fileUrl) return { ok: false, status: 409, code: "POD_FILE_MISSING", error: "This POD has no stored file to send." };
   const load = await fetchLoadForNotify(loadId);
-  if (!load) return;
+  if (!load) return { ok: false, status: 404, code: "POD_NOT_FOUND", error: "Load not found." };
   const to = await resolveRecipients(load);
-  if (to.length === 0) return;
+  if (to.length === 0) {
+    return { ok: false, status: 409, code: "NO_OPERATIONAL_RECIPIENTS", error: "This customer has no operational contact to send it to." };
+  }
 
-  const podUrl = load.podUrl;
-  if (!podUrl) return;
-
-  const fullPodUrl = `${PORTAL_BASE}${podUrl.startsWith("/") ? "" : "/"}${podUrl}`;
+  const chunks: Buffer[] = [];
+  for await (const chunk of await getFileStream(doc.fileUrl)) chunks.push(Buffer.from(chunk));
+  const ext = path.extname(doc.fileName || "") || ".pdf";
+  const attachment = { filename: `${load.referenceNumber}-POD${ext}`, content: Buffer.concat(chunks), contentType: doc.fileType || "application/pdf" };
 
   const html = wrap(`
     <h2 style="color:#0f172a">Load ${load.referenceNumber} &mdash; Proof of Delivery</h2>
-    <p>The proof of delivery for your shipment <strong>${load.referenceNumber}</strong> is now available.</p>
+    <p>The proof of delivery for your shipment <strong>${load.referenceNumber}</strong> is attached to this email.</p>
     ${loadInfoTable(load)}
-    <div style="text-align:center;margin:24px 0">
-      <a href="${fullPodUrl}" style="display:inline-block;padding:14px 32px;background:#d4a574;color:#0f172a;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px">Download POD</a>
-    </div>
     ${trackingLink(load)}
     <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because your contact email is associated with this shipment on Silk Route Logistics.</p>
   `);
 
+  // Per recipient, so a failure on one does not hide that the others already have it.
+  const sent: string[] = [];
+  const failed: string[] = [];
   for (const addr of to) {
-    await sendShipperEmail(addr, `Load ${load.referenceNumber} — Proof of Delivery`, html);
+    try {
+      await sendShipperEmail(addr, `Load ${load.referenceNumber} — Proof of Delivery`, html, [attachment]);
+      sent.push(addr);
+    } catch (err) {
+      log.error({ err, loadId }, `[ShipperLoadNotify] POD send to ${addr} failed`);
+      failed.push(addr);
+    }
   }
-  log.info(`[ShipperLoadNotify] POD email sent to ${to.join(", ")} for ${load.referenceNumber}`);
+  if (sent.length === 0) return { ok: false, status: 502, code: "POD_SEND_FAILED", error: "The POD could not be sent to any recipient." };
+  log.info(`[ShipperLoadNotify] POD sent to ${sent.join(", ")} for ${load.referenceNumber}`);
+  return { ok: true, recipients: sent, failed, referenceNumber: load.referenceNumber };
 }
 
 // ─── Daily ETA Updates Cron Handler ────────────────────────────
