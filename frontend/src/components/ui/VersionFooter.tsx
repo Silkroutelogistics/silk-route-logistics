@@ -19427,7 +19427,9 @@
 // column, so a partly paid invoice shows what is left to collect.
 // v3.8.bnd — The accounting invoices page shows a partly paid invoice's balance, under its
 // amount in the list and beside what was paid in the detail panel.
-export const SRL_VERSION = "3.8.bnd";
+// v3.8.bne — The AR aging report ages by the due day on the America/Toronto clock: an invoice
+// stays current through its due day and is a day past due from midnight Toronto.
+export const SRL_VERSION = "3.8.bne";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

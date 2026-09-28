@@ -27,6 +27,7 @@ import {
 import { atCostReimbursementsForLoad, carrierAccessorialsForLoad } from "../services/integrationService";
 import { BILLED_STATUSES, invoiceValue } from "../lib/invoiceTotals";
 import { invoiceBalance } from "../../../shared/constants/invoiceBalance";
+import { OPEN_STATUSES, daysPastDue, dueDayClockDate } from "../../../shared/constants/invoiceDueDay";
 import { assertInvoiceOnFileOrOverride, invoiceOnFile } from "../lib/carrierPayInvoiceGate";
 import { priorSentBaseInvoice, priorSentMessage } from "../lib/invoiceSendGuard";
 
@@ -883,10 +884,9 @@ export async function voidInvoice(req: AuthRequest, res: Response) {
 export async function getInvoiceAging(req: AuthRequest, res: Response) {
   try {
     const now = new Date();
-    const unpaidStatuses: any[] = ["SENT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED", "OVERDUE", "PARTIAL"];
 
     const invoices = await prisma.invoice.findMany({
-      where: { status: { in: unpaidStatuses } },
+      where: { status: { in: OPEN_STATUSES as any[] } },
       include: {
         load: {
           select: {
@@ -915,8 +915,11 @@ export async function getInvoiceAging(req: AuthRequest, res: Response) {
     let grandTotal = 0;
 
     for (const inv of invoices) {
-      const anchorDate = inv.dueDate ?? inv.createdAt;
-      const daysOld = daysBetween(anchorDate, now);
+      // v3.8.bne — days past the due day on the America/Toronto clock, from the
+      // shared rule (ruling 2026-09-27, 3): current through the due day, 1-30
+      // from 00:00 Toronto the day after. With no due date, from the day it was
+      // created, on the same clock.
+      const daysOld = daysPastDue(inv.dueDate ?? dueDayClockDate(inv.createdAt), now);
       // v3.8.bnb — the report ages what is still owed, not the face amount: a
       // partly paid invoice that has turned OVERDUE carries its balance
       // (ruling 2026-09-27, 2). Each row says it, and the totals are its sum.
