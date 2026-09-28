@@ -19435,7 +19435,9 @@
 // invoice, so a partly paid invoice counts for its balance, as in the aging report.
 // v3.8.bnh — The accounting invoices page flags an invoice past due from midnight Toronto after
 // its due day, never a draft, and shows every due date as the day the invoice prints.
-export const SRL_VERSION = "3.8.bnh";
+// v3.8.bni — The invoice list API's past-due flag and day count read the same rule as the
+// invoices page and the aging report.
+export const SRL_VERSION = "3.8.bni";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

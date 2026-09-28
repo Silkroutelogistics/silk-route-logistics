@@ -27,7 +27,7 @@ import {
 import { atCostReimbursementsForLoad, carrierAccessorialsForLoad } from "../services/integrationService";
 import { BILLED_STATUSES, invoiceValue } from "../lib/invoiceTotals";
 import { invoiceBalance } from "../../../shared/constants/invoiceBalance";
-import { OPEN_STATUSES, daysPastDue, dueDayClockDate } from "../../../shared/constants/invoiceDueDay";
+import { OPEN_STATUSES, daysPastDue, dueDayClockDate, isInvoiceOverdue } from "../../../shared/constants/invoiceDueDay";
 import { pastDueWhere } from "../services/invoiceAging";
 import { assertInvoiceOnFileOrOverride, invoiceOnFile } from "../lib/carrierPayInvoiceGate";
 import { priorSentBaseInvoice, priorSentMessage } from "../lib/invoiceSendGuard";
@@ -315,14 +315,13 @@ export async function getInvoices(req: AuthRequest, res: Response) {
     // that visible to the type rather than asserted away with a non-null !.
     const total = counted ?? 0;
 
-    // Enrich with aging info
+    // Enrich with aging info. v3.8.bni — the same flag and day count as the
+    // invoices page and the aging report (ruling 2026-09-27, 3): past the due
+    // day on the Toronto clock, and open. It had compared the stored instant.
     const now = new Date();
     const enriched = invoices.map((inv) => {
-      const daysOutstanding = inv.dueDate
-        ? daysBetween(inv.dueDate, now)
-        : daysBetween(inv.createdAt, now);
-      const isOverdue = inv.dueDate ? now > inv.dueDate && !["PAID", "VOID"].includes(inv.status) : false;
-      return { ...inv, daysOutstanding: Math.max(0, daysOutstanding), isOverdue };
+      const daysOutstanding = daysPastDue(inv.dueDate ?? dueDayClockDate(inv.createdAt), now);
+      return { ...inv, daysOutstanding: Math.max(0, daysOutstanding), isOverdue: isInvoiceOverdue(inv, now) };
     });
 
     res.json({

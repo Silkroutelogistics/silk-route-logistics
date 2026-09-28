@@ -4,7 +4,7 @@
 //   R2 atomic conditional write (a concurrent full-pay can't double-credit the
 //      factoring fund — the loser matches zero rows -> 409, onInvoicePaid skipped)
 //   R3 reject non-positive amounts
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { prisma } from "../../../src/config/database";
 
 // integrationService is mocked because markInvoicePaid dynamically imports
@@ -143,6 +143,42 @@ describe("markInvoicePaid — payment ledger (go-live audit R1/R2/R3)", () => {
 // the part that can be right in isolation and wrong in place: whether the exact
 // query actually runs first, whether its rows are excluded from the second, and
 // whether a handler with no search term still behaves exactly as it did.
+// v3.8.bni — ruling 2026-09-27, 3: the list's isOverdue and daysOutstanding
+// read the shared rule, so the API agrees with the page and the aging report.
+describe("getInvoices — the past-due flag and day count", () => {
+  const DUE = { id: "bkn", invoiceNumber: "121494I", status: "SENT", dueDate: new Date("2026-10-25T00:00:00.000Z"), createdAt: new Date("2026-09-25T00:00:00.000Z") };
+
+  async function listAt(now: string, rows: unknown[]) {
+    vi.setSystemTime(new Date(now));
+    (mockPrisma.invoice.findMany as any).mockResolvedValue(rows);
+    (mockPrisma.invoice.count as any).mockResolvedValue(rows.length);
+    const res = mockRes();
+    await getInvoices({ query: {}, user: { id: "ae-1", role: "ADMIN" } } as any, res);
+    return (res.json as any).mock.calls[0][0].invoices;
+  }
+
+  beforeEach(() => { vi.clearAllMocks(); vi.useFakeTimers(); });
+  afterEach(() => vi.useRealTimers());
+
+  it("is not overdue through the due day, and one day overdue from 00:00 Toronto", async () => {
+    let [inv] = await listAt("2026-10-26T03:59:00.000Z", [DUE]);
+    expect([inv.isOverdue, inv.daysOutstanding]).toEqual([false, 0]);
+    [inv] = await listAt("2026-10-26T04:00:00.000Z", [DUE]);
+    expect([inv.isOverdue, inv.daysOutstanding]).toEqual([true, 1]);
+  });
+
+  it("uses the Toronto clock, not New York's (January 1974, when the two differed)", async () => {
+    const old = { ...DUE, dueDate: new Date("1974-01-09T00:00:00.000Z") };
+    expect((await listAt("1974-01-10T04:30:00.000Z", [old]))[0].isOverdue).toBe(false);
+    expect((await listAt("1974-01-10T05:00:00.000Z", [old]))[0].isOverdue).toBe(true);
+  });
+
+  it("a draft past its due date is not overdue", async () => {
+    const [inv] = await listAt("2026-11-01T12:00:00.000Z", [{ ...DUE, status: "DRAFT" }]);
+    expect(inv.isOverdue).toBe(false);
+  });
+});
+
 describe("getInvoices — search ranks an exact document number first", () => {
   beforeEach(() => {
     vi.clearAllMocks();
