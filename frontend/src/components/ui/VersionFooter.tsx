@@ -19448,7 +19448,10 @@
 // Tipalti stays exempt only from the late count and the credit block.
 // v3.8.bnn — ruling 2026-09-27, 5: the ar-reminders-daily registry row
 // describes the job in its slot, the 90-day credit block, which sends no reminders.
-export const SRL_VERSION = "3.8.bnn";
+// v3.8.bno — ruling 2026-09-27, 6: the /invoices router refuses any write whose body
+// names status (400 INVOICE_STATUS_NOT_WRITABLE); PATCH /invoices/:id/status and
+// POST /invoices/batch/status are removed.
+export const SRL_VERSION = "3.8.bno";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
