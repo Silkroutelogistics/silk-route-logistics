@@ -48,6 +48,8 @@ export interface OverdueCreditBlockResult {
   alreadyBlocked: number;
   /** Invoices left unmarked because the customer has no credit record; retried tomorrow. */
   noCreditRecord: number;
+  /** Invoices of customers billed through Tipalti: exempt, left unmarked (v3.8.bmf). */
+  skippedTipalti: number;
 }
 
 export async function applyOverdueCreditBlocks(now: Date = new Date()): Promise<OverdueCreditBlockResult> {
@@ -63,15 +65,30 @@ export async function applyOverdueCreditBlocks(now: Date = new Date()): Promise<
       // invoice must not block a customer.
       load: { is: { deletedAt: null, status: { not: "CANCELLED" } } },
     },
-    select: { id: true, invoiceNumber: true, load: { select: { customerId: true } } },
+    select: {
+      id: true,
+      invoiceNumber: true,
+      load: { select: { customerId: true, customer: { select: { defaultInvoiceChannel: true } } } },
+    },
     take: 5000,
   });
 
-  const result: OverdueCreditBlockResult = { checked: invoices.length, blocked: 0, alreadyBlocked: 0, noCreditRecord: 0 };
+  const result: OverdueCreditBlockResult = {
+    checked: invoices.length, blocked: 0, alreadyBlocked: 0, noCreditRecord: 0, skippedTipalti: 0,
+  };
 
   for (const inv of invoices) {
     const customerId = inv.load?.customerId;
     if (!customerId) continue;
+
+    // v3.8.bmf (ruling 2026-09-27): a customer billed through Tipalti is paid on
+    // Tipalti's cycle, not its own, so an invoice past 90 days does not block
+    // that customer's credit. Left unmarked, so the block applies if the
+    // customer stops billing through Tipalti.
+    if (inv.load?.customer?.defaultInvoiceChannel === "TIPALTI") {
+      result.skippedTipalti++;
+      continue;
+    }
 
     const credit = await prisma.shipperCredit.findUnique({
       where: { customerId },

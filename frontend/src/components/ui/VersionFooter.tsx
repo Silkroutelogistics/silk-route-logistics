@@ -19383,7 +19383,9 @@
 // v3.8.blg — Only the payment reminder sender ticks the reminder boxes, and a late
 // payment counts once, when the bill is fully paid. The 90-day credit block is its
 // own job and no longer needs an email on file.
-export const SRL_VERSION = "3.8.bme";
+// v3.8.bmf — A customer billed through Tipalti is not credit-blocked when an invoice
+// passes 90 days overdue: Tipalti pays on its own cycle, not the customer's.
+export const SRL_VERSION = "3.8.bmf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

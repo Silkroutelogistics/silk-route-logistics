@@ -494,7 +494,7 @@ export function startSchedulers() {
   cron.schedule("0 11 * * *", async () => {
     await withLock("overdue-credit-block-daily", 10 * 60 * 1000, async () => {
       const r = await applyOverdueCreditBlocks();
-      log.info(`[Scheduler] 90-day credit block: ${r.blocked} blocked, ${r.alreadyBlocked} already blocked, ${r.noCreditRecord} with no credit record, of ${r.checked} checked`);
+      log.info(`[Scheduler] 90-day credit block: ${r.blocked} blocked, ${r.alreadyBlocked} already blocked, ${r.noCreditRecord} with no credit record, ${r.skippedTipalti} Tipalti-exempt, of ${r.checked} checked`);
     });
   });
 

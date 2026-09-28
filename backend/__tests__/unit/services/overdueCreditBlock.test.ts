@@ -20,7 +20,7 @@ interface Inv {
   dueDate: Date;
   creditBlockApplied: boolean;
   deletedAt: Date | null;
-  load: { customerId: string | null; deletedAt: Date | null; status: string; customer?: { email: string | null } };
+  load: { customerId: string | null; deletedAt: Date | null; status: string; customer?: { email: string | null }; channel?: string };
 }
 
 let invoices: Inv[];
@@ -56,8 +56,20 @@ beforeEach(() => {
   vi.clearAllMocks();
   invoices = [];
   credits = new Map([["cust-1", { id: "sc-1", autoBlocked: false }]]);
-  mockPrisma.invoice.findMany.mockImplementation(async ({ where }: any) =>
-    invoices.filter((i) => matches(i, where)).map((i) => ({ id: i.id, invoiceNumber: i.invoiceNumber, load: { customerId: i.load.customerId } })),
+  // Returns the customer's channel only when the query selects it, so a job
+  // that stopped asking for it would read every customer as not-Tipalti here
+  // too, and the Tipalti cases below would fail.
+  mockPrisma.invoice.findMany.mockImplementation(async ({ where, select }: any) =>
+    invoices.filter((i) => matches(i, where)).map((i) => ({
+      id: i.id,
+      invoiceNumber: i.invoiceNumber,
+      load: {
+        customerId: i.load.customerId,
+        ...(select?.load?.select?.customer?.select?.defaultInvoiceChannel
+          ? { customer: { defaultInvoiceChannel: i.load.channel ?? "EMAIL" } }
+          : {}),
+      },
+    })),
   );
   mockPrisma.invoice.update.mockImplementation(async ({ where, data }: any) => {
     const row = invoices.find((i) => i.id === where.id)!;
@@ -78,7 +90,7 @@ describe("applyOverdueCreditBlocks", () => {
     invoices = [inv({ id: "a", daysPastDue: 90 })];
     const r = await applyOverdueCreditBlocks(NOW);
 
-    expect(r).toEqual({ checked: 1, blocked: 1, alreadyBlocked: 0, noCreditRecord: 0 });
+    expect(r).toEqual({ checked: 1, blocked: 1, alreadyBlocked: 0, noCreditRecord: 0, skippedTipalti: 0 });
     const data = mockPrisma.shipperCredit.updateMany.mock.calls[0][0].data;
     expect(data.autoBlocked).toBe(true);
     expect(data.blockedReason).toBe("Auto-blocked: Invoice INV-a 90+ days overdue");
@@ -116,7 +128,7 @@ describe("applyOverdueCreditBlocks", () => {
     credits.set("cust-1", { id: "sc-1", autoBlocked: true });
     const r = await applyOverdueCreditBlocks(NOW);
 
-    expect(r).toEqual({ checked: 1, blocked: 0, alreadyBlocked: 1, noCreditRecord: 0 });
+    expect(r).toEqual({ checked: 1, blocked: 0, alreadyBlocked: 1, noCreditRecord: 0, skippedTipalti: 0 });
     expect(mockPrisma.shipperCredit.updateMany).not.toHaveBeenCalled();
     expect(invoices[0].creditBlockApplied).toBe(true);
   });
@@ -154,5 +166,37 @@ describe("applyOverdueCreditBlocks", () => {
     ].flatMap((c: any[]) => Object.keys(c[0].data ?? {}));
     expect(written.length).toBeGreaterThan(0);
     expect(written.filter((k) => /reminderSent|lastReminderAt|latePayments/.test(k))).toEqual([]);
+  });
+});
+
+// v3.8.bmf — ruling 2026-09-27: customers whose default invoice channel is
+// TIPALTI are exempt from the 90-day credit block.
+describe("applyOverdueCreditBlocks — customers billed through Tipalti", () => {
+  const tipalti = (id: string, customerId = "cust-1") =>
+    inv({ id, daysPastDue: 120, load: { customerId, deletedAt: null, status: "DELIVERED", channel: "TIPALTI" } });
+
+  it("a Tipalti customer 120 days overdue is not blocked, and the invoice is left unmarked", async () => {
+    invoices = [tipalti("t")];
+    const r = await applyOverdueCreditBlocks(NOW);
+
+    expect(r).toEqual({ checked: 1, blocked: 0, alreadyBlocked: 0, noCreditRecord: 0, skippedTipalti: 1 });
+    expect(mockPrisma.shipperCredit.findUnique).not.toHaveBeenCalled();
+    expect(mockPrisma.shipperCredit.updateMany).not.toHaveBeenCalled();
+    expect(credits.get("cust-1")!.autoBlocked).toBe(false);
+    expect(invoices[0].creditBlockApplied).toBe(false);
+  });
+
+  it("a Tipalti invoice ahead in the run does not stop the next customer's block", async () => {
+    credits.set("cust-2", { id: "sc-2", autoBlocked: false });
+    invoices = [
+      tipalti("t", "cust-1"),
+      inv({ id: "e", daysPastDue: 120, load: { customerId: "cust-2", deletedAt: null, status: "DELIVERED", channel: "EMAIL" } }),
+    ];
+    const r = await applyOverdueCreditBlocks(NOW);
+
+    expect(r.skippedTipalti).toBe(1);
+    expect(r.blocked).toBe(1);
+    expect(credits.get("cust-1")!.autoBlocked).toBe(false);
+    expect(credits.get("cust-2")!.autoBlocked).toBe(true);
   });
 });
