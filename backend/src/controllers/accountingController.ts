@@ -26,6 +26,7 @@ import {
 // carrier portal and the manual carrier-pay route.
 import { atCostReimbursementsForLoad, carrierAccessorialsForLoad } from "../services/integrationService";
 import { BILLED_STATUSES, invoiceValue } from "../lib/invoiceTotals";
+import { invoiceBalance } from "../../../shared/constants/invoiceBalance";
 import { assertInvoiceOnFileOrOverride, invoiceOnFile } from "../lib/carrierPayInvoiceGate";
 import { priorSentBaseInvoice, priorSentMessage } from "../lib/invoiceSendGuard";
 
@@ -916,25 +917,29 @@ export async function getInvoiceAging(req: AuthRequest, res: Response) {
     for (const inv of invoices) {
       const anchorDate = inv.dueDate ?? inv.createdAt;
       const daysOld = daysBetween(anchorDate, now);
-      const enriched = { ...inv, daysOutstanding: Math.max(0, daysOld) };
+      // v3.8.bnb — the report ages what is still owed, not the face amount: a
+      // partly paid invoice that has turned OVERDUE carries its balance
+      // (ruling 2026-09-27, 2). Each row says it, and the totals are its sum.
+      const balance = invoiceBalance(inv);
+      const enriched = { ...inv, daysOutstanding: Math.max(0, daysOld), balance };
 
-      grandTotal += inv.amount;
+      grandTotal += balance;
 
       if (daysOld <= 0) {
         buckets.current.invoices.push(enriched);
-        buckets.current.total += inv.amount;
+        buckets.current.total += balance;
       } else if (daysOld <= 30) {
         buckets["1-30"].invoices.push(enriched);
-        buckets["1-30"].total += inv.amount;
+        buckets["1-30"].total += balance;
       } else if (daysOld <= 60) {
         buckets["31-60"].invoices.push(enriched);
-        buckets["31-60"].total += inv.amount;
+        buckets["31-60"].total += balance;
       } else if (daysOld <= 90) {
         buckets["61-90"].invoices.push(enriched);
-        buckets["61-90"].total += inv.amount;
+        buckets["61-90"].total += balance;
       } else {
         buckets["90+"].invoices.push(enriched);
-        buckets["90+"].total += inv.amount;
+        buckets["90+"].total += balance;
       }
     }
 

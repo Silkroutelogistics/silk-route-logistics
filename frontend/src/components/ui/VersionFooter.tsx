@@ -19421,7 +19421,9 @@
 // rule; the hourly aging job reads it.
 // v3.8.bna — A partly paid invoice past its due day turns overdue like any other, and keeps
 // what was paid, so its balance still shows.
-export const SRL_VERSION = "3.8.bna";
+// v3.8.bnb — The AR aging report ages what is still owed: each row carries its balance and
+// the totals add balances, so a partly paid invoice counts for what is left.
+export const SRL_VERSION = "3.8.bnb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
