@@ -6,6 +6,7 @@ import { Truck, DollarSign, Users, FileText, ChevronRight, Bell, MapPin, PieChar
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { money, customerBilled } from "@/lib/rateDisplay";
+import { isInvoiceOverdue } from "@shared/constants/invoiceDueDay";
 
 export function EmployeeOverview() {
   const { user } = useAuthStore();
@@ -78,10 +79,11 @@ export function EmployeeOverview() {
     l.status === "POSTED" && new Date(l.createdAt).getTime() < Date.now() - 4 * 60 * 60 * 1000
   ).length ?? 0;
 
+  // v3.8.bnj — the rule the accounting pages use (ruling 2026-09-27, 3): open,
+  // and past its due day on the Toronto clock. It had counted any invoice not
+  // PAID, VOID and DRAFT included, from the stored instant.
   const overdueInvoices = Array.isArray(invoices)
-    ? invoices.filter((i: { status: string; dueDate?: string }) =>
-        i.status !== "PAID" && i.dueDate && new Date(i.dueDate) < new Date()
-      ).length
+    ? invoices.filter((i: { status: string; dueDate?: string }) => isInvoiceOverdue(i)).length
     : 0;
 
   const expiringInsurance = 0; // derived from compliance stats if available

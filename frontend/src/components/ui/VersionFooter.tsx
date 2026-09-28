@@ -19437,7 +19437,9 @@
 // its due day, never a draft, and shows every due date as the day the invoice prints.
 // v3.8.bni — The invoice list API's past-due flag and day count read the same rule as the
 // invoices page and the aging report.
-export const SRL_VERSION = "3.8.bni";
+// v3.8.bnj — The employee dashboard's Overdue Invoices count uses the same rule as the accounting
+// pages: open invoices past their due day on the Toronto clock, never a void or a draft.
+export const SRL_VERSION = "3.8.bnj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
