@@ -11,7 +11,9 @@ import { log } from "../lib/logger";
  * found most of its reminders "already sent". That job is gone. What it did
  * that was real now lives in the one place that should do each thing:
  *
- *   marking an invoice OVERDUE   the hourly invoice-aging job (cron/index.ts)
+ *   marking an invoice OVERDUE   the hourly invoice-aging job: the rule is in
+ *                                services/invoiceAging.ts (v3.8.bmi), run from
+ *                                cron/index.ts
  *   counting a late payment      integrationService.onInvoicePaid, once, when
  *                                the invoice is fully paid
  *   blocking credit at 90 days   here
