@@ -1,5 +1,5 @@
 import { prisma } from "../config/database";
-import { etParts } from "../lib/financePeriods";
+import { pastDueCutoff } from "../../../shared/constants/invoiceDueDay";
 
 /**
  * v3.8.bmi — when an invoice turns OVERDUE, decided in one place (ruling
@@ -14,7 +14,8 @@ import { etParts } from "../lib/financePeriods";
  *
  * WHEN. A due date is a calendar day: the day the invoice prints, which is the
  * UTC date of the stored value (v3.8.bjr prints the stored day on any host).
- * It has passed once that day is over on SRL's clock, America/New_York. The
+ * It has passed once that day is over on the America/Toronto clock (ruling
+ * 2026-09-27; the rule itself is in shared/constants/invoiceDueDay.ts). The
  * job used to compare the stored instant with now, so a due date stored at
  * midnight UTC turned OVERDUE at 8 PM Eastern the evening before it was due:
  * Beekeepers' four invoices, due Oct 25, would have gone overdue on Oct 24.
@@ -24,15 +25,6 @@ import { etParts } from "../lib/financePeriods";
 
 /** The statuses this job moves to OVERDUE. Unchanged from the inline query it replaces. */
 export const OVERDUE_FROM = ["SENT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED"];
-
-/**
- * A due date earlier than this instant has passed: 00:00 UTC on today's
- * Eastern calendar date. A due date on that date or later has not.
- */
-export function pastDueCutoff(now: Date): Date {
-  const { year, month, day } = etParts(now);
-  return new Date(Date.UTC(year, month - 1, day));
-}
 
 /** Marks every invoice whose due date has passed OVERDUE. Returns how many moved. */
 export async function markPastDueInvoicesOverdue(now: Date = new Date()): Promise<number> {

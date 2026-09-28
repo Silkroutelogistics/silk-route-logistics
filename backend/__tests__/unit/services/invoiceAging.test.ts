@@ -2,13 +2,14 @@
  * v3.8.bmi — ruling 2026-09-27: "Overdue is set only by the hourly aging job,
  * on the due date, for every customer including Tipalti."
  *
- * Held here: when a due date has passed (the Eastern calendar day after the
- * due day), and what the job does with that — an invoice due today stays as it
+ * Held here: when a due date has passed (the day after the due day, on the
+ * America/Toronto clock, ruling 2026-09-27), and what the job does with that — an invoice due today stays as it
  * is, and a Tipalti invoice past due turns OVERDUE like any other.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { prisma } from "../../../src/config/database";
-import { pastDueCutoff, markPastDueInvoicesOverdue, OVERDUE_FROM } from "../../../src/services/invoiceAging";
+import { markPastDueInvoicesOverdue, OVERDUE_FROM } from "../../../src/services/invoiceAging";
+import { pastDueCutoff } from "../../../../shared/constants/invoiceDueDay";
 
 const mockPrisma = prisma as any;
 
@@ -16,7 +17,7 @@ const mockPrisma = prisma as any;
 const DUE_OCT25 = new Date("2026-10-25T00:00:00.000Z");
 const passed = (due: Date, now: string) => due < pastDueCutoff(new Date(now));
 
-describe("a due date has passed once its day is over in Eastern time", () => {
+describe("a due date has passed once its day is over on the Toronto clock", () => {
   it("an invoice due Oct 25 is not overdue at 8:30 PM or 11:59 PM Eastern on Oct 25", () => {
     expect(passed(DUE_OCT25, "2026-10-26T00:30:00.000Z")).toBe(false); // the old rule's first overdue hour was Oct 24, 8 PM
     expect(passed(DUE_OCT25, "2026-10-26T03:59:59.000Z")).toBe(false);
@@ -30,6 +31,16 @@ describe("a due date has passed once its day is over in Eastern time", () => {
     const due = new Date("2026-11-10T00:00:00.000Z");
     expect(passed(due, "2026-11-11T04:59:59.000Z")).toBe(false);
     expect(passed(due, "2026-11-11T05:00:00.000Z")).toBe(true);
+  });
+
+  // Toronto and New York share a clock today, so no 2026 date can show which
+  // one the code reads. January 1974 can: the US was on emergency daylight
+  // time (UTC-4) while Toronto stayed on standard time (UTC-5). At 04:30 UTC
+  // on Jan 10 it was already Jan 10 in New York and still Jan 9 in Toronto.
+  it("the clock is America/Toronto, not America/New_York", () => {
+    const due = new Date("1974-01-09T00:00:00.000Z");
+    expect(passed(due, "1974-01-10T04:30:00.000Z")).toBe(false); // on New York's clock this was already overdue
+    expect(passed(due, "1974-01-10T05:00:00.000Z")).toBe(true);
   });
 
   it("a due date carrying a time of day is judged by its day, not its hour", () => {
@@ -69,6 +80,13 @@ describe("markPastDueInvoicesOverdue — the hourly aging job", () => {
     rows = [{ id: "due-today", status: "SENT", dueDate: DUE_OCT25, channel: "EMAIL" }];
     expect(await markPastDueInvoicesOverdue(new Date("2026-10-26T00:30:00.000Z"))).toBe(0);
     expect(rows[0].status).toBe("SENT");
+  });
+
+  it("the job judges the due day on the Toronto clock", async () => {
+    rows = [{ id: "jan9", status: "SENT", dueDate: new Date("1974-01-09T00:00:00.000Z"), channel: "EMAIL" }];
+    expect(await markPastDueInvoicesOverdue(new Date("1974-01-10T04:30:00.000Z"))).toBe(0);
+    expect(await markPastDueInvoicesOverdue(new Date("1974-01-10T05:00:00.000Z"))).toBe(1);
+    expect(rows[0].status).toBe("OVERDUE");
   });
 
   it("a Tipalti invoice past due shows overdue in aging", async () => {

@@ -19417,7 +19417,9 @@
 // in front of it showed "MC-MC-116980", on the carrier's own home page among
 // others. Every labelled MC number now goes through one rule, mcDigits, in
 // both trees, and a guard fails the build on a new one that does not.
-export const SRL_VERSION = "3.8.bmy";
+// v3.8.bmz — An invoice's due day is judged on the America/Toronto clock, from one shared
+// rule; the hourly aging job reads it.
+export const SRL_VERSION = "3.8.bmz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
