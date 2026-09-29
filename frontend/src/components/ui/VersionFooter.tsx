@@ -19507,7 +19507,11 @@
 // the cargo value, the pallet count and the driver's instructions. The with-tender schema
 // did not declare most of them, so they were stripped on the way in. The draft RC now takes
 // the load's pickup number. The customer's FSC and accessorials stay off the carrier's RC.
-export const SRL_VERSION = "3.8.bof";
+// v3.8.bog — Order Builder collects the pickup number and the shipper and delivery
+// references, and both of its exits (the tender drawer and Waterfall / Load Board / DAT)
+// send every fact the rate confirmation prints. The load's weight, pieces and pallets are
+// the sum of its lines, not line 1, and it is hazmat when any line is.
+export const SRL_VERSION = "3.8.bog";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

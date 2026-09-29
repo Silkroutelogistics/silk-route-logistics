@@ -6,6 +6,7 @@ import { X, AlertCircle, AlertTriangle, ShieldAlert, Loader2 } from "lucide-reac
 import { useForm } from "react-hook-form";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { buildWithTenderPayload } from "./withTenderPayload";
 import { mcDigits } from "@/lib/mcNumber";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { type CustomerSummary } from "@/components/shared/CustomerPicker";
@@ -57,7 +58,7 @@ interface CarrierSearchResult {
   phone?: string | null;
 }
 
-interface DrawerFormState {
+export interface DrawerFormState {
   // Lane
   originCity: string;
   originState: string;
@@ -107,6 +108,13 @@ interface DrawerFormState {
   shipperReference: string;
   deliveryReference: string;
   appointmentNumber: string;
+  // v3.8.bog — carried from Order Builder to the load, and so to the RC.
+  // The drawer does not re-edit them.
+  pickupAppointment: string;
+  deliveryAppointment: string;
+  pickupNumber: string;
+  cargoValue: string;
+  driverInstructions: string;
 
   // Carrier
   carrierId: string;
@@ -198,6 +206,7 @@ const EMPTY_FORM: DrawerFormState = {
   pickupDate: "", pickupTimeStart: "", pickupTimeEnd: "",
   deliveryDate: "", deliveryTimeStart: "", deliveryTimeEnd: "",
   poNumbersText: "", shipperReference: "", deliveryReference: "", appointmentNumber: "",
+  pickupAppointment: "", deliveryAppointment: "", pickupNumber: "", cargoValue: "", driverInstructions: "",
   carrierId: "",
   customerRate: "", offeredRate: "", expiresAtHours: "24",
   specialInstructions: "", pickupInstructions: "", deliveryInstructions: "",
@@ -332,82 +341,14 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
       if (!data.pickupDate || !data.deliveryDate) throw new Error("Pickup and delivery dates required");
       if (!data.offeredRate || Number(data.offeredRate) <= 0) throw new Error("Offered rate must be > 0");
 
-      const expiresAtHours = Number(data.expiresAtHours) || 24;
-      const expiresAt = new Date(Date.now() + expiresAtHours * 60 * 60 * 1000).toISOString();
-      const poNumbers = data.poNumbersText.split(",").map((s) => s.trim()).filter(Boolean);
-
-      const payload = {
-        orderId: orderId ?? undefined,
+      // v3.8.bog — built by buildWithTenderPayload (./withTenderPayload), which
+      // computes the load's totals from the same line array it sends.
+      const payload = buildWithTenderPayload(data, {
+        orderId,
         customerId: customer.id,
-        originCity: data.originCity, originState: data.originState, originZip: data.originZip,
-        originAddress: data.originAddress || null,
-        originCompany: data.originCompany || null,
-        originContactName: data.originContactName || null,
-        originContactPhone: data.originContactPhone || null,
-        destCity: data.destCity, destState: data.destState, destZip: data.destZip,
-        destAddress: data.destAddress || null,
-        destCompany: data.destCompany || null,
-        destContactName: data.destContactName || null,
-        destContactPhone: data.destContactPhone || null,
-        distance: data.distance ? Number(data.distance) : null,
-        equipmentType: data.equipmentType,
-        commodity: data.commodity || null,
-        weight: data.weight ? Number(data.weight) : null,
-        pieces: data.pieces ? parseInt(data.pieces, 10) : null,
-        // Sprint 59.b (v3.8.act) Item 176 — combine primary line (from
-        // form fields) with pass-through extra lines so multi-line BOL
-        // round-trips through the drawer without loss. lineItemsRest is
-        // typically populated when drawer is launched from an Order
-        // Builder draft with form.lineItems.length > 1.
-        lineItems: [
-          {
-            lineNumber: 1,
-            pieces: parseInt(data.pieces, 10) || 1,
-            packageType: data.packageType || "PLT",
-            description: data.description || "General Freight",
-            weight: Number(data.weight) || 0,
-          },
-          ...(lineItemsRest ?? []).map((li, i) => ({
-            lineNumber: i + 2,
-            pieces: li.pieces,
-            packageType: li.packageType || "PLT",
-            description: li.description,
-            weight: li.weight,
-            freightClass: li.freightClass ?? null,
-            nmfcCode: li.nmfcCode ?? null,
-            hazmat: li.hazmat ?? false,
-            hazmatUnNumber: li.hazmatUnNumber ?? null,
-            hazmatClass: li.hazmatClass ?? null,
-          })),
-        ],
-        hazmat: data.hazmat,
-        temperatureControlled: data.temperatureControlled,
-        tempMin: data.tempMin ? Number(data.tempMin) : null,
-        tempMax: data.tempMax ? Number(data.tempMax) : null,
-        tempSetpoint: data.tempSetpoint ? Number(data.tempSetpoint) : null,
-        preCoolTo: data.preCoolTo ? Number(data.preCoolTo) : null,
-        reeferContinuous: data.reeferContinuous,
-        pickupDate: new Date(data.pickupDate).toISOString(),
-        pickupTimeStart: data.pickupTimeStart || null,
-        pickupTimeEnd: data.pickupTimeEnd || null,
-        deliveryDate: new Date(data.deliveryDate).toISOString(),
-        deliveryTimeStart: data.deliveryTimeStart || null,
-        deliveryTimeEnd: data.deliveryTimeEnd || null,
-        isMultiStop: false,
-        poNumbers,
-        appointmentNumber: data.appointmentNumber || null,
-        shipperReference: data.shipperReference || null,
-        deliveryReference: data.deliveryReference || null,
-        tender: {
-          carrierId: selectedCarrier.id,
-          offeredRate: Number(data.offeredRate),
-          expiresAt,
-        },
-        customerRate: data.customerRate ? Number(data.customerRate) : null,
-        specialInstructions: data.specialInstructions || null,
-        pickupInstructions: data.pickupInstructions || null,
-        deliveryInstructions: data.deliveryInstructions || null,
-      };
+        carrierId: selectedCarrier.id,
+        lineItemsRest,
+      });
 
       const res = await api.post("/loads/with-tender", payload);
       return res.data;

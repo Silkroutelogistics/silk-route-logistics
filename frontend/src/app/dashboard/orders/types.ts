@@ -140,6 +140,11 @@ export interface OrderForm {
   appointmentNumber: string;
   pickupAppointment: string;
   deliveryAppointment: string;
+  /** v3.8.bog — the shipper's pickup number and both references. The Rate
+   *  Confirmation prints them on the stop rows; nothing captured them. */
+  pickupNumber: string;
+  shipperReference: string;
+  deliveryReference: string;
   poNumbers: string[];
   distance: string;
   lumperEstimate: string;
@@ -194,6 +199,15 @@ export interface OrderForm {
   trackingLinkAutoSend: boolean;
 }
 
+/** v3.8.bog — the load's weight and pieces are the sum of its lines, so a
+ *  multi-line RC prints the whole weight. Null rather than 0 when nothing was
+ *  entered: an empty form is not a claim of zero pounds. */
+export function loadTotals(lines: { weight: string; pieces: string }[]): { weight: number | null; pieces: number | null } {
+  const weight = lines.reduce((n, l) => n + (parseFloat(l.weight) || 0), 0);
+  const pieces = lines.reduce((n, l) => n + (parseInt(l.pieces, 10) || 0), 0);
+  return { weight: weight > 0 ? weight : null, pieces: pieces > 0 ? pieces : null };
+}
+
 export const emptyOrderForm = (): OrderForm => ({
   customerId: "",
   originFacilityId: "",
@@ -230,6 +244,9 @@ export const emptyOrderForm = (): OrderForm => ({
   appointmentNumber: "",
   pickupAppointment: "",
   deliveryAppointment: "",
+  pickupNumber: "",
+  shipperReference: "",
+  deliveryReference: "",
   poNumbers: [],
   distance: "",
   lumperEstimate: "",

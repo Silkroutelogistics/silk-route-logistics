@@ -22,6 +22,7 @@ import { LineItemsSection } from "@/components/orders/LineItemsSection";
 import {
   emptyLineItem,
   emptyOrderForm,
+  loadTotals,
   EQUIPMENT_OPTIONS,
   type LineItemFormData,
   type OrderForm,
@@ -618,8 +619,11 @@ export default function OrderBuilderPage() {
       // Equipment & freight
       equipmentType: form.equipmentType,
       commodity: form.lineItems[0]?.description || null,
-      weight: form.lineItems[0]?.weight ? parseFloat(form.lineItems[0].weight) : null,
-      pieces: form.lineItems[0]?.pieces ? parseInt(form.lineItems[0].pieces, 10) : null,
+      // v3.8.bog — the LOAD's weight and pieces are the sum of its lines. Line 1
+      // alone printed a partial weight on a multi-line RC, and weight is the
+      // figure a carrier scales and is held legal against.
+      weight: loadTotals(form.lineItems).weight,
+      pieces: loadTotals(form.lineItems).pieces,
       // Pallets are DERIVED from the line items rather than collected again.
       // The AE already states package type per line, and `Load.pallets` had no
       // writer on any create path — so the column was permanently NULL. Summing
@@ -646,6 +650,10 @@ export default function OrderBuilderPage() {
       poNumbers: form.poNumbers,
       pickupAppointment: form.pickupAppointment || null,
       deliveryAppointment: form.deliveryAppointment || null,
+      pickupNumber: form.pickupNumber || null,
+      shipperReference: form.shipperReference || null,
+      deliveryReference: form.deliveryReference || null,
+      cargoValue: form.cargoValue ? parseFloat(form.cargoValue) : null,
       // Pricing
       customerRate: form.customerRate ? parseFloat(form.customerRate) : null,
       carrierRate: form.targetCost ? parseFloat(form.targetCost) : null,
@@ -1307,6 +1315,20 @@ export default function OrderBuilderPage() {
                 <PoInput pos={form.poNumbers} onChange={(list) => setForm((f) => ({ ...f, poNumbers: list }))} />
               </Field>
             </div>
+            {/* v3.8.bog — printed on the Rate Confirmation's stop rows (PU#,
+                shipper ref at pickup, ref at delivery). `?? ""` because a draft
+                saved before these existed hydrates without them. */}
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              <Field label="Pickup #">
+                <input value={form.pickupNumber ?? ""} onChange={(e) => setForm((f) => ({ ...f, pickupNumber: e.target.value }))} className={inp} />
+              </Field>
+              <Field label="Shipper ref">
+                <input value={form.shipperReference ?? ""} onChange={(e) => setForm((f) => ({ ...f, shipperReference: e.target.value }))} className={inp} />
+              </Field>
+              <Field label="Delivery ref">
+                <input value={form.deliveryReference ?? ""} onChange={(e) => setForm((f) => ({ ...f, deliveryReference: e.target.value }))} className={inp} />
+              </Field>
+            </div>
 
             {/* Lumper estimate */}
             <div className="mt-3">
@@ -1838,7 +1860,8 @@ export default function OrderBuilderPage() {
           packageType: form.lineItems[0]?.packageType ?? "PLT",
           weight: form.lineItems[0]?.weight ?? "",
           description: form.lineItems[0]?.description ?? "",
-          hazmat: !!form.lineItems[0]?.hazmat,
+          // Any line, not line 1: a hazmat line 3 is still hazmat freight.
+          hazmat: form.lineItems.some((l) => l.hazmat),
           temperatureControlled: form.temperatureControlled,
           tempMin: form.tempMin ?? "",
           tempMax: form.tempMax ?? "",
@@ -1850,6 +1873,15 @@ export default function OrderBuilderPage() {
           // The drawer still carries one appointment box. The delivery side is
           // what maps to it, matching where existing values were migrated.
           appointmentNumber: form.deliveryAppointment ?? "",
+          // v3.8.bog — both sides, the references, the value and the driver's
+          // note, so the RC prints what the AE entered here.
+          pickupAppointment: form.pickupAppointment ?? "",
+          deliveryAppointment: form.deliveryAppointment ?? "",
+          pickupNumber: form.pickupNumber ?? "",
+          shipperReference: form.shipperReference ?? "",
+          deliveryReference: form.deliveryReference ?? "",
+          cargoValue: form.cargoValue ?? "",
+          driverInstructions: form.driverInstructions ?? "",
           // Financials
           customerRate: form.customerRate,
           offeredRate: form.targetCost,
