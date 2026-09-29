@@ -300,7 +300,20 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
   // feeds them moved. AE formData could say one thing while the carrier had
   // chosen another, and nothing reconciled the two. The carrier decides how
   // their own load is paid, so the row they wrote is what the document states.
-  const governingTender = await prisma.loadTender.findFirst({
+  // Item 342 (v3.8.boo) — an RC drafted for an offer that is still open is
+  // issued WITH that offer: the election is the offer's, the signing link lives
+  // as long as the offer, and nothing is frozen onto the load until the carrier
+  // signs (which is also when they take it). `issueAtOffer` is set only by
+  // offerRateConfirmationService, never over HTTP, and it suppresses this
+  // email because the tender offer is the carrier's one email.
+  const offerTender = rc.tenderId
+    ? await prisma.loadTender.findFirst({
+        where: { id: rc.tenderId, status: "OFFERED", deletedAt: null },
+        select: { id: true, expiresAt: true },
+      })
+    : null;
+  const issueAtOffer = (req as unknown as { issueAtOffer?: boolean }).issueAtOffer === true;
+  const governingTender = offerTender ?? await prisma.loadTender.findFirst({
     where: { loadId: rc.loadId, status: { in: ["ACCEPTED", "RC_SENT", "CONFIRMED"] }, deletedAt: null },
     orderBy: { createdAt: "desc" },
     select: { id: true },
@@ -471,7 +484,7 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
   // Rotation is what revokes the prior link: the row holds one hash. This
   // therefore lands BEFORE the email, so the link in the email is the link
   // the row knows; the status update below no longer carries token fields.
-  const signToken = await rotateRcSignToken(rc.id);
+  const signToken = await rotateRcSignToken(rc.id, prisma, { expiresAt: offerTender?.expiresAt ?? null });
 
   // Send the document and the link that signs it.
   //
@@ -479,7 +492,7 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
   // carrier to sign and gives them nowhere to do it sends them back to a
   // dispatcher, which is how an unsigned RC ends up aging past its SLA for
   // reasons that have nothing to do with the carrier.
-  await sendRateConfirmationEmail(
+  if (!issueAtOffer) await sendRateConfirmationEmail(
     recipientEmail,
     recipientName || "Carrier",
     rc.load.referenceNumber,
@@ -608,8 +621,9 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
   // activation page, lib/download.ts). Existing rows are converted by migration
   // 20260901000000_rc_pdf_url_api_relative.
   // v3.8.bom — one writer, shared with the carrier signing an offer-time rate
-  // confirmation (Item 342), which freezes the same three columns.
-  await freezeIssuedRateConfirmationOntoLoad({
+  // confirmation (Item 342), which freezes the same three columns. Not while
+  // the offer is open (v3.8.boo): that freeze belongs to the signature.
+  if (!offerTender) await freezeIssuedRateConfirmationOntoLoad({
     loadId: rc.loadId,
     rateConfirmationId: rc.id,
     quickPayFeePercent: election.feePercent,

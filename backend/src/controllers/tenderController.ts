@@ -24,6 +24,7 @@ import { assignCarrier } from "../services/carrierAssignmentService";
 import { stampCarrierAcceptance } from "../lib/acceptanceEvidence";
 import { createTender as createTenderRow } from "../services/tenderCreationService";
 import { autoIssueRateConfirmation } from "../services/rateConfirmationAutoIssue";
+import { issueRateConfirmationAtOffer } from "../services/offerRateConfirmationService";
 import { withdrawLiveTenders, settleTender, settleTenders } from "../services/tenderTransitionService";
 
 export async function createTender(req: AuthRequest, res: Response) {
@@ -122,9 +123,23 @@ export async function createTender(req: AuthRequest, res: Response) {
   // notifyTenderAction sets /carrier/dashboard/tenders correctly. Manual call
   // also used type "TENDER" which isn't in NotificationType enum;
   // notifyTenderAction uses canonical "TENDER_RECEIVED".
+  // v3.8.boo (Item 342) — the rate confirmation goes out WITH the offer, so the
+  // carrier's acceptance is their signature. Before the notice, so the Accept
+  // button in it already has a document to open. Never fatal: without it the
+  // offer is accepted and signed in two steps, as before.
+  const offerRc = await issueRateConfirmationAtOffer(tender.id, req.user!.id).catch((err) => {
+    log.error({ err, tenderId: tender.id }, "[Tender] issue at offer threw");
+    return { issued: false, reason: "threw" } as { issued: boolean; rateConfirmationId?: string; reason?: string };
+  });
+
   await notifyTenderAction(tender.id, "OFFERED");
 
-  res.status(201).json({ ...tender, complianceWarnings: compliance.warnings.length > 0 ? compliance.warnings : undefined });
+  res.status(201).json({
+    ...tender,
+    rateConfirmationIssued: offerRc.issued,
+    rateConfirmationId: offerRc.rateConfirmationId ?? null,
+    complianceWarnings: compliance.warnings.length > 0 ? compliance.warnings : undefined,
+  });
 }
 
 export async function acceptTender(req: AuthRequest, res: Response) {

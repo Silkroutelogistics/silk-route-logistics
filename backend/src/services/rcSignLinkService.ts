@@ -51,8 +51,15 @@ export interface RotatedSignLink {
  * Mint a fresh single-use signing token for a rate confirmation and store its
  * hash, superseding whatever link was live. Both issuing paths call this.
  */
-export async function rotateRcSignToken(rcId: string, db: Db = prisma): Promise<RotatedSignLink> {
+export async function rotateRcSignToken(
+  rcId: string,
+  db: Db = prisma,
+  // Item 342 — an RC issued with the offer is signed to ACCEPT that offer, so
+  // its link lives exactly as long as the offer does, not RC_SIGN_SLA_HOURS.
+  opts: { expiresAt?: Date | null } = {},
+): Promise<RotatedSignLink> {
   const minted = mintRcSignToken();
+  if (opts.expiresAt) minted.expiresAt = opts.expiresAt;
   await db.rateConfirmation.update({
     where: { id: rcId },
     data: {

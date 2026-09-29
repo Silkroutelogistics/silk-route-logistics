@@ -213,7 +213,8 @@ describe("the AE send path mints through the same function", () => {
     const fs = await import("fs");
     const path = await import("path");
     const src = fs.readFileSync(path.resolve(__dirname, "../../../src/controllers/rateConfirmationController.ts"), "utf8");
-    expect(src).toContain("await rotateRcSignToken(rc.id)");
+    // v3.8.boo passes the offer expiry as a third argument; the call is what matters.
+    expect(src).toMatch(/await rotateRcSignToken\(rc\.id[,)]/);
     expect(src).not.toMatch(/signTokenHash\s*:/);
     expect(src).not.toContain("mintRcSignToken(");
   });

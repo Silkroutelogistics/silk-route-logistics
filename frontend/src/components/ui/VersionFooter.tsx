@@ -19537,7 +19537,10 @@
 // v3.8.bon — signing a rate confirmation issued with the offer accepts the offer (Item 342):
 // agreement, token claim, the whole accept path, then the signature; a refused accept releases
 // the claim. The load is frozen and the tender confirmed at the signature, never at offer.
-export const SRL_VERSION = "3.8.bon";
+// v3.8.boo — the rate confirmation is issued WITH a direct offer (Item 342): Load Board tender
+// and Carrier Engagement Drawer. Frozen, hashed, numbered and signable for as long as the offer;
+// no second email, nothing on the load until the carrier signs. Never fatal to the offer.
+export const SRL_VERSION = "3.8.boo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

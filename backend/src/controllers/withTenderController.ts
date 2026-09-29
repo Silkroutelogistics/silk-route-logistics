@@ -10,6 +10,7 @@ import { checkCustomerActive } from "../lib/customerActive";
 import { generateLoadNumber, formatDocumentNumber } from "../lib/documentNumber";
 import { log } from "../lib/logger";
 import { createTender } from "../services/tenderCreationService";
+import { issueRateConfirmationAtOffer } from "../services/offerRateConfirmationService";
 
 /**
  * Sprint 59 (v3.8.acj) Item 176 — POST /api/loads/with-tender
@@ -299,6 +300,15 @@ export async function createLoadWithTender(req: AuthRequest, res: Response) {
 
     // Post-commit side effects — non-blocking try/catch per Sprint 38 pattern.
     // Email failures must NOT roll back the load/tender/RC.
+    //
+    // v3.8.boo (Item 342) — the draft made in the transaction is ISSUED here,
+    // after commit (storage and the render do not belong inside a database
+    // transaction), then the offer goes out. Awaited so the response says
+    // whether the carrier can sign; never fatal.
+    const offerRc = await issueRateConfirmationAtOffer(result.tender.id, req.user!.id).catch((err) => {
+      log.error({ err, tenderId: result.tender.id }, "[with-tender] issue at offer threw");
+      return { issued: false } as { issued: boolean };
+    });
     notifyTenderAction(result.tender.id, "OFFERED").catch((err) =>
       log.error({ err, tenderId: result.tender.id }, "[with-tender] notifyTenderAction failed"),
     );
@@ -327,6 +337,7 @@ export async function createLoadWithTender(req: AuthRequest, res: Response) {
       load: result.load,
       tender: result.tender,
       rateConfirmation: result.rc,
+      rateConfirmationIssued: offerRc.issued,
     });
   } catch (err: any) {
     log.error({ err }, "[with-tender] transaction rollback");
