@@ -19534,7 +19534,10 @@
 // v3.8.bom — a direct offer issued with its rate confirmation is accepted by signing it
 // (Item 342): a bare carrier accept is refused 409 SIGN_TO_ACCEPT, and an AE accept on the
 // carrier's behalf sends the RC for the carrier to sign (issued at accept for a counter).
-export const SRL_VERSION = "3.8.bom";
+// v3.8.bon — signing a rate confirmation issued with the offer accepts the offer (Item 342):
+// agreement, token claim, the whole accept path, then the signature; a refused accept releases
+// the claim. The load is frozen and the tender confirmed at the signature, never at offer.
+export const SRL_VERSION = "3.8.bon";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

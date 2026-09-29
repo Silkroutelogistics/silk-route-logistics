@@ -33,6 +33,9 @@ import { getAgreementState, type AgreementReader, type AgreementVerdict } from "
 import { recordSecurityEvent } from "../lib/securityAudit";
 import { stampCarrierAcceptance } from "../lib/acceptanceEvidence";
 import { log } from "../lib/logger";
+import { makeCaptureRes } from "../lib/captureResponse";
+import { freezeIssuedRateConfirmationOntoLoad } from "../services/rateConfirmationFreezeService";
+import type { AuthRequest } from "../middleware/auth";
 
 /**
  * The carrier's My Loads page, where a signed load's bill of lading now is.
@@ -109,6 +112,15 @@ function refusal(reason: string): { status: number; title: string; body: string 
         <p>If you need another copy, ask your dispatcher or open the load in your carrier portal.</p>`,
     };
   }
+  if (reason === "OFFER_ENDED") {
+    return {
+      status: 410,
+      title: "Offer expired",
+      body: `<h1>This offer has expired</h1>
+        <p>The load was offered for a limited time and that time has passed, so there is nothing to sign.</p>
+        <p>If you still want it, contact your dispatcher or operations@silkroutelogistics.ai.</p>`,
+    };
+  }
   if (reason === "EXPIRED") {
     return {
       status: 410,
@@ -161,6 +173,35 @@ function agreementRefusal(v: AgreementVerdict): { status: number; title: string;
 }
 
 /**
+ * A refused signature, recorded and answered. The subject of the audit row is
+ * the carrier whose signature was refused — on an open offer that is the
+ * TENDER's carrier, since nobody is on the load yet (Item 342). audit_logs.userId
+ * is a required FK, so with no carrier there is only a log line.
+ */
+async function renderAgreementRefusal(
+  req: Request,
+  res: Response,
+  verdict: AgreementVerdict,
+  rc: { id: string; loadId: string; signTokenId: string | null },
+  carrierUserId: string | null,
+) {
+  const reason = verdict.state === "TERMINATED" ? "AGREEMENT_TERMINATED" : "BCA_REQUIRED";
+  if (carrierUserId) {
+    await recordSecurityEvent({
+      userId: carrierUserId,
+      action: "RC_SIGN_REFUSED",
+      note: `Rate confirmation signature refused: ${reason === "BCA_REQUIRED" ? "no executed Broker-Carrier Agreement on file" : "Broker-Carrier Agreement terminated"}`,
+      req: req as never,
+      details: { reason, rateConfirmationId: rc.id, loadId: rc.loadId, signTokenId: rc.signTokenId ?? null },
+    });
+  } else {
+    log.warn({ rcId: rc.id, loadId: rc.loadId, reason }, "[RC] signature refused on a load with no carrier");
+  }
+  const r = agreementRefusal(verdict);
+  res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
+}
+
+/**
  * The BCA question for the carrier ON THE LOAD. `Load.carrierId` is a User.id
  * and the agreement rows hang off CarrierProfile.id (§13.3 Items 57, 222.4),
  * so the profile is resolved first. A load with no carrier, or a carrier with
@@ -197,6 +238,24 @@ async function resolve(token: string) {
   return rc;
 }
 
+/**
+ * Item 342 (v3.8.bon) — the offer this rate confirmation was issued WITH, when
+ * it is still open. Then signing is also accepting: the carrier is the
+ * TENDER's carrier, because nobody is on the load yet.
+ */
+async function openOfferFor(rc: { tenderId: string | null }) {
+  if (!rc.tenderId) return null;
+  const t = await prisma.loadTender.findUnique({
+    where: { id: rc.tenderId },
+    select: { id: true, status: true, expiresAt: true, carrier: { select: { userId: true } } },
+  });
+  return t && t.status === "OFFERED" ? t : null;
+}
+
+function offerEnded(offer: { expiresAt: Date | null } | null): boolean {
+  return !!offer?.expiresAt && offer.expiresAt.getTime() <= Date.now();
+}
+
 /** The form. */
 router.get("/:token", async (req: Request, res: Response) => {
   const rc = await resolve(String(req.params.token));
@@ -216,10 +275,16 @@ router.get("/:token", async (req: Request, res: Response) => {
     res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
     return;
   }
+  const offer = await openOfferFor(rc);
+  if (offerEnded(offer)) {
+    const r = refusal("OFFER_ENDED");
+    res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
+    return;
+  }
   // Sign-first: a carrier with no executed BCA is shown where to sign it, not
   // the form. The POST decides again inside its transaction; this is so the
   // carrier is told before they type a name, not after.
-  const { verdict } = await bcaStateForLoad(rc.load.carrierId, prisma);
+  const { verdict } = await bcaStateForLoad(offer ? offer.carrier.userId : rc.load.carrierId, prisma);
   if (verdict.state !== "SIGNED") {
     const r = agreementRefusal(verdict);
     res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
@@ -242,6 +307,7 @@ router.get("/:token", async (req: Request, res: Response) => {
       <div class="kv"><span>Total carrier pay</span><span><strong>${money(carrierTotal)}</strong></span></div>
       <p><a class="cta" href="/api/rc-sign/${encodeURIComponent(String(req.params.token))}/document" target="_blank" rel="noopener">Read the rate confirmation (PDF)</a></p>
       <p>Read it before you sign. It is the document SRL issued, the same one your dispatcher and your carrier portal hold, and signing below accepts it as written.</p>
+      ${offer ? `<p><strong>Signing also accepts this load.</strong> It books the load in your name at the rate above; there is no separate accept step.</p>` : ""}
       <form method="POST" action="/api/rc-sign/${encodeURIComponent(String(req.params.token))}">
         <label class="field" for="signerName">Type your full name to sign</label>
         <input type="text" id="signerName" name="signerName" required minlength="2" maxlength="120" autocomplete="name" placeholder="First and last name">
@@ -249,7 +315,7 @@ router.get("/:token", async (req: Request, res: Response) => {
           <input type="checkbox" id="attest" name="attest" value="yes" required>
           <label for="attest">I am authorized to bind this carrier, and I agree that typing my name is my electronic signature on this rate confirmation.</label>
         </div>
-        <button type="submit">Sign rate confirmation</button>
+        <button type="submit">${offer ? "Accept load and sign" : "Sign rate confirmation"}</button>
       </form>
       <p class="foot">This link signs this rate confirmation once and then stops working.<br>Document fingerprint <span class="ref">${rc.contentHash ?? "not recorded"}</span></p>`,
   }));
@@ -354,6 +420,68 @@ router.post("/:token", async (req: Request, res: Response) => {
   const signerIp = extractClientIp(req as never);
   const signerUserAgent = clientUserAgent(req as never);
 
+  // ── Item 342 (v3.8.bon) — SIGNING AN OPEN OFFER IS ACCEPTING IT ──
+  //
+  // The RC was issued with the offer, so nobody is on the load yet and the
+  // signer is the tender's carrier. In order: the agreement (no write), then
+  // the token is CLAIMED so a double-tap cannot run the accept twice, then the
+  // accept path runs whole (compliance, assignment, sibling withdrawal,
+  // shipment) through the same controller every other accept uses. If the
+  // accept is refused the claim is released: the link stays good, because the
+  // carrier signed nothing.
+  const offer = await openOfferFor(rc);
+  if (offerEnded(offer)) {
+    const r = refusal("OFFER_ENDED");
+    res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
+    return;
+  }
+  const carrierUserId = offer ? offer.carrier.userId : rc.load.carrierId;
+  if (offer) {
+    const pre = await bcaStateForLoad(carrierUserId, prisma);
+    if (pre.verdict.state !== "SIGNED") {
+      await renderAgreementRefusal(req, res, pre.verdict, rc, carrierUserId);
+      return;
+    }
+    const claimed = await prisma.rateConfirmation.updateMany({
+      where: { id: rc.id, signTokenUsedAt: null, signTokenHash: hashRcSignToken(String(req.params.token)) },
+      data: { signTokenUsedAt: signedAt },
+    });
+    if (claimed.count === 0) {
+      const r = refusal("ALREADY_USED");
+      res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
+      return;
+    }
+    const { acceptTender } = await import("../controllers/tenderController");
+    const { shim, state } = makeCaptureRes();
+    let threw = false;
+    try {
+      await acceptTender(
+        {
+          params: { id: offer.id },
+          user: { id: offer.carrier.userId, email: "", role: "CARRIER" },
+          body: {},
+          viaSignature: { rateConfirmationId: rc.id },
+        } as unknown as AuthRequest,
+        shim,
+      );
+    } catch (err) {
+      threw = true;
+      log.error({ err, rcId: rc.id, tenderId: offer.id }, "[RC] accept-by-signature threw");
+    }
+    if (threw || (state.statusCode ?? 200) >= 400) {
+      await prisma.rateConfirmation.updateMany({
+        where: { id: rc.id, signTokenUsedAt: signedAt },
+        data: { signTokenUsedAt: null },
+      });
+      const why = String((state.body as { error?: string } | null)?.error ?? "The load could not be accepted.").replace(/[<>&]/g, "");
+      res.status(409).type("html").send(page({
+        title: "Not accepted",
+        body: `<h1>We could not accept this load</h1><p>${why}</p><p>Nothing was signed. Contact your dispatcher or operations@silkroutelogistics.ai.</p>`,
+      }));
+      return;
+    }
+  }
+
   // THE AGREEMENT IS RE-EVALUATED INSIDE THE TRANSACTION THAT WRITES THE
   // SIGNATURE, on the transaction client, so the state decided on is the state
   // that commits beside the signature — not a read from a moment earlier that
@@ -369,10 +497,11 @@ router.post("/:token", async (req: Request, res: Response) => {
   // a double-tap on a phone, a retried request -- resolve to one signature,
   // because the second matches no row. A check-then-write would let both through.
   const outcome = await prisma.$transaction(async (tx) => {
-    const { verdict } = await bcaStateForLoad(rc.load.carrierId, tx);
+    const { verdict } = await bcaStateForLoad(carrierUserId, tx);
     if (verdict.state !== "SIGNED") return { refused: verdict, claimed: 0 };
     const claimed = await tx.rateConfirmation.updateMany({
-      where: { id: rc.id, signTokenUsedAt: null },
+      // On an offer the token was claimed before the accept, at signedAt.
+      where: { id: rc.id, signTokenUsedAt: offer ? signedAt : null },
       data: {
         signed: true,
         signedAt,
@@ -397,12 +526,12 @@ router.post("/:token", async (req: Request, res: Response) => {
     // Only when the signature actually landed: claimed.count is 0 on a replayed
     // link, and a replay must not stamp an acceptance the first submission
     // already recorded.
-    if (claimed.count === 1 && rc.load.carrierId) {
+    if (claimed.count === 1 && carrierUserId) {
       await stampCarrierAcceptance(
         {
           loadId: rc.loadId,
           via: "RC_SIGNATURE",
-          carrierUserId: rc.load.carrierId,
+          carrierUserId,
           byUserId: null,
           at: signedAt,
         },
@@ -413,23 +542,7 @@ router.post("/:token", async (req: Request, res: Response) => {
   });
 
   if (outcome.refused) {
-    const reason = outcome.refused.state === "TERMINATED" ? "AGREEMENT_TERMINATED" : "BCA_REQUIRED";
-    // The subject of the audit row is the carrier whose signature was refused.
-    // audit_logs.userId is a required FK, so a load with no carrier leaves only
-    // a log line — there is no user to hang the row on.
-    if (rc.load.carrierId) {
-      await recordSecurityEvent({
-        userId: rc.load.carrierId,
-        action: "RC_SIGN_REFUSED",
-        note: `Rate confirmation signature refused: ${reason === "BCA_REQUIRED" ? "no executed Broker-Carrier Agreement on file" : "Broker-Carrier Agreement terminated"}`,
-        req: req as never,
-        details: { reason, rateConfirmationId: rc.id, loadId: rc.loadId, signTokenId: rc.signTokenId ?? null },
-      });
-    } else {
-      log.warn({ rcId: rc.id, loadId: rc.loadId, reason }, "[RC] signature refused on a load with no carrier");
-    }
-    const r = agreementRefusal(outcome.refused);
-    res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
+    await renderAgreementRefusal(req, res, outcome.refused, rc, carrierUserId);
     return;
   }
 
@@ -502,6 +615,30 @@ router.post("/:token", async (req: Request, res: Response) => {
     }).catch((err) => log.error({ err, rcId: rc.id }, "[RC] CONFIRMED transition failed"));
   }
 
+  // Item 342 (v3.8.bon) — an offer signed here was accepted a moment ago, so
+  // its tender stands at ACCEPTED. The document was out from the offer, so the
+  // history records RC_SENT and then CONFIRMED, in that order; and the load is
+  // frozen now, not at offer, because an offer can die and a load must never
+  // carry the fee a declined carrier elected.
+  if (offer) {
+    const fd = (rc.formData ?? {}) as { quickPayFeePercent?: number; quickPaySpeed?: string };
+    try {
+      await freezeIssuedRateConfirmationOntoLoad({
+        loadId: rc.loadId,
+        rateConfirmationId: rc.id,
+        quickPayFeePercent: fd.quickPayFeePercent ?? 0,
+        quickPaySpeed: fd.quickPaySpeed ?? "STANDARD",
+      });
+    } catch (err) {
+      log.error({ err, rcId: rc.id, loadId: rc.loadId }, "[RC] load freeze after accept-by-signature failed");
+    }
+    const metadata = { rateConfirmationId: rc.id, signTokenId: rc.signTokenId, contentHash: rc.contentHash, issuedAtOffer: true };
+    (async () => {
+      await settleTender({ tenderId: offer.id, to: "RC_SENT", from: "ACCEPTED", metadata });
+      await settleTender({ tenderId: offer.id, to: "CONFIRMED", from: "RC_SENT", metadata });
+    })().catch((err) => log.error({ err, rcId: rc.id }, "[RC] CONFIRMED transition after accept-by-signature failed"));
+  }
+
   // The settlement checklist learns the rate confirmation is signed.
   //
   // docSignedRateCon is recomputed from the SIGNED row this handler just
@@ -539,7 +676,7 @@ router.post("/:token", async (req: Request, res: Response) => {
   res.type("html").send(page({
     title: "Signed",
     body: `<h1>Signed &mdash; thank you</h1>
-      <p>Your signature is recorded and the load is confirmed. Your bill of lading is now available on My Loads.</p>
+      <p>${offer ? "The load is booked in your name and" : "Your signature is recorded and"} the load is confirmed. Your bill of lading is now available on My Loads, beside this signed rate confirmation.</p>
       <div class="kv"><span>Signed by</span><span>${signerName.replace(/[<>&]/g, "")}</span></div>
       <div class="kv"><span>Signed at</span><span>${signedAt.toUTCString()}</span></div>
       <a class="cta" href="${PORTAL_MY_LOADS}?load=${encodeURIComponent(rc.loadId)}">Open the load on My Loads</a>
