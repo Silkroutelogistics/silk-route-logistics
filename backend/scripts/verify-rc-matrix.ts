@@ -41,6 +41,7 @@ const EXPECTED_PAGES: Record<string, number> = {
   reefer: 3,
   "long names": 3,
   "no carrier assigned": 3,
+  "auto-draft ISO dates": 3,
   "customTerms set": 3,
   "worst case": 3,
   "qp not elected": 3,
@@ -198,6 +199,14 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
     ["reefer", makeLoad({ reefer: true }), {}],
     ["long names", makeLoad({ longNames: true }), {}],
     ["no carrier assigned", makeLoad({ noCarrier: true }), {}],
+    // The draft tender accept writes (autoRateConfirmationService) stores full ISO
+    // timestamps. Every other case passes Date objects on the load, which is why
+    // this matrix stayed green while RC 5003 printed 2026-09-27T00:00:00.000Z across
+    // the PICKUP and DELIVERY cells and pushed the appointment off the stop panel.
+    ["auto-draft ISO dates", makeLoad(), {
+      pickupDate: "2026-08-13T00:00:00.000Z", deliveryDate: "2026-08-17T00:00:00.000Z",
+      pickupTimeWindow: "21:00 – 21:30", deliveryTimeWindow: "23:00 – 23:30",
+    }, { expect: ["Aug 13, 2026", "Aug 17, 2026"], forbid: ["T00:00:00", ".000Z"] }],
     ["customTerms set", makeLoad(), { customTerms: "Driver must call dispatch 1 hour prior to arrival at both stops." }],
     ["worst case", makeLoad({ rows: 6, longSi: true, reefer: true, longNames: true }), { customTerms: "Extra handling required." }],
 

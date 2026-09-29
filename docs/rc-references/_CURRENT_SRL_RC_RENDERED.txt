@@ -1,6 +1,6 @@
 SRL RATE CONFIRMATION — RENDERED CAPTURE
 
-Generated 2026-09-28 from no version letter in HEAD subject (commit 280452e6) PLUS uncommitted changes to backend/src/services/pdfService.ts.
+Generated 2026-09-29 from no version letter in HEAD subject (commit be85e9a8) PLUS uncommitted changes to backend/src/services/pdfService.ts.
 Regenerate:  cd backend && npx tsx scripts/verify-rc-matrix.ts --dump
 
 Y coordinates are top-down from the page top, rounded to 0.5pt. Items sharing
@@ -38,13 +38,13 @@ read as a page map and taught the wrong one for several sprints.
     178  AE: Wasi Haider · (269) 220-6760
   189.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
   202.5  DATE ISSUED ⟂ LOAD REF ⟂ PICKUP ⟂ DELIVERY ⟂ PICKUP # ⟂ PO # ⟂ QUICK PAY ⟂ TERMS
-    218  Sep 27, 2026 ⟂ 121488 ⟂ 8/13/2026 ⟂ 8/17/2026 ⟂ — ⟂ PO1770 ⟂ Not elected ⟂ Net-30
+    218  Sep 28, 2026 ⟂ 121488 ⟂ Aug 13, 2026 ⟂ Aug 17, 2026 ⟂ — ⟂ PO1770 ⟂ Not elected ⟂ Net-30
     237  PARTIES
   258.5  SHIPPER · PICKUP FROM ⟂ CONSIGNEE · DELIVER TO
     277  Virun ⟂ Mainfreight North Lake
   290.5  1750 North 8th Street ⟂ 17801 Interstate 35 West Service Road
   301.5  Colton, CA 92324 ⟂ Northlake, TX 76262
-  314.5  Window: 8/13/2026 ⟂ Window: 8/17/2026
+  314.5  Window: Aug 13, 2026 ⟂ Window: Aug 17, 2026
   359.5  MILES ⟂ TRANSIT ⟂ $/ MILE
     374  Lane mileage ⟂ Standard pace ⟂ Carrier rate
     378  1,350 ⟂ 24.5 hrs ⟂ $3.04
@@ -154,13 +154,13 @@ read as a page map and taught the wrong one for several sprints.
     178  AE: Wasi Haider · (269) 220-6760
   189.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
   202.5  DATE ISSUED ⟂ LOAD REF ⟂ PICKUP ⟂ DELIVERY ⟂ PICKUP # ⟂ PO # ⟂ QUICK PAY ⟂ TERMS
-    218  Sep 27, 2026 ⟂ 121488 ⟂ 8/13/2026 ⟂ 8/17/2026 ⟂ — ⟂ PO1770 ⟂ Not elected ⟂ Net-30
+    218  Sep 28, 2026 ⟂ 121488 ⟂ Aug 13, 2026 ⟂ Aug 17, 2026 ⟂ — ⟂ PO1770 ⟂ Not elected ⟂ Net-30
     237  PARTIES
   258.5  SHIPPER · PICKUP FROM ⟂ CONSIGNEE · DELIVER TO
     277  Virun ⟂ Mainfreight North Lake
   290.5  1750 North 8th Street ⟂ 17801 Interstate 35 West Service Road
   301.5  Colton, CA 92324 ⟂ Northlake, TX 76262
-  314.5  Window: 8/13/2026 ⟂ Window: 8/17/2026
+  314.5  Window: Aug 13, 2026 ⟂ Window: Aug 17, 2026
   359.5  MILES ⟂ TRANSIT ⟂ $/ MILE
     374  Lane mileage ⟂ Standard pace ⟂ Carrier rate
     378  1,350 ⟂ 24.5 hrs ⟂ $3.04
@@ -274,13 +274,13 @@ read as a page map and taught the wrong one for several sprints.
     178  AE: Wasi Haider · (269) 220-6760
   189.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
   202.5  DATE ISSUED ⟂ LOAD REF ⟂ PICKUP ⟂ DELIVERY ⟂ PICKUP # ⟂ PO # ⟂ QUICK PAY ⟂ TERMS
-    218  Sep 27, 2026 ⟂ 121488 ⟂ 8/13/2026 ⟂ 8/17/2026 ⟂ — ⟂ PO1770 ⟂ 3% · 7-day ⟂ 7 days
+    218  Sep 28, 2026 ⟂ 121488 ⟂ Aug 13, 2026 ⟂ Aug 17, 2026 ⟂ — ⟂ PO1770 ⟂ 3% · 7-day ⟂ 7 days
     237  PARTIES
   258.5  SHIPPER · PICKUP FROM ⟂ CONSIGNEE · DELIVER TO
     277  Virun ⟂ Mainfreight North Lake
   290.5  1750 North 8th Street ⟂ 17801 Interstate 35 West Service Road
   301.5  Colton, CA 92324 ⟂ Northlake, TX 76262
-  314.5  Window: 8/13/2026 ⟂ Window: 8/17/2026
+  314.5  Window: Aug 13, 2026 ⟂ Window: Aug 17, 2026
   359.5  MILES ⟂ TRANSIT ⟂ $/ MILE
     374  Lane mileage ⟂ Standard pace ⟂ Carrier rate
     378  1,350 ⟂ 24.5 hrs ⟂ $3.04

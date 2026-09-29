@@ -10,6 +10,7 @@ import { generateBOLQRBuffer } from "../utils/qrGenerator";
 import type { ResolvedStopContacts } from "../lib/stopContact";
 import { BOL_TEMPLATE_VERSION, RC_TEMPLATE_VERSION } from "../lib/documentTemplateVersions";
 import { formatStopWindow } from "../lib/stopWindow";
+import { documentDate } from "../lib/documentDate";
 import { decodeHtmlEntities } from "../utils/htmlEntities";
 // ONE derivation rule for every document identifier this file prints. These are
 // pure reads: the number is allocated and persisted where the document is
@@ -1784,8 +1785,8 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // em-dash per drawMetaStrip skill canonical, instead of orphan labels).
   // formData primary + Load fallback per Sprint 48 hybrid precedence pattern.
   const dateStr = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  const pickupStr = fd.pickupDate || (load.pickupDate instanceof Date ? load.pickupDate.toLocaleDateString("en-US", { timeZone: "UTC" }) : null) || "—";
-  const deliveryStr = fd.deliveryDate || (load.deliveryDate instanceof Date ? load.deliveryDate.toLocaleDateString("en-US", { timeZone: "UTC" }) : null) || "—";
+  const pickupStr = documentDate(fd.pickupDate) ?? documentDate(load.pickupDate) ?? "—";
+  const deliveryStr = documentDate(fd.deliveryDate) ?? documentDate(load.deliveryDate) ?? "—";
   const equipment = fd.equipmentType || load.equipmentType || "—";
   const termsLabel = fd.paymentTerms || "Net-30";
   // ── v3.8.asb — the QUICK PAY cell states the FEE APPLIED TO THIS LOAD ────
@@ -2859,11 +2860,7 @@ export function generateShipperLoadConfirmation(load: EnhancedRCLoadData, formDa
 
   const money = (n: number) =>
     `$${(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const fmtDate = (d?: Date | string | null) => {
-    if (!d) return "—";
-    if (typeof d === "string") return d;
-    return new Date(d).toLocaleDateString("en-US", { timeZone: "UTC", year: "numeric", month: "short", day: "numeric" });
-  };
+  const fmtDate = (d?: Date | string | null) => documentDate(d) ?? "—";
   const smallLabel = (text: string, x: number, ly: number, size = 7) =>
     doc.font(FONT_BODY_BOLD, size).fillColor(TOKENS.goldDark)
        .text(text.toUpperCase(), x, ly, { characterSpacing: 0.8, lineBreak: false });

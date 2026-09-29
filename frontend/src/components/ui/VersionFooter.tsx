@@ -19488,7 +19488,11 @@
 // v3.8.bob — the T&T Docs tab's signed delivery BOL row gets "Send to customer" too; each
 // row confirms by name and keeps its own result note. A test holds the tab's list to the
 // backend's.
-export const SRL_VERSION = "3.8.bob";
+// v3.8.boc — the rate confirmation prints PICKUP, DELIVERY and each stop window as a date
+// ("Sep 27, 2026"), whatever shape the draft stored. The draft written on tender accept
+// stored the full ISO timestamp, which ran across two cells on RC 5003. The shipper load
+// confirmation takes the same helper. An RC matrix case now builds that draft shape.
+export const SRL_VERSION = "3.8.boc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
