@@ -8,6 +8,7 @@ import { verifyTenderActionToken, TenderActionPayload } from "../lib/tenderActio
 import { log } from "../lib/logger";
 import { makeCaptureRes } from "../lib/captureResponse";
 import { clientIp, clientUserAgent } from "../lib/clientIp";
+import { mintOfferSignLink } from "../services/rcSignLinkService";
 
 /**
  * v3.8.als §13.3 Item 142 — magic-link tender accept/decline (no login).
@@ -172,6 +173,47 @@ async function respond(req: Request, res: Response, act: boolean) {
       heading: "Already handled",
       body: `<p>Tender <span class="ref">${ref}</span> (${lane}) has already been <strong>${label.toLowerCase()}</strong>. No further action is needed.</p><a class="cta" href="https://silkroutelogistics.ai/carrier/login">Open carrier portal</a>`,
     }));
+  }
+
+  // ── Item 342 (v3.8.bop) — ACCEPT IS SIGNING, when the offer carries its RC ──
+  //
+  // The tender went out WITH its rate confirmation, so accepting it is signing
+  // that document. This link no longer books the load bare: the GET says so and
+  // offers one button, and the POST mints a fresh signing link and 303s to the
+  // review-and-sign page, where the one act (accept and sign) happens. The token
+  // is NOT claimed here: nothing has been accepted yet, and a carrier who closes
+  // the signing page must be able to come back through the same email.
+  if (payload.action === "accept") {
+    const offerRc = await prisma.rateConfirmation.findFirst({
+      where: { tenderId: tender.id, status: "SENT" },
+      select: { id: true },
+    });
+    if (offerRc) {
+      if (!act) {
+        const rate = tender.offeredRate.toLocaleString("en-US", { style: "currency", currency: "USD" });
+        return send(res, 200, renderPage({
+          accent: C.navy,
+          heading: `Review and sign tender ${ref}`,
+          body: `<p>${lane}</p><div class="kv"><span>Offered rate</span><span><strong>${rate}</strong></span></div><p>Accepting this load is signing its rate confirmation. You will read the document, then sign it once to book the load in your name.</p><form method="POST" action="/api/tender-action/${encodeURIComponent(token)}"><button type="submit">Review and sign</button></form>`,
+        }));
+      }
+      const out = await mintOfferSignLink({
+        tenderId: tender.id,
+        carrierUserId: payload.carrierUserId,
+        channel: "tender_email",
+        ip: clientIp(req),
+        userAgent: clientUserAgent(req),
+      });
+      if (out.ok) { res.redirect(303, out.link.path); return; }
+      const why = out.code === "SIGN_LINK_RATE_LIMITED"
+        ? "A new signing page has been opened several times in the last hour for this offer. Try again in an hour, or use the page you already opened."
+        : "This offer is no longer open, so there is nothing to sign.";
+      return send(res, out.code === "SIGN_LINK_RATE_LIMITED" ? 429 : 409, renderPage({
+        accent: C.warn,
+        heading: "Could not open the signing page",
+        body: `<p>${why}</p><a class="cta" href="https://silkroutelogistics.ai/carrier/login">Open carrier portal</a>`,
+      }));
+    }
   }
 
   if (!act) {

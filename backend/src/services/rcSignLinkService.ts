@@ -100,7 +100,7 @@ export async function recordCarrierMint(input: {
   rcId: string;
   loadId: string;
   tokenId: string;
-  channel: "portal" | "email";
+  channel: "portal" | "email" | "tender_email";
   ip?: string | null;
   userAgent?: string | null;
   sentTo?: string | null;
@@ -113,13 +113,62 @@ export async function recordCarrierMint(input: {
       entityId: input.rcId,
       changes: input.channel === "email"
         ? `Carrier requested a new signing link by email`
-        : `Carrier opened the signing page from the portal`,
+        : input.channel === "tender_email"
+          ? `Carrier opened the signing page from the tender email's Accept`
+          : `Carrier opened the signing page from the portal`,
       ipAddress: input.ip ?? null,
       userAgent: input.userAgent ?? null,
       // The token id, never the token. The id is what the certificate names.
       details: { channel: input.channel, signTokenId: input.tokenId, loadId: input.loadId, sentTo: input.sentTo ?? null },
     },
   });
+}
+
+/**
+ * Item 342 (v3.8.bop) — the carrier's way into an offer's signing page.
+ *
+ * An offer issued with its rate confirmation is accepted by signing it, so
+ * both doors a carrier accepts through — the Accept button in the tender
+ * email and the one on the portal's Tenders page — mint a fresh signing link
+ * here and land on the review-and-sign page. The secret cannot be recovered
+ * from the stored hash, so each opening mints; rotation revokes the last, and
+ * the per-RC hourly limit and its audit rows are the portal's, shared.
+ *
+ * The link lives as long as the OFFER. An offer that is no longer open, or
+ * belongs to another carrier, has nothing to sign.
+ */
+export type OfferSignLink =
+  | { ok: true; link: RotatedSignLink; rateConfirmationId: string; loadId: string }
+  | { ok: false; code: "NOT_YOUR_TENDER" | "OFFER_NOT_OPEN" | "NO_OFFER_RC" | "SIGN_LINK_RATE_LIMITED" };
+
+export async function mintOfferSignLink(input: {
+  tenderId: string;
+  carrierUserId: string;
+  channel: "portal" | "tender_email";
+  ip?: string | null;
+  userAgent?: string | null;
+}): Promise<OfferSignLink> {
+  const tender = await prisma.loadTender.findUnique({
+    where: { id: input.tenderId },
+    select: { id: true, loadId: true, status: true, expiresAt: true, deletedAt: true, carrier: { select: { userId: true } } },
+  });
+  if (!tender || tender.carrier.userId !== input.carrierUserId) return { ok: false, code: "NOT_YOUR_TENDER" };
+  if (tender.status !== "OFFERED" || tender.deletedAt || tender.expiresAt.getTime() <= Date.now()) {
+    return { ok: false, code: "OFFER_NOT_OPEN" };
+  }
+  const rc = await prisma.rateConfirmation.findFirst({
+    where: { tenderId: tender.id, status: "SENT" },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  if (!rc) return { ok: false, code: "NO_OFFER_RC" };
+  if ((await recentCarrierMints(rc.id)) >= RC_SIGN_LINK_MINTS_PER_HOUR) return { ok: false, code: "SIGN_LINK_RATE_LIMITED" };
+  const link = await rotateRcSignToken(rc.id, prisma, { expiresAt: tender.expiresAt });
+  await recordCarrierMint({
+    userId: input.carrierUserId, rcId: rc.id, loadId: tender.loadId, tokenId: link.tokenId,
+    channel: input.channel, ip: input.ip ?? null, userAgent: input.userAgent ?? null,
+  });
+  return { ok: true, link, rateConfirmationId: rc.id, loadId: tender.loadId };
 }
 
 /**

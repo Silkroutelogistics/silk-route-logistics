@@ -256,6 +256,8 @@ test.describe("Full Load Lifecycle E2E", () => {
     expect(tenderResp.ok(), `POST /loads/:id/tender must succeed (Sprint 36b ID semantics + compliance gate); got ${tenderResp.status()} ${await tenderResp.text()}`).toBeTruthy();
     const tender = await tenderResp.json();
     expect(tender.id, "tender.id required for B6.5 accept").toBeTruthy();
+    // v3.8.boo (Item 342) — the rate confirmation goes out WITH a direct offer.
+    expect(tender.rateConfirmationIssued, "Item 342: the RC must be issued with the offer").toBe(true);
 
     // ─────────────────────────────────────────────────────────────────
     // B6.5 — Carrier accepts tender (Sprint 38: Items 51 + 52 + 53)
@@ -297,10 +299,36 @@ test.describe("Full Load Lifecycle E2E", () => {
       `Sprint 45a Item 80: notifyTenderAction("OFFERED") must create a TENDER_RECEIVED notification for the carrier; saw types: ${notifs.map((n) => n.type).join(", ") || "(none)"}`
     ).toBeTruthy();
 
-    const acceptResp = await request.post(`${BACKEND_API}/tenders/${tender.id}/accept`, {
+    // v3.8.bom-bop (Item 342) — ACCEPTING IS SIGNING. The offer carries its rate
+    // confirmation, so a bare accept is refused and the carrier goes through the
+    // review-and-sign page, where one act books the load and signs the document.
+    const bareAccept = await request.post(`${BACKEND_API}/tenders/${tender.id}/accept`, { headers: carrierAuthHeaders });
+    expect(bareAccept.status(), "Item 342: a bare accept of an offer carrying its RC must be refused").toBe(409);
+    expect((await bareAccept.json()).code).toBe("SIGN_TO_ACCEPT");
+
+    const signLinkResp = await request.post(`${BACKEND_API}/carrier-tenders/${tender.id}/sign-link`, {
       headers: carrierAuthHeaders,
+      maxRedirects: 0,
     });
-    expect(acceptResp.ok(), `POST /tenders/:id/accept must succeed (Sprint 38 atomic txn + notification + fan-out); got ${acceptResp.status()} ${await acceptResp.text()}`).toBeTruthy();
+    expect(signLinkResp.status(), `Item 342: the portal's Accept must 303 to the signing page; got ${signLinkResp.status()} ${await signLinkResp.text()}`).toBe(303);
+    const signUrl = new URL(signLinkResp.headers()["location"], BACKEND_API).toString();
+    const signPage = await request.get(signUrl);
+    expect(signPage.ok(), "Item 342: the review-and-sign page must render").toBeTruthy();
+    expect(await signPage.text()).toContain("Accept load and sign");
+    const acceptResp = await request.post(signUrl, { form: { signerName: "E2E Carrier Dispatch", attest: "yes" } });
+    const acceptHtml = await acceptResp.text();
+    expect(acceptResp.ok(), `Item 342: signing the offer must accept it; got ${acceptResp.status()} ${acceptHtml.slice(0, 400)}`).toBeTruthy();
+    expect(acceptHtml).toContain("booked in your name");
+
+    // The tender reaches CONFIRMED (the move runs just after the response).
+    let tenderStatus = "";
+    for (let i = 0; i < 20 && tenderStatus !== "CONFIRMED"; i++) {
+      const tr = await request.get(`${BACKEND_API}/loads/${load.id}/tenders`, { headers: authHeaders });
+      const list = await tr.json();
+      tenderStatus = (Array.isArray(list) ? list : list.tenders ?? []).find((x: any) => x.id === tender.id)?.status ?? "";
+      if (tenderStatus !== "CONFIRMED") await new Promise((r) => setTimeout(r, 250));
+    }
+    expect(tenderStatus, "Item 342: signing the offer confirms the tender").toBe("CONFIRMED");
 
     // verify atomic txn outcome (Item 53)
     const acceptedLoadResp = await request.get(`${BACKEND_API}/loads/${load.id}`, { headers: authHeaders });

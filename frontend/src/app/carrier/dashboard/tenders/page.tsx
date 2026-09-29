@@ -12,6 +12,7 @@ import { formatStopDate } from "@/lib/stopDate";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { apiHref } from "@/lib/download";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { Clock, MapPin, AlertTriangle, CheckCircle2, Repeat2, ArrowRight } from "lucide-react";
 
@@ -40,6 +41,9 @@ interface ActiveTender {
   expiresAt: string;
   createdAt: string;
   waterfallPositionId: string | null;
+  // v3.8.bop (Item 342) — the offer went out WITH its rate confirmation, so it
+  // is accepted by signing it on the review-and-sign page.
+  signable?: boolean;
   load: {
     id: string;
     referenceNumber: string;
@@ -240,6 +244,18 @@ export default function CarrierTendersPage() {
 
             {!isDeclining && !isCountering && (
               <div className="mt-5 flex gap-2">
+                {t.signable ? (
+                  // Accepting is signing: a form POST, so the browser follows the
+                  // redirect to the review-and-sign page the API serves.
+                  <form method="POST" action={apiHref(`/carrier-tenders/${t.id}/sign-link`)} className="flex-1 flex" data-testid="tender-sign-form">
+                    <button
+                      type="submit"
+                      className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#2F7A4F] hover:bg-[#276641] text-[#FBF7F0] font-semibold rounded"
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> Review and sign
+                    </button>
+                  </form>
+                ) : (
                 <button
                   onClick={() => accept.mutate(t)}
                   disabled={accept.isPending}
@@ -247,6 +263,7 @@ export default function CarrierTendersPage() {
                 >
                   <CheckCircle2 className="w-4 h-4" /> Accept
                 </button>
+                )}
                 <button
                   onClick={() => { setCountering(t.id); setCounterRate(String(Math.round(Number(t.offeredRate)))); }}
                   className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#FAEEDA] hover:bg-[#f3e3c4] text-[#854F0B] font-semibold rounded border border-[#BA7517]/40"

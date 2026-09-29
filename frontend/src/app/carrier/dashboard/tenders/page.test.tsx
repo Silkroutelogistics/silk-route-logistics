@@ -90,3 +90,22 @@ describe("accepting a tender", () => {
     expect(banner.textContent).not.toMatch(/undefined/);
   });
 });
+
+describe("an offer issued with its rate confirmation is accepted by signing (v3.8.bop, Item 342)", () => {
+  it("offers Review and sign as a form POST to the sign-link endpoint, not a bare accept", () => {
+    state.tenders = [{ ...tender("t1", "SRL-121500"), signable: true }];
+    render(<CarrierTendersPage />);
+    const form = screen.getByTestId("tender-sign-form");
+    expect(form.getAttribute("method")).toBe("POST");
+    expect(form.getAttribute("action")).toContain("/carrier-tenders/t1/sign-link");
+    expect(screen.getByRole("button", { name: /Review and sign/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Accept$/ })).toBeNull();
+  });
+
+  it("an offer without one keeps the plain Accept", () => {
+    state.tenders = [{ ...tender("t1", "SRL-121500"), signable: false }];
+    render(<CarrierTendersPage />);
+    expect(screen.queryByTestId("tender-sign-form")).toBeNull();
+    expect(screen.getByRole("button", { name: /Accept/ })).toBeTruthy();
+  });
+});

@@ -2,10 +2,42 @@ import { Router, Response } from "express";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { log } from "../lib/logger";
+import { mintOfferSignLink, RC_SIGN_LINK_MINTS_PER_HOUR } from "../services/rcSignLinkService";
+import { rcPage } from "./rcSign";
+import { extractClientIp } from "../services/geoService";
+import { clientUserAgent } from "../lib/clientIp";
 
 const router = Router();
 router.use(authenticate);
 router.use(authorize("CARRIER"));
+
+/**
+ * POST /api/carrier-tenders/:id/sign-link — Item 342 (v3.8.bop).
+ *
+ * The Tenders page's Accept for an offer issued with its rate confirmation.
+ * Accepting is signing, so this mints the signing link and 303s to the
+ * review-and-sign page. A form POST rather than XHR, as My Loads' "Sign it
+ * here" is, so the browser follows the redirect to a page the API serves.
+ */
+router.post("/:id/sign-link", async (req: AuthRequest, res: Response) => {
+  const out = await mintOfferSignLink({
+    tenderId: req.params.id,
+    carrierUserId: req.user!.id,
+    channel: "portal",
+    ip: extractClientIp(req as never),
+    userAgent: clientUserAgent(req as never),
+  });
+  if (out.ok) { res.redirect(303, out.link.path); return; }
+  const back = "https://silkroutelogistics.ai/carrier/dashboard/tenders";
+  const copy: Record<string, [number, string, string]> = {
+    NOT_YOUR_TENDER: [404, "Tender not found", "We could not find this offer on your account."],
+    OFFER_NOT_OPEN: [409, "Offer no longer open", "This offer has expired or has already been answered, so there is nothing to sign."],
+    NO_OFFER_RC: [409, "Nothing to sign yet", "This offer has no rate confirmation attached. Accept it from the Tenders page and your dispatcher will send one."],
+    SIGN_LINK_RATE_LIMITED: [429, "Too many signing links", `A new signing link has been issued ${RC_SIGN_LINK_MINTS_PER_HOUR} times in the last hour for this offer. Try again in an hour, or use the most recent page you opened.`],
+  };
+  const [status, title, msg] = copy[out.code];
+  res.status(status).type("html").send(rcPage({ title, body: `<h1>${title}</h1><p>${msg}</p><a class="cta" href="${back}">Back to Tenders</a>` }));
+});
 
 /**
  * GET /api/carrier-tenders/active

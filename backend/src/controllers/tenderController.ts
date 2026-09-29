@@ -825,7 +825,18 @@ export async function getCarrierTenders(req: AuthRequest, res: Response) {
     orderBy: { createdAt: "desc" },
   });
 
-  res.json(tenders);
+  // v3.8.bop (Item 342) — which of these offers went out WITH their rate
+  // confirmation. Those are accepted by signing, so the portal's Accept opens
+  // the review-and-sign page instead of booking the load bare.
+  const issued = tenders.length
+    ? await prisma.rateConfirmation.findMany({
+        where: { tenderId: { in: tenders.map((t) => t.id) }, status: "SENT" },
+        select: { tenderId: true },
+      })
+    : [];
+  const signable = new Set(issued.map((r) => r.tenderId));
+
+  res.json(tenders.map((t) => ({ ...t, signable: signable.has(t.id) })));
 }
 
 /** Broker/admin: view all tenders for a specific load */

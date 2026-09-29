@@ -19540,7 +19540,10 @@
 // v3.8.boo — the rate confirmation is issued WITH a direct offer (Item 342): Load Board tender
 // and Carrier Engagement Drawer. Frozen, hashed, numbered and signable for as long as the offer;
 // no second email, nothing on the load until the carrier signs. Never fatal to the offer.
-export const SRL_VERSION = "3.8.boo";
+// v3.8.bop — both accept doors open review-and-sign for an offer issued with its rate
+// confirmation (Item 342): the tender email's Accept and the portal's Tenders Accept mint a link
+// that lives as long as the offer; neither books the load bare.
+export const SRL_VERSION = "3.8.bop";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
