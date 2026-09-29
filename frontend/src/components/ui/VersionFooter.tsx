@@ -19521,7 +19521,11 @@
 // is cleared); the printed RC shows no fuel-surcharge row and totals the rows it prints;
 // Quick Pay is priced on the line haul; the signing page's total takes an older RC's FSC
 // back out. Carrier settlement handles FSC internally.
-export const SRL_VERSION = "3.8.boi";
+// v3.8.boj — an accepted counter-offer drafts the rate confirmation at the COUNTER rate.
+// The draft read tender.offeredRate while the load was booked, and settlement paid, the
+// counter, so the carrier signed one number and was paid another. The shipment row takes
+// the same agreed rate. Found by the Item 342 Phase A.
+export const SRL_VERSION = "3.8.boj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

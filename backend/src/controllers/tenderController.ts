@@ -300,7 +300,9 @@ export async function acceptTender(req: AuthRequest, res: Response) {
       commodity: load.commodity,
       weight: load.weight,
       pieces: load.pieces,
-      rate: tender.offeredRate,
+      // v3.8.boj — the agreed rate (the counter, when one was accepted), as the
+      // load's carrierRate is booked above; offeredRate understated it.
+      rate: agreedRateFromTender(tender as any) ?? tender.offeredRate,
       distance: load.distance,
       specialInstructions: load.specialInstructions,
       customerId: load.customerId,

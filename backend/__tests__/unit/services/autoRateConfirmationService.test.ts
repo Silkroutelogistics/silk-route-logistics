@@ -233,6 +233,24 @@ describe("autoGenerateRateConfirmation — what the load carries reaches the dra
     expect(fd.pickupNumber).toBe("");
   });
 
+  it("drafts an accepted counter at the COUNTER rate, not the original offer (v3.8.boj)", async () => {
+    // The accept path books the load, and settlement pays, the counter. The RC
+    // is the document the carrier signs, so it has to say the same number.
+    pilotFullyEligible();
+    const tender = { ...makeTender("SILVER"), status: "ACCEPTED", offeredRate: 2000, counterRate: 2250 };
+    const { fd, rc } = await runAutoRc(makeLoad(), tender);
+    expect(fd.lineHaulRate).toBe(2250);
+    expect(fd.totalCharges).toBe(2250);
+    expect(rc.carrierRate).toBe(2250);
+    expect(rc.totalCharges).toBe(2250);
+  });
+
+  it("drafts a plain accept at the offered rate", async () => {
+    pilotFullyEligible();
+    const { fd } = await runAutoRc(makeLoad(), { ...makeTender("SILVER"), status: "ACCEPTED", counterRate: null });
+    expect(fd.lineHaulRate).toBe(2000);
+  });
+
   it("does not put the customer's accessorials on the carrier's draft", async () => {
     // Load.accessorials is what Order Builder priced for the CUSTOMER, from the
     // customer's negotiated rates. The carrier's pre-approved accessorials are
