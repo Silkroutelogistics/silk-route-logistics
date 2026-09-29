@@ -192,14 +192,9 @@ interface FormState {
   // 7 - Financials
   customerRate: string;
   carrierLineHaul: string;
-  fuelSurcharge: string;
-  // v3.8.aan — Sprint 35 Item 46. Aligned to backend canonical
-  // FuelSurchargeType enum (FLAT | PERCENTAGE) per Prisma
-  // schema.prisma:446 + validator rateConfirmation.ts:106. Pre-fix
-  // had "PER_MILE" (copy-pasted from rateType validator at line 104,
-  // a different field with different concept). Backend rejected
-  // the phantom value with ZodError surfaced via Sprint 33 extractor.
-  fuelSurchargeType: "FLAT" | "PERCENTAGE";
+  // v3.8.boi — no fuel surcharge. Owner ruling 2026-09-29: FSC is fully
+  // internal and the carrier never sees it, so the editor neither collects
+  // nor sends one, and it is not part of carrier pay on the RC.
   accessorials: Accessorial[];
   totalCarrierPay: string;
 
@@ -485,14 +480,6 @@ function initForm(load: any, user: any): FormState {
     // 7 - Financials
     customerRate: load?.customerRate ? String(load.customerRate) : "",
     carrierLineHaul: load?.carrierRate ? String(load.carrierRate) : "",
-    fuelSurcharge: load?.fuelSurcharge ? String(load.fuelSurcharge) : "0",
-    // v3.8.aan — Sprint 35. Normalize legacy values to backend canonical
-    // FLAT | PERCENTAGE. Defensive against any pre-fix records that may
-    // have stored "PER_MILE" (unlikely — backend validator would have
-    // rejected — but harmless safety. Coerces unknown to "FLAT" default.
-    fuelSurchargeType: (load?.fuelSurchargeType === "PERCENTAGE" || load?.fuelSurchargeType === "FLAT")
-      ? load.fuelSurchargeType
-      : "FLAT",
     accessorials: load?.accessorials && Array.isArray(load.accessorials)
       ? load.accessorials.map((a: any) => {
           // Three input shapes supported:
@@ -600,9 +587,8 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
   const financials = useMemo(() => {
     const customerRate = toNum(form.customerRate);
     const lineHaul = toNum(form.carrierLineHaul);
-    const fuel = toNum(form.fuelSurcharge);
     const accTotal = form.accessorials.reduce((sum, a) => sum + toNum(a.amount), 0);
-    const totalCarrier = lineHaul + fuel + accTotal;
+    const totalCarrier = lineHaul + accTotal;
     const margin = customerRate - totalCarrier;
     const marginPct = customerRate > 0 ? (margin / customerRate) * 100 : 0;
     // v3.8.aal — Sprint 33 Item 44. Fee derives from carrier's Caravan
@@ -632,8 +618,8 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
     const feeAmount = totalCarrier * (feePercent / 100);
     const netPay = totalCarrier - feeAmount;
 
-    return { customerRate, lineHaul, fuel, accTotal, totalCarrier, margin, marginPct, tierInfo, feePercent, feeAmount, netPay };
-  }, [form.customerRate, form.carrierLineHaul, form.fuelSurcharge, form.accessorials, form.paymentTier, form.carrierTier, form.quickPayFeePercent]);
+    return { customerRate, lineHaul, accTotal, totalCarrier, margin, marginPct, tierInfo, feePercent, feeAmount, netPay };
+  }, [form.customerRate, form.carrierLineHaul, form.accessorials, form.paymentTier, form.carrierTier, form.quickPayFeePercent]);
 
   // Sprint 51.c (Item 150) — auto-update total carrier pay + net pay only.
   // Pre-Sprint-51.c this effect ALSO wrote quickPayFeePercent which created
@@ -651,7 +637,10 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
     return {
       ...form,
       lineHaulRate: toNum(form.carrierLineHaul),
-      fuelSurcharge: toNum(form.fuelSurcharge),
+      // v3.8.boi — always 0. Sent explicitly (not omitted) so saving an older
+      // draft that carried an FSC clears it rather than keeping it.
+      fuelSurcharge: 0,
+      fuelSurchargeType: "FLAT" as const,
       totalCharges: financials.totalCarrier,
       customerRate: financials.customerRate,
       weight: form.weight ? parseFloat(form.weight) : undefined,
@@ -1938,28 +1927,6 @@ function SectionFinancials({
               />
             </div>
           </div>
-          <div>
-            <label className={labelCls}>Fuel Surcharge ($)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">$</span>
-              <input
-                type="number"
-                value={form.fuelSurcharge}
-                onChange={(e) => set("fuelSurcharge", e.target.value)}
-                className={`${inputCls} pl-7`}
-                step="0.01"
-              />
-            </div>
-          </div>
-          <SelectField
-            label="FSC Type"
-            value={form.fuelSurchargeType}
-            onChange={(v) => set("fuelSurchargeType", v as "FLAT" | "PERCENTAGE")}
-            options={[
-              { value: "FLAT", label: "Flat Amount" },
-              { value: "PERCENTAGE", label: "Percentage" },
-            ]}
-          />
         </div>
       </div>
 
@@ -2034,10 +2001,6 @@ function SectionFinancials({
             <div className="flex justify-between text-sm">
               <span className="text-slate-400">Carrier Line Haul</span>
               <span className="text-white">{fmtMoney(financials.lineHaul)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-400">Fuel Surcharge</span>
-              <span className="text-white">{fmtMoney(financials.fuel)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-slate-400">Accessorials</span>

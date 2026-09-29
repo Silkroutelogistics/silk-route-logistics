@@ -119,4 +119,13 @@ describe("GET /rc-sign/:token (the form)", () => {
     expect(html).toContain("<strong>$710</strong>");
     expect(html).not.toContain("<strong>$400</strong>");
   });
+
+  it("takes an older RC's FSC back out of the total it shows (v3.8.boi)", async () => {
+    // FSC is internal. An RC whose totalCharges includes one must show the
+    // carrier the same total the document prints: line haul plus accessorials.
+    mockPrisma.rateConfirmation.findFirst.mockResolvedValue(rcRow({ totalCharges: 710, fuelSurcharge: 110 }));
+    const html = await (await fetch(`${base}/${TOKEN}`)).text();
+    expect(html).toContain("<strong>$600</strong>");
+    expect(html).not.toContain("<strong>$710</strong>");
+  });
 });

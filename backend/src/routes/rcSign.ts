@@ -228,13 +228,18 @@ router.get("/:token", async (req: Request, res: Response) => {
 
   const l = rc.load;
   const lane = `${l.originCity}, ${l.originState} &rarr; ${l.destCity}, ${l.destState}`;
+  // v3.8.boi — the same total the document prints: line haul plus accessorials.
+  // FSC is internal (owner ruling 2026-09-29), and an older RC's totalCharges
+  // can include one, so it is taken back out rather than shown to the carrier.
+  const carrierTotal =
+    rc.totalCharges != null ? rc.totalCharges - (rc.fuelSurcharge ?? 0) : (rc.carrierRate ?? l.carrierRate);
   res.type("html").send(page({
     title: "Sign rate confirmation",
     body: `<h1>Rate confirmation</h1>
       <p>Load ${l.loadNumber ?? l.referenceNumber ?? ""} &middot; ${lane}</p>
       <div class="kv"><span>Equipment</span><span>${l.equipmentType ?? "—"}</span></div>
       <div class="kv"><span>Pickup</span><span>${l.pickupDate ? new Date(l.pickupDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</span></div>
-      <div class="kv"><span>Total carrier pay</span><span><strong>${money(rc.totalCharges ?? rc.carrierRate ?? l.carrierRate)}</strong></span></div>
+      <div class="kv"><span>Total carrier pay</span><span><strong>${money(carrierTotal)}</strong></span></div>
       <p><a class="cta" href="/api/rc-sign/${encodeURIComponent(String(req.params.token))}/document" target="_blank" rel="noopener">Read the rate confirmation (PDF)</a></p>
       <p>Read it before you sign. It is the document SRL issued, the same one your dispatcher and your carrier portal hold, and signing below accepts it as written.</p>
       <form method="POST" action="/api/rc-sign/${encodeURIComponent(String(req.params.token))}">

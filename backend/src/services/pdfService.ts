@@ -2094,17 +2094,23 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
 
   // ── rate + total card ────────────────────────────────────────────────────
   const linehaul = Number(fd.lineHaulRate ?? load.carrierRate ?? 0);
-  const fsc = Number((fd.fuelSurcharge as number | undefined) ?? 0);
+  // v3.8.boi — owner ruling 2026-09-29: FSC is fully internal. The carrier never
+  // sees it; it is not printed, and it is not in the total. `fd.fuelSurcharge`
+  // is IGNORED here, including on older drafts that still carry one, and the
+  // total is computed from the rows printed rather than read from
+  // `fd.totalCharges`, which on those drafts can include the FSC. A total that
+  // differs from the sum of the rows above it is a number the carrier cannot
+  // check.
   const accs = (fd.accessorials as Array<{ description?: string; type?: string; amount: number }> | undefined) ?? [];
   const accSum = accs.reduce((s, a) => s + Number(a.amount || 0), 0);
-  const totalCarrierPay = Number((fd.totalCharges as number | undefined) ?? (linehaul + fsc + accSum));
+  const totalCarrierPay = linehaul + accSum;
 
   const qpFeePct = typeof fd.quickPayFeePercent === "number" && fd.quickPayFeePercent > 0 ? fd.quickPayFeePercent : null;
   const qpSpeedRaw = typeof fd.quickPaySpeed === "string" ? fd.quickPaySpeed.toUpperCase() : null;
   const qpElected = qpFeePct !== null;
   const qpSameDay = qpSpeedRaw === "SAME_DAY";
   const qpLabel = qpElected ? (qpSameDay ? `${qpFeePct}% same day` : `${qpFeePct}% · 7-day`) : "Not elected";
-  const qpFeeBase = accs.length === 0 ? linehaul + fsc : null;
+  const qpFeeBase = accs.length === 0 ? linehaul : null;
   const qpFeeAmount = qpElected && qpFeeBase !== null ? Math.round(qpFeeBase * (qpFeePct as number)) / 100 : null;
   const tierUpper = (fd.carrierPaymentTier as string | undefined)?.toUpperCase();
   const tierLabel = tierUpper ? tierUpper.charAt(0) + tierUpper.slice(1).toLowerCase() : null;
@@ -2120,9 +2126,8 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
       amt: money(linehaul),
     },
   ];
-  if (fsc > 0) chargeRows.push({ d: "Fuel surcharge", amt: money(fsc) });
   for (const a of accs) chargeRows.push({ d: a.description || a.type || "Accessorial", note: "Approved before dispatch", amt: money(Number(a.amount || 0)) });
-  if (fsc <= 0 && accs.length === 0) chargeRows.push({ d: "Accessorials", note: "None pre-approved · see terms", amt: money(0) });
+  if (accs.length === 0) chargeRows.push({ d: "Accessorials", note: "None pre-approved · see terms", amt: money(0) });
   const chargeRowH = (r: { note?: string }) => (r.note ? 24 : 16);
   const tableH = 14 + 6 + chargeRows.reduce((s, r) => s + chargeRowH(r), 0);
 

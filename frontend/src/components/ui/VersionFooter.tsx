@@ -19516,7 +19516,12 @@
 // same bytes the AE and the carrier portal download and the email attached — under the
 // same token and locks, and never re-renders. The page shows the RC's total, not the line
 // haul alone, and prints the fingerprint of the document being signed.
-export const SRL_VERSION = "3.8.boh";
+// v3.8.boi — owner ruling 2026-09-29: FSC is fully internal and the carrier never sees it.
+// The RC editor no longer collects one and saves an explicit 0 (so an older draft's FSC
+// is cleared); the printed RC shows no fuel-surcharge row and totals the rows it prints;
+// Quick Pay is priced on the line haul; the signing page's total takes an older RC's FSC
+// back out. Carrier settlement handles FSC internally.
+export const SRL_VERSION = "3.8.boi";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
