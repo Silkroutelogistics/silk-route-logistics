@@ -392,3 +392,31 @@ describe("a speed change attempted after issue", () => {
     expect(r.code).toBe("QP_FEE_ABOVE_LADDER");
   });
 });
+
+describe("autoGenerateRateConfirmation — a draft belongs to one tender (v3.8.bok)", () => {
+  it("stamps the tender it was drafted for", async () => {
+    pilotFullyEligible();
+    const { rc } = await runAutoRc(makeLoad(), makeTender());
+    expect(rc.tenderId).toBe("tender-1");
+  });
+
+  it("only reuses a draft that is this tender's or belongs to no tender", async () => {
+    pilotFullyEligible();
+    await runAutoRc(makeLoad(), makeTender());
+    const where = mockPrisma.rateConfirmation.findFirst.mock.calls[0][0].where;
+    expect(where).toMatchObject({ loadId: "load-1", status: "DRAFT", OR: [{ tenderId: "tender-1" }, { tenderId: null }] });
+  });
+
+  it("claims a legacy draft for this tender instead of stacking a second one", async () => {
+    pilotFullyEligible();
+    mockPrisma.rateConfirmation.update = vi.fn().mockResolvedValue({});
+    mockPrisma.load.findUnique.mockResolvedValue(makeLoad());
+    mockPrisma.loadTender.findUnique.mockResolvedValue(makeTender());
+    mockPrisma.rateConfirmation.findFirst.mockResolvedValue({ id: "rc-legacy", tenderId: null, status: "DRAFT" });
+    const rc: any = await autoGenerateRateConfirmation("load-1", "tender-1", "ae-1");
+    expect(rc.id).toBe("rc-legacy");
+    expect(rc.tenderId).toBe("tender-1");
+    expect(mockPrisma.rateConfirmation.update).toHaveBeenCalledWith({ where: { id: "rc-legacy" }, data: { tenderId: "tender-1" } });
+    expect(mockPrisma.rateConfirmation.create).not.toHaveBeenCalled();
+  });
+});

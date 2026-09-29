@@ -19525,7 +19525,10 @@
 // The draft read tender.offeredRate while the load was booked, and settlement paid, the
 // counter, so the carrier signed one number and was paid another. The shipment row takes
 // the same agreed rate. Found by the Item 342 Phase A.
-export const SRL_VERSION = "3.8.boj";
+// v3.8.bok — each rate confirmation records the tender it was drafted for (Item 342).
+// Additive nullable RateConfirmation.tenderId + index, no backfill. A draft is reused only
+// by its own tender or a legacy draft that belongs to none, which it then claims.
+export const SRL_VERSION = "3.8.bok";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
