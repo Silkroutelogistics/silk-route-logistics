@@ -160,6 +160,10 @@ export async function createLoadWithTender(req: AuthRequest, res: Response) {
           commodity: loadFields.commodity ?? null,
           weight: loadFields.weight ?? null,
           pieces: loadFields.pieces ?? null,
+          // v3.8.bof — the RC prints both. `?? null`, not `|| null`: a declared
+          // value of 0 is a statement, not an absence.
+          pallets: loadFields.pallets ?? null,
+          cargoValue: loadFields.cargoValue ?? null,
           hazmat: loadFields.hazmat,
           temperatureControlled: loadFields.temperatureControlled,
           tempMin: loadFields.tempMin ?? null,
@@ -188,6 +192,12 @@ export async function createLoadWithTender(req: AuthRequest, res: Response) {
           appointmentNumber: loadFields.appointmentNumber ?? null,
           shipperReference: loadFields.shipperReference ?? null,
           deliveryReference: loadFields.deliveryReference ?? null,
+          // v3.8.bof — per-side appointments and the shipper's pickup number.
+          // The legacy single box still lands on the delivery side when a
+          // client sends only that.
+          pickupAppointment: loadFields.pickupAppointment ?? null,
+          deliveryAppointment: loadFields.deliveryAppointment ?? loadFields.appointmentNumber ?? null,
+          pickupNumber: loadFields.pickupNumber ?? null,
 
           // Financials — fuelSurcharge dropped from drawer scope at
           // Sprint 59.b per Item 176; RC generation hardcodes 0 and AE
@@ -210,6 +220,7 @@ export async function createLoadWithTender(req: AuthRequest, res: Response) {
           specialInstructions: loadFields.specialInstructions ?? null,
           pickupInstructions: loadFields.pickupInstructions ?? null,
           deliveryInstructions: loadFields.deliveryInstructions ?? null,
+          driverInstructions: loadFields.driverInstructions ?? null,
 
           // Dispatch — drawer is always direct_tender
           dispatchMethod: "direct_tender",

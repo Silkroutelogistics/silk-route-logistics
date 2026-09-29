@@ -220,6 +220,35 @@ describe("autoGenerateRateConfirmation — drafting freezes nothing", () => {
   });
 });
 
+describe("autoGenerateRateConfirmation — what the load carries reaches the draft (v3.8.bof)", () => {
+  it("seeds the shipper's pickup number from the load", async () => {
+    pilotFullyEligible();
+    const { fd } = await runAutoRc(makeLoad({ pickupNumber: "PU-7781" }), makeTender("SILVER"));
+    expect(fd.pickupNumber).toBe("PU-7781");
+  });
+
+  it("leaves it empty, not invented, when the load has none", async () => {
+    pilotFullyEligible();
+    const { fd } = await runAutoRc(makeLoad({ pickupNumber: null }), makeTender("SILVER"));
+    expect(fd.pickupNumber).toBe("");
+  });
+
+  it("does not put the customer's accessorials on the carrier's draft", async () => {
+    // Load.accessorials is what Order Builder priced for the CUSTOMER, from the
+    // customer's negotiated rates. The carrier's pre-approved accessorials are
+    // a separate promise the AE makes at the offer; copying these would print
+    // the customer's money on the document the carrier signs.
+    pilotFullyEligible();
+    const { fd, rc } = await runAutoRc(
+      makeLoad({ accessorials: [{ type: "Detention", amount: 75, payer: "Customer" }], fuelSurchargeAmount: 310 }),
+      makeTender("SILVER"),
+    );
+    expect(fd.accessorials).toEqual([]);
+    expect(fd.fuelSurcharge).toBe(0);
+    expect(rc.totalCharges).toBe(2000);
+  });
+});
+
 const ok = (fd: Record<string, unknown>, tier: string) => {
   const r = resolveIssuedElection(fd, tier);
   if (!r.ok) throw new Error(`expected ok, got ${r.code}: ${r.error}`);

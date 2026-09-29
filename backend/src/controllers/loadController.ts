@@ -340,11 +340,20 @@ export async function createLoad(req: AuthRequest, res: Response) {
     // `pallets` was declared on the model and written by nothing on any create
     // path, so the column was permanently NULL on every load ever made.
     pallets: raw.pallets || undefined,
+    // v3.8.bof — the shipper's pickup number and both references print on the
+    // Rate Confirmation. No create path wrote them, so every RC printed none.
+    pickupNumber: raw.pickupNumber || undefined,
+    shipperReference: raw.shipperReference || undefined,
+    deliveryReference: raw.deliveryReference || undefined,
     additionalRefs: raw.additionalRefs || undefined,
 
     // Freight classification (TMW)
     nmfcCode: raw.nmfcCode || undefined,
     declaredValue: raw.declaredValue || undefined,
+    // The cargo value the AE entered in Order Builder. Kept apart from
+    // declaredValue, which is the released-value declaration and a liability
+    // term; this one is only what the freight is worth.
+    cargoValue: raw.cargoValue ?? undefined,
     releasedValueDeclared:
       typeof raw.releasedValueDeclared === "boolean" ? raw.releasedValueDeclared : undefined,
     releasedValueBasis,

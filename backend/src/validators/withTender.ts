@@ -94,6 +94,16 @@ export const createLoadWithTenderSchema = z.object({
   appointmentNumber: z.string().optional().nullable(),
   shipperReference: z.string().optional().nullable(),
   deliveryReference: z.string().optional().nullable(),
+  // v3.8.bof — the Rate Confirmation prints each of these, and Order Builder
+  // captures them, but this schema did not declare them, so Zod stripped them
+  // on the way in and the RC printed blanks. Per-side appointments replace the
+  // single box (appointmentNumber stays accepted for older clients).
+  pickupAppointment: z.string().optional().nullable(),
+  deliveryAppointment: z.string().optional().nullable(),
+  pickupNumber: z.string().optional().nullable(),
+  // Freight facts, not money: the declared cargo value and the pallet count.
+  cargoValue: z.number().nonnegative().optional().nullable(),
+  pallets: z.number().int().nonnegative().optional().nullable(),
 
   // Tender (drawer Section 5)
   tender: tenderSchema,
@@ -111,6 +121,9 @@ export const createLoadWithTenderSchema = z.object({
   specialInstructions: z.string().optional().nullable(),
   pickupInstructions: z.string().optional().nullable(),
   deliveryInstructions: z.string().optional().nullable(),
+  // Order Builder's "Driver (rate con only)" box: printed on the RC for the
+  // driver, never in the customer email.
+  driverInstructions: z.string().optional().nullable(),
 
   // Defaults
   shipmentPriority: z.enum(["standard", "hot"]).default("standard"),

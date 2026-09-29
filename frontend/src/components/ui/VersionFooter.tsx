@@ -19502,7 +19502,12 @@
 // terms, conditions, requirements, invoicing, and the Agreement to be bound citing BCA
 // Art. 24. Figures unchanged. Every render site reads one load include, and ISSUED prints
 // the countersign instant rather than the render time. Template 2.0, terms 2026-09-28-v4.
-export const SRL_VERSION = "3.8.boe";
+// v3.8.bof — both load-create paths accept and store what the rate confirmation prints from
+// Order Builder: pickup and delivery appointments, the shipper's pickup number and references,
+// the cargo value, the pallet count and the driver's instructions. The with-tender schema
+// did not declare most of them, so they were stripped on the way in. The draft RC now takes
+// the load's pickup number. The customer's FSC and accessorials stay off the carrier's RC.
+export const SRL_VERSION = "3.8.bof";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
