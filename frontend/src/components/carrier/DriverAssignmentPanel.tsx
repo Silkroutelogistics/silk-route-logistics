@@ -12,8 +12,10 @@ import { CarrierCard } from "./CarrierCard";
  *
  * Arc 19 built PATCH /carrier-loads/:id/driver and the two driver-verify
  * routes, and nothing in the portal ever called them. The rate confirmation
- * download refused with DRIVER_NOT_VERIFIED and pointed the carrier at this
- * page, where there was nothing to do. This is the control that was missing.
+ * download used to refuse with DRIVER_NOT_VERIFIED and point the carrier at
+ * this page, where there was nothing to do. This is the control that was
+ * missing. v3.8.bod lifted that refusal (owner ruling 2026-09-28): verifying the
+ * driver no longer gates the RC; an unverified handset is a risk signal to the AE.
  *
  * What verification proves, and what it does not: that something holding the
  * number read back a code we texted to it, and that the person holding it

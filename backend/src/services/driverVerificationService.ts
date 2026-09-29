@@ -202,20 +202,3 @@ export async function confirmDriverVerification(opts: {
   log.info({ loadId: opts.loadId }, "[DriverVerify] driver handset proven and consent captured");
   return { ok: true, verifiedAt: now };
 }
-
-/**
- * Is the number currently on this load the one that was proven?
- *
- * Compares against `driverPhone` rather than trusting the timestamp alone, so
- * editing the number by any path — including one that forgets to clear the
- * verification — reads as unverified rather than inheriting the old proof.
- */
-export async function isDriverPhoneVerified(loadId: string): Promise<boolean> {
-  const load = await prisma.load.findUnique({
-    where: { id: loadId },
-    select: { driverPhone: true, driverPhoneVerified: true, driverPhoneVerifiedAt: true },
-  });
-  if (!load?.driverPhoneVerifiedAt || !load.driverPhoneVerified) return false;
-  const current = normalizePhoneE164(load.driverPhone || "");
-  return !!current && current === load.driverPhoneVerified;
-}

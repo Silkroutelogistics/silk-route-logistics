@@ -116,9 +116,9 @@ async function main() {
     const gated = await fetch(`${BASE}/rate-confirmations/${rcBefore.id}/pdf`, { headers: { Cookie: carrierCookie } });
     const gatedBody: any = await gated.json().catch(() => ({}));
     check(
-      "the rate confirmation is REFUSED while the driver is unverified",
-      gated.status === 403 && gatedBody?.error === "DRIVER_NOT_VERIFIED",
-      `HTTP ${gated.status} ${gatedBody?.error || ""} — the document that sends a truck to a dock`,
+      "the rate confirmation is RELEASED while the driver is unverified (gate lifted v3.8.bod, owner 2026-09-28)",
+      gated.status === 200 && gatedBody?.error !== "DRIVER_NOT_VERIFIED",
+      `HTTP ${gated.status} ${gatedBody?.error || ""} — the carrier can read the document for the load they hold`,
     );
 
     const start = await post(`/carrier-loads/${load.id}/driver-verify/start`, carrierCookie, {

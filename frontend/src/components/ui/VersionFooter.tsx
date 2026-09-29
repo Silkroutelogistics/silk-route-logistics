@@ -19492,7 +19492,10 @@
 // ("Sep 27, 2026"), whatever shape the draft stored. The draft written on tender accept
 // stored the full ISO timestamp, which ran across two cells on RC 5003. The shipper load
 // confirmation takes the same helper. An RC matrix case now builds that draft shape.
-export const SRL_VERSION = "3.8.boc";
+// v3.8.bod — owner ruling 2026-09-28: a carrier who holds the load downloads its rate
+// confirmation without first verifying a driver. The ARC 19 gate is lifted; an unverified
+// handset is still a DRIVER_PHONE_UNVERIFIED risk signal to the AE. Ownership still gates.
+export const SRL_VERSION = "3.8.bod";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -610,8 +610,8 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
   // cookie is sent). It was rejected: it bakes a hostname into every stored row,
   // so the day the API moves, every historical row is wrong and needs a data
   // migration; and a bare href renders the endpoint's JSON errors as raw JSON in
-  // a tab. This endpoint returns 403 DRIVER_NOT_VERIFIED with a message the
-  // carrier is supposed to act on.
+  // a tab. This endpoint returns JSON errors (403 when the caller is not the
+  // load's carrier, 404 when the RC is gone) that the carrier should be able to read.
   //
   // So the column holds the path the api client consumes — no host, no `/api`
   // prefix — and both carrier surfaces fetch it through that client and render
@@ -682,39 +682,10 @@ export async function downloadRateConfirmationPdf(req: AuthRequest, res: Respons
     return;
   }
 
-  // ARC 19 — and the driver handset on this load must be PROVEN first.
-  //
-  // The rate confirmation is the document that sends a truck to a shipper.
-  // Issuing it against a number nobody has confirmed means that when the load
-  // goes quiet, dispatch is calling a handset that may never have existed. The
-  // check is on the carrier path only: AE-side roles need to read the RC while
-  // they are arranging the verification. §13.3 Item 225.
-  if (req.user!.role === "CARRIER") {
-    const { isDriverPhoneVerified } = await import("../services/driverVerificationService");
-    if (!(await isDriverPhoneVerified(rc.loadId))) {
-      res.status(403).json({
-        error: "DRIVER_NOT_VERIFIED",
-        // v3.8.awy — names the FIRST step, not the second.
-        //
-        // The old wording said "confirm the driver mobile number", which assumes
-        // a driver is already on the load. On a freshly booked load none is
-        // assigned, so the carrier was told to confirm a number that does not
-        // exist yet and had nowhere to go. The audit hit this directly: the
-        // reported load was BOOKED with driverName, driverPhone and
-        // driverPhoneVerified all null, so fixing the link that 404'd would have
-        // moved the carrier from "page not found" to an instruction they could
-        // not follow.
-        //
-        // Both steps, in order, and where to do them.
-        message:
-          "Assign a driver to this load and verify their mobile number first — both are on the " +
-          "load in My Loads. We text a code to that number; entering it proves we can reach the " +
-          "person hauling the load before the rate confirmation is released.",
-        action: { href: "/carrier/dashboard/my-loads", label: "Verify the driver" },
-      });
-      return;
-    }
-  }
+  // The driver-verification gate that stood here (ARC 19, §13.3 Item 225) is lifted.
+  // Owner ruling 2026-09-28: once a carrier has the load, they can download its rate
+  // confirmation. An unverified driver handset still raises DRIVER_PHONE_UNVERIFIED in
+  // the risk engine, so the AE is told; it no longer withholds the carrier's document.
 
   // Filename now carries the RC's own number, so a re-issue downloads as
   // SRL-121485R2.pdf instead of overwriting the original in the AE's downloads

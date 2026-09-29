@@ -46,8 +46,8 @@ export function apiHref(apiRelativePath: string): string {
  * export on silkroutelogistics.ai and the API is api.silkroutelogistics.ai, so a
  * root-relative path resolves against the Pages host and 404s; and even with an
  * absolute URL the browser would render this endpoint's JSON errors as raw JSON
- * in a tab. The rate-confirmation endpoint answers 403 DRIVER_NOT_VERIFIED with
- * a message the carrier is meant to act on.
+ * in a tab. The rate-confirmation endpoint answers 403/404 with a message the
+ * carrier is meant to read.
  *
  * The 60s revoke rather than an immediate one: revoking synchronously races the
  * new tab's own load of the blob, and the tab wins only sometimes. Mirrors the

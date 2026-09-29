@@ -45,9 +45,9 @@ export default function MyLoadsPage() {
   const [bolError, setBolError] = useState<string | null>(null);
   const [bolOpening, setBolOpening] = useState(false);
   // v3.8.awt — the rate-confirmation link is fetched, not navigated to, so its
-  // failures need somewhere to land. The endpoint answers 403
-  // DRIVER_NOT_VERIFIED with an instruction the carrier has to follow; before
-  // this the link went to the Pages host and 404'd with nothing to read.
+  // failures need somewhere to land (403 if the load is not theirs, 404 if the RC
+  // is gone). Before this the link went to the Pages host and 404'd with nothing
+  // to read. v3.8.bod: the driver-verification refusal is gone (owner ruling).
   const [rcError, setRcError] = useState<string | null>(null);
   const [rcOpening, setRcOpening] = useState(false);
   const queryClient = useQueryClient();
