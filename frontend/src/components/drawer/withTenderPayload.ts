@@ -22,6 +22,8 @@ export function buildWithTenderPayload(
     carrierId: string;
     lineItemsRest?: DrawerLineItemRest[];
     now?: number;
+    /** Item 342 (v3.8.bor) — the AE's Quick Pay election; undefined is standard terms. */
+    quickPay?: { speed: "SEVEN_DAY" | "SAME_DAY"; evidenceType: string; evidenceRef: string };
   },
 ) {
   const rest = ctx.lineItemsRest ?? [];
@@ -107,6 +109,7 @@ export function buildWithTenderPayload(
       carrierId: ctx.carrierId,
       offeredRate: Number(data.offeredRate),
       expiresAt,
+      quickPay: ctx.quickPay,
     },
     customerRate: data.customerRate ? Number(data.customerRate) : null,
     specialInstructions: data.specialInstructions || null,

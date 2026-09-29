@@ -8,6 +8,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { buildWithTenderPayload } from "./withTenderPayload";
 import { mcDigits } from "@/lib/mcNumber";
+import { EMPTY_OFFER_QUICK_PAY, offerQuickPayBody, offerQuickPayProblem, type OfferQuickPayValue } from "@/lib/offerQuickPay";
+import { OfferQuickPayFields } from "@/components/tender/OfferQuickPayFields";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { type CustomerSummary } from "@/components/shared/CustomerPicker";
 import { OverrideComplianceModal, type BlockedCode } from "@/components/loads/OverrideComplianceModal";
@@ -224,6 +226,8 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
   const [customer, setCustomer] = useState<CustomerSummary | null>(initialCustomer ?? null);
   const [selectedCarrier, setSelectedCarrier] = useState<CarrierSearchResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // v3.8.bor (Item 342) — Quick Pay is decided with the offer, by the AE.
+  const [quickPay, setQuickPay] = useState<OfferQuickPayValue>(EMPTY_OFFER_QUICK_PAY);
   // Sprint 63 (v3.8.afi) — Instructions audience tabs (mirrors Order
   // Builder Section 4 Sprint 61 pattern). One textarea binds to the
   // active audience field; underlying 3 fields (specialInstructions /
@@ -340,6 +344,8 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
       if (!selectedCarrier) throw new Error("Select a carrier first");
       if (!data.pickupDate || !data.deliveryDate) throw new Error("Pickup and delivery dates required");
       if (!data.offeredRate || Number(data.offeredRate) <= 0) throw new Error("Offered rate must be > 0");
+      const qpProblem = offerQuickPayProblem(quickPay);
+      if (qpProblem) throw new Error(qpProblem);
 
       // v3.8.bog — built by buildWithTenderPayload (./withTenderPayload), which
       // computes the load's totals from the same line array it sends.
@@ -348,6 +354,7 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
         customerId: customer.id,
         carrierId: selectedCarrier.id,
         lineItemsRest,
+        quickPay: offerQuickPayBody(quickPay),
       });
 
       const res = await api.post("/loads/with-tender", payload);
@@ -574,8 +581,9 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
                   </div>
                 )}
                 <div className="text-[11px] text-slate-500 italic">
-                  Fuel surcharge is set on the Rate Confirmation PDF surface after the carrier accepts. Not collected here.
+                  Fuel surcharge is internal and is not printed on the rate confirmation (v3.8.boi).
                 </div>
+                <OfferQuickPayFields value={quickPay} onChange={setQuickPay} />
               </div>
             </section>
 

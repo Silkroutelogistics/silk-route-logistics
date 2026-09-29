@@ -19546,7 +19546,10 @@
 // v3.8.boq — Quick Pay on a direct offer is decided at offer (Item 342): the AE records it on
 // evidence, behind the carrier's own three gates (pilot, signed agreement, switched on), before
 // anything is written; the election lands before the RC is issued, so the document prints it.
-export const SRL_VERSION = "3.8.boq";
+// v3.8.bor — the AE sets Quick Pay on the offer from both offer surfaces (Item 342): Load Board
+// tender drawer and Carrier Engagement Drawer, one shared field set; evidence required for a paid
+// speed, and the backend's eligibility refusal is shown on the Load Board.
+export const SRL_VERSION = "3.8.bor";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

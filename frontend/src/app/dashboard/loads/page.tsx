@@ -33,6 +33,8 @@ import { deriveLoadStatus, ATTENTION_LABEL, actionsFor, ACTION_LABEL, WIRED_ACTI
 import type { Load as BaseLoad, LoadTender } from "@/types/entities";
 import { money, pct, perMile, customerBilled, carrierPay, margin, marginPct } from "@/lib/rateDisplay";
 import { mcDigits } from "@/lib/mcNumber";
+import { EMPTY_OFFER_QUICK_PAY, offerQuickPayBody, offerQuickPayProblem, type OfferQuickPayValue } from "@/lib/offerQuickPay";
+import { OfferQuickPayFields } from "@/components/tender/OfferQuickPayFields";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -189,6 +191,8 @@ export default function LoadsPage() {
   const [showRateConf, setShowRateConf] = useState(false);
   const [tenderCarrierId, setTenderCarrierId] = useState("");
   const [tenderRate, setTenderRate] = useState("");
+  // v3.8.bor (Item 342) — Quick Pay is decided with the offer, by the AE.
+  const [tenderQuickPay, setTenderQuickPay] = useState<OfferQuickPayValue>(EMPTY_OFFER_QUICK_PAY);
   const [tenderExpiryHours, setTenderExpiryHours] = useState(24); // v3.8.alv §13.3 Item 144 — tiered expiry preset
 
   /* ---- Sprint 39 Item 54 — Accept on Behalf state ---- */
@@ -388,7 +392,7 @@ export default function LoadsPage() {
   // code on both sides; deletion reduces the audit surface.
 
   const createTender = useMutation({
-    mutationFn: ({ loadId, carrierId, offeredRate, expiresInHours }: { loadId: string; carrierId: string; offeredRate: number; expiresInHours?: number }) =>
+    mutationFn: ({ loadId, carrierId, offeredRate, expiresInHours, quickPay }: { loadId: string; carrierId: string; offeredRate: number; expiresInHours?: number; quickPay?: ReturnType<typeof offerQuickPayBody> }) =>
       // Sprint 44c (v3.8.aaz) Item 74 — Sprint 37f canonical is singular
       // (POST = "create a tender" verb form; GET /loads/:id/tenders = noun
       // list form). This caller had drifted to plural, producing 404 in
@@ -407,6 +411,7 @@ export default function LoadsPage() {
         carrierId,
         offeredRate,
         expiresAt: new Date(Date.now() + (expiresInHours ?? 24) * 60 * 60 * 1000).toISOString(),
+        quickPay,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["load", selectedLoadId] });
@@ -414,6 +419,7 @@ export default function LoadsPage() {
       setTenderCarrierId("");
       setTenderRate("");
       setTenderExpiryHours(24);
+      setTenderQuickPay(EMPTY_OFFER_QUICK_PAY);
     },
   });
 
@@ -1207,6 +1213,12 @@ export default function LoadsPage() {
               setTenderRate={setTenderRate}
               expiryHours={tenderExpiryHours}
               setExpiryHours={setTenderExpiryHours}
+              quickPay={tenderQuickPay}
+              setQuickPay={setTenderQuickPay}
+              submitError={
+                (createTender.error as { response?: { data?: { error?: string; message?: string } } } | null)?.response?.data?.error ??
+                (createTender.error ? "The offer could not be sent." : null)
+              }
               complianceResult={complianceResult}
               checkingCompliance={checkingCompliance}
               onSubmit={async () => {
@@ -1228,6 +1240,7 @@ export default function LoadsPage() {
                         carrierId: tenderCarrierId,
                         offeredRate: parseFloat(tenderRate),
                       expiresInHours: tenderExpiryHours,
+                      quickPay: offerQuickPayBody(tenderQuickPay),
                       });
                     }
                   } catch {
@@ -1236,6 +1249,7 @@ export default function LoadsPage() {
                       carrierId: tenderCarrierId,
                       offeredRate: parseFloat(tenderRate),
                       expiresInHours: tenderExpiryHours,
+                      quickPay: offerQuickPayBody(tenderQuickPay),
                     });
                   } finally {
                     setCheckingCompliance(false);
@@ -1248,6 +1262,7 @@ export default function LoadsPage() {
                     carrierId: tenderCarrierId,
                     offeredRate: parseFloat(tenderRate),
                       expiresInHours: tenderExpiryHours,
+                      quickPay: offerQuickPayBody(tenderQuickPay),
                   });
                 }
               }}
@@ -2048,6 +2063,9 @@ function TenderForm({
   setTenderRate,
   expiryHours,
   setExpiryHours,
+  quickPay,
+  setQuickPay,
+  submitError,
   complianceResult,
   checkingCompliance,
   onSubmit,
@@ -2064,6 +2082,9 @@ function TenderForm({
   setTenderRate: (v: string) => void;
   expiryHours: number;
   setExpiryHours: (v: number) => void;
+  quickPay: OfferQuickPayValue;
+  setQuickPay: (v: OfferQuickPayValue) => void;
+  submitError: string | null;
   complianceResult: {
     allowed: boolean;
     blocked_reasons: string[];
@@ -2300,6 +2321,13 @@ function TenderForm({
           Carrier must accept before this window closes; the hourly sweep auto-expires it otherwise.
         </p>
       </div>
+      <OfferQuickPayFields value={quickPay} onChange={setQuickPay} />
+      {offerQuickPayProblem(quickPay) && (
+        <p className="text-xs text-[#9B2C2C]">{offerQuickPayProblem(quickPay)}</p>
+      )}
+      {submitError && (
+        <p className="text-xs text-[#9B2C2C]" data-testid="tender-submit-error">{submitError}</p>
+      )}
       {complianceResult && !complianceResult.allowed && (
         <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
           <p className="text-sm font-medium text-[#9B2C2C] mb-1">Carrier Blocked</p>
@@ -2337,7 +2365,7 @@ function TenderForm({
       <button
         onClick={onSubmit}
         disabled={
-          !tenderCarrierId || !tenderRate || isPending || checkingCompliance ||
+          !tenderCarrierId || !tenderRate || isPending || checkingCompliance || offerQuickPayProblem(quickPay) !== null ||
           (complianceResult !== null && !complianceResult.allowed)
         }
         className="w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50"
