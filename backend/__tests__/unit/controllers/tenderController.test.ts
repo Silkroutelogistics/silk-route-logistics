@@ -119,9 +119,15 @@ describe("tenderController", () => {
       (prisma.load.update as any).mockResolvedValue({});
       (prisma.notification.create as any).mockResolvedValue({});
       (prisma as any).loadTrackingEvent = { create: vi.fn().mockResolvedValue({}) };
+      (prisma.rateConfirmation.updateMany as any).mockResolvedValue({ count: 1 });
 
       const result = await processExpiredTenders();
       expect(result.expired).toBe(1);
+      // v3.8.bol — the expired offer takes its rate confirmation with it.
+      expect(prisma.rateConfirmation.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ tenderId: { in: ["t-1"] } }),
+        data: expect.objectContaining({ status: "VOID", signTokenHash: null }),
+      }));
       expect(result.loadsReverted).toBe(1);
       expect(prisma.load.update).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({ status: "POSTED" }),

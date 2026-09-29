@@ -19528,7 +19528,10 @@
 // v3.8.bok — each rate confirmation records the tender it was drafted for (Item 342).
 // Additive nullable RateConfirmation.tenderId + index, no backfill. A draft is reused only
 // by its own tender or a legacy draft that belongs to none, which it then claims.
-export const SRL_VERSION = "3.8.bok";
+// v3.8.bol — a declined, expired or withdrawn offer takes its rate confirmation with it
+// (Item 342). Voided and its signing link killed in the same transaction as the tender
+// move, keyed on the tenders that actually moved; the number stays cancelled, never reused.
+export const SRL_VERSION = "3.8.bol";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

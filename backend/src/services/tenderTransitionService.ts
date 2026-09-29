@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../config/database";
 import { logTenderTransition, TenderState } from "./waterfallEventService";
+import { voidTenderRateConfirmations } from "./rateConfirmationVoidService";
 
 /**
  * Moving tenders between states.
@@ -191,8 +192,21 @@ async function applySettle(
     );
   }
 
+  // v3.8.bol (Item 342) — a tender that dies takes its offer-time rate
+  // confirmation with it, in the same transaction as the move. Here, at the one
+  // place every decline, expiry and withdrawal passes through, rather than at
+  // each of their callers: six hand-rolled copies of one rule is how this
+  // service came to exist. Keyed on the tenders that ACTUALLY moved, so a
+  // tender that raced to accepted keeps its document.
+  if (TENDER_DEATHS.includes(to) && moved.length > 0) {
+    await voidTenderRateConfirmations(moved.map((t) => t.id), db);
+  }
+
   return { count: moved.length, tenderIds: moved.map((t) => t.id) };
 }
+
+/** The settlements that end an offer. Its rate confirmation goes with it. */
+const TENDER_DEATHS: SettleTo[] = ["DECLINED", "EXPIRED", "WITHDRAWN"];
 
 /**
  * Settle one tender by id.

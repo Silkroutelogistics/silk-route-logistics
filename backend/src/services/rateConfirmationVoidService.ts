@@ -49,3 +49,31 @@ export async function voidLiveRateConfirmations(loadId: string, db: Db = prisma)
   });
   return voided.count;
 }
+
+/**
+ * v3.8.bol (Item 342) — void the rate confirmations drafted for these tenders,
+ * and only those.
+ *
+ * The RC is issued with the offer on the direct paths, so a tender that dies
+ * (declined, expired, withdrawn) leaves a document in the carrier's inbox with a
+ * live signing link on it. Without this a carrier could sign a load that was
+ * already covered by someone else, or an offer that ran out. Scoped by tender
+ * rather than by load for exactly that reason: withdrawing the losers when one
+ * carrier wins must not touch the winner's document.
+ *
+ * The number stays on the voided row, so it is cancelled rather than freed:
+ * rateConNumber is @unique and a void never clears it (§21.2, never reused).
+ */
+export async function voidTenderRateConfirmations(tenderIds: string[], db: Db = prisma): Promise<number> {
+  if (tenderIds.length === 0) return 0;
+  const voided = await db.rateConfirmation.updateMany({
+    where: { tenderId: { in: tenderIds }, status: { notIn: [...VOIDABLE_EXCLUSIONS] } },
+    data: {
+      status: "VOID",
+      signTokenHash: null,
+      signTokenId: null,
+      signTokenExpiresAt: null,
+    },
+  });
+  return voided.count;
+}
