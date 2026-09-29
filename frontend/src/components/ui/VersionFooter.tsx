@@ -19549,7 +19549,10 @@
 // v3.8.bor — the AE sets Quick Pay on the offer from both offer surfaces (Item 342): Load Board
 // tender drawer and Carrier Engagement Drawer, one shared field set; evidence required for a paid
 // speed, and the backend's eligibility refusal is shown on the Load Board.
-export const SRL_VERSION = "3.8.bor";
+// v3.8.bos — the carrier no longer chooses Quick Pay after accept (Item 342): the portal PUT
+// refuses QP_DECIDED_AT_OFFER, My Loads shows the terms read-only, and the "Quick Pay is open"
+// notice sent at accept is removed.
+export const SRL_VERSION = "3.8.bos";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -62,7 +62,6 @@ vi.mock("../../../src/controllers/shipmentController", () => ({
 }));
 vi.mock("../../../src/services/notificationService", () => ({
   notifyTenderAction: vi.fn().mockResolvedValue(undefined),
-  notifyQuickPayElectionOpen: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../../src/services/autoRateConfirmationService", () => ({
   autoGenerateRateConfirmation: vi.fn().mockResolvedValue(null),

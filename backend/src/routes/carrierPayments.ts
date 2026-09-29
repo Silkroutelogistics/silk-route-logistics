@@ -7,8 +7,6 @@ import {
   normalizeTier,
   quickPayAutoApprovePerLoad,
   quickPayMonthlyLimit,
-  quickPayFeePercent,
-  standardNetDays,
 } from "../lib/quickPayPricing";
 // One resolver for "what part of this settlement is the carrier's own money",
 // reading the APPROVED accessorial ledger — the same store the amount being
@@ -18,8 +16,6 @@ import { atCostReimbursementsForLoad } from "../services/integrationService";
 // v3.8.asb — the Quick Pay pilot. One resolver for "is this carrier approved",
 // shared with the carrier-facing gate and the delivery pricing path.
 import { isQuickPayPilotApproved } from "../controllers/carrierController";
-import { record as recordQuickPayElection } from "../services/quickPayElectionService";
-import { extractClientIp } from "../services/geoService";
 
 const router = Router();
 
@@ -130,23 +126,17 @@ router.get("/summary", async (req: AuthRequest, res: Response) => {
 // this endpoint is only useful BEFORE that moment, and it says so rather than
 // accepting a change it cannot honour.
 //
-// SAYING NOTHING HERE COSTS THE CARRIER NOTHING. A load with no election
-// recorded is paid on the carrier's free tier terms at no fee (D1). This
-// endpoint is not an opt-out from a default; it is the only way Quick Pay is
-// ever switched on for a load. Nothing else turns it on.
-//
-// It is deliberately small: two endpoints, one field, no new model. The fuller
-// version is a speed control on the tender-accept screen, which belongs to the
-// tender surface and is reported as a follow-up rather than built here.
+// v3.8.bos (Item 342) — THE CARRIER NO LONGER CHOOSES HERE. The rate
+// confirmation now goes out with the offer and accepting it is signing it, so
+// the speed is the AE's election at offer (services/offerQuickPayService), and
+// the PUT below refuses with QP_DECIDED_AT_OFFER. The GET stays: My Loads reads
+// it to show the carrier what the load pays.
 //
 // GET  /api/carrier-payments/loads/:loadId/quickpay-speed
-// PUT  /api/carrier-payments/loads/:loadId/quickpay-speed   { speed }
+// PUT  /api/carrier-payments/loads/:loadId/quickpay-speed   refused since v3.8.bos
 //
 // Mounted above the `/:id` payment routes: Express matches in declaration
 // order and "loads" would otherwise be read as a payment id.
-
-type QpSpeed = "STANDARD" | "SEVEN_DAY" | "SAME_DAY";
-const QP_SPEEDS: QpSpeed[] = ["STANDARD", "SEVEN_DAY", "SAME_DAY"];
 
 /**
  * Resolve the load, prove the calling carrier owns it, and report whether the
@@ -236,185 +226,41 @@ router.get("/loads/:loadId/quickpay-speed", async (req: AuthRequest, res: Respon
     // Only ever non-null once the rate confirmation has been ISSUED. Before
     // that there is no fee, because nothing has been recorded on this load.
     feePercent: result.load.quickPayFeePercent,
-    // Can it still be changed here?
+    // Whether the rate confirmation has fixed it. Nothing changes it here any
+    // more (v3.8.bos); this picks the wording My Loads shows.
     locked: result.issued,
     frozen: result.frozen,
     rateConfirmationStatus: result.rcStatus,
-    // Whether Quick Pay is available to this carrier at all, and what each
-    // speed costs THEM. §8: same-day is the seven-day fee plus two points.
+    // Whether Quick Pay is available to this carrier at all, so My Loads can
+    // say how to ask for it.
     eligible,
     tier,
     // The agreement version the carrier signed. Carriers are not shown it
     // (2026-09-26: agreements are named without a version on every carrier
     // screen); the election row records it at decision time as the evidence.
     quickPayVersion: profile?.quickPayVersion ?? null,
-    // Written here rather than in the component so the wording lives beside
-    // the agreement it quotes. No em dashes and no contractions, per the
-    // brand voice rules for carrier-facing copy.
-    attestation: eligible
-      ? `I elect this Quick Pay option for this load under the Caravan Quick Pay Agreement. The fee shown applies to this load only. Standard tier pay remains free and is not affected.`
-      : null,
-    options: eligible
-      ? [
-          { speed: "STANDARD", feePercent: 0, label: `Standard — free, Net-${standardNetDays(tier)}` },
-          { speed: "SEVEN_DAY", feePercent: quickPayFeePercent(tier), label: `7-day Quick Pay — ${quickPayFeePercent(tier)}%` },
-          { speed: "SAME_DAY", feePercent: quickPayFeePercent(tier, true), label: `Same-day Quick Pay — ${quickPayFeePercent(tier, true)}%` },
-        ]
-      : [],
   });
 });
 
+// Item 342 (v3.8.bos, owner ruling 2026-09-28 (1)) — REFUSED, always. The rate
+// confirmation goes out with the offer and accepting it is signing it, so how
+// the load is paid is settled before the carrier accepts: the AE records Quick
+// Pay at offer, behind the same three gates this endpoint used to run
+// (services/offerQuickPayService). There is no moment after the offer at which
+// a carrier choice here could be anything but a contradiction of the document
+// they signed. The route stays mounted so an old client gets a reason rather
+// than a 404.
 router.put("/loads/:loadId/quickpay-speed", async (req: AuthRequest, res: Response) => {
-  const speed = String((req.body as { speed?: string })?.speed ?? "").toUpperCase() as QpSpeed;
-  if (!QP_SPEEDS.includes(speed)) {
-    res.status(400).json({
-      error: `Choose one of ${QP_SPEEDS.join(", ")}.`,
-      code: "QP_SPEED_INVALID",
-    });
-    return;
-  }
-
   const result = await loadForSpeedElection(req.params.loadId, req.user!.id);
   if (result.error) {
     res.status(result.error).json({ error: result.message });
     return;
   }
-  // REFUSED, never silently ignored. Accepting the write here and letting the
-  // frozen fee stand is the exploit: the delivery path takes the pay date from
-  // the speed and the fee from the frozen percentage, so a post-issue flip to
-  // SAME_DAY bought same-day money at the 7-day price. The two halves are set
-  // together when the document is issued and neither moves alone afterwards.
-  if (result.issued) {
-    const frozenSpeed = result.load.quickPaySpeed;
-    const frozenPct = result.load.quickPayFeePercent;
-    const settled =
-      frozenSpeed && frozenPct !== null && frozenPct !== undefined
-        ? frozenSpeed === "STANDARD"
-          ? "standard terms at no fee"
-          : `${frozenSpeed === "SAME_DAY" ? "same-day" : "7-day"} Quick Pay at ${frozenPct}%`
-        : "the terms printed on it";
-    res.status(409).json({
-      error: `The rate confirmation for load ${result.load.referenceNumber} has already been issued at ${settled}, so that is what this load pays. Call your rep if it needs to change.`,
-      code: "QP_SPEED_LOCKED",
-      speed: frozenSpeed,
-      feePercent: frozenPct,
-    });
-    return;
-  }
-
-  const profile = await prisma.carrierProfile.findUnique({
-    where: { userId: req.user!.id },
-    select: { id: true, tier: true, quickPayEnabled: true, quickPayVersion: true },
-  });
-  if (!profile) {
-    res.status(404).json({ error: "Carrier profile not found" });
-    return;
-  }
-
-  // Choosing STANDARD is always allowed. It is a carrier saying "pay me on my
-  // free terms on this one", which needs no approval, no agreement and no
-  // switch — and it is a real election, distinct from never having chosen, so
-  // it is recorded rather than left null.
-  if (speed !== "STANDARD") {
-    if (!(await isQuickPayPilotApproved(profile.id))) {
-      res.status(403).json({
-        error:
-          "Quick Pay is running as a pilot and your account is not in it. Your loads pay on your standard tier terms, at no fee.",
-        code: "QP_PILOT_NOT_APPROVED",
-        action: { label: "Ask about the Quick Pay pilot", href: "/carrier/dashboard/activation" },
-      });
-      return;
-    }
-    const qpSigned = await prisma.carrierAgreement.findFirst({
-      where: { carrierId: profile.id, status: "SIGNED", templateName: "quick-pay" },
-      select: { id: true },
-    });
-    if (!qpSigned) {
-      res.status(403).json({
-        error:
-          "Read and sign the Caravan Quick Pay Agreement in your portal first, then choose a Quick Pay speed on this load.",
-        code: "QP_AGREEMENT_NOT_SIGNED",
-        action: { label: "Review and sign", href: "/carrier/dashboard/activation" },
-      });
-      return;
-    }
-    if (profile.quickPayEnabled !== true) {
-      res.status(403).json({
-        error: "Quick Pay is turned off on your account. Turn it on in Activation, then choose a speed on this load.",
-        code: "QP_NOT_ENABLED",
-        action: { label: "Turn on Quick Pay", href: "/carrier/dashboard/activation" },
-      });
-      return;
-    }
-  }
-
-  // The election and the projection move TOGETHER or not at all.
-  //
-  // Load.quickPaySpeed is what the rate confirmation and the charge path read;
-  // the QuickPayElection row is the record of WHO chose it, WHEN and THROUGH
-  // WHAT CHANNEL. Before this the projection was written alone, so a carrier
-  // disputing a deduction could be shown a fee with nothing behind it -- while
-  // the BCA, the Quick Pay Agreement and the rate confirmation can each produce
-  // a name, an IP, a user agent and a timestamp. One transaction is what stops
-  // the two halves from disagreeing.
-  //
-  // A load with no tender still gets the projection: the election model is
-  // tender-scoped by design, and a directly-assigned load has nothing to scope
-  // to. That case is logged rather than silently skipped.
-  const governing = await prisma.loadTender.findFirst({
-    where: { loadId: result.load.id, status: { in: ["ACCEPTED", "RC_SENT", "CONFIRMED"] }, deletedAt: null },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  });
-
-  await prisma.$transaction(async (tx) => {
-    await tx.load.update({ where: { id: result.load.id }, data: { quickPaySpeed: speed } });
-    if (!governing) return;
-    const recorded = await recordQuickPayElection(
-      {
-        tenderId: governing.id,
-        loadId: result.load.id,
-        carrierProfileId: profile.id,
-        speed,
-        tier: profile.tier,
-        decidedVia: "PORTAL",
-        signerIp: extractClientIp(req),
-        signerUserAgent: req.headers["user-agent"] ?? null,
-        quickPayVersion: profile.quickPayVersion,
-      },
-      tx,
-    );
-    if (!recorded.ok) {
-      // Throwing rolls the projection back with it. A refusal here means the
-      // input was contradictory, and honouring half of it would leave the
-      // carrier elected with no record of having elected.
-      throw new Error(`[QuickPayElection] ${recorded.code}: ${recorded.error}`);
-    }
-  });
-
-  if (!governing) {
-    log.warn(
-      { loadId: result.load.id, speed },
-      "[QuickPayElection] projection written with no governing tender -- election not recorded",
-    );
-  }
-
-  const tier = normalizeTier(profile.tier);
-  // What it WILL cost. Not written to the load — the fee is recorded when the
-  // rate confirmation is issued and not a moment before (§3), so quoting it
-  // here without writing it is the honest shape.
-  const willCost = speed === "STANDARD" ? 0 : quickPayFeePercent(tier, speed === "SAME_DAY");
-
-  log.info({ loadId: result.load.id, carrierUserId: req.user!.id, speed }, "[QuickPay] per-load speed elected");
-  res.json({
-    loadId: result.load.id,
-    referenceNumber: result.load.referenceNumber,
-    speed,
-    feePercentWhenIssued: willCost,
-    note:
-      speed === "STANDARD"
-        ? `Load ${result.load.referenceNumber} pays your free ${tier} standard terms, Net-${standardNetDays(tier)}.`
-        : `Load ${result.load.referenceNumber} is set to ${speed === "SAME_DAY" ? "same-day" : "7-day"} Quick Pay at ${willCost}%. The fee is confirmed in writing on the rate confirmation.`,
+  res.status(409).json({
+    error: `Quick Pay on load ${result.load.referenceNumber} is set with the offer and printed on your rate confirmation. Call your rep if it needs to change.`,
+    code: "QP_DECIDED_AT_OFFER",
+    speed: result.load.quickPaySpeed,
+    feePercent: result.load.quickPayFeePercent,
   });
 });
 

@@ -22,12 +22,17 @@ const SRC = path.resolve(__dirname, "../../../src");
 const read = (p: string) => fs.readFileSync(path.join(SRC, p), "utf8");
 
 describe("agreement names reach carriers without a version", () => {
-  it("the Quick Pay election sentence names the agreement only", () => {
+  // v3.8.bos (Item 342) — the per-load election sentence is gone with the
+  // carrier's after-accept choice: Quick Pay is set by the AE at offer and the
+  // carrier signs it on the rate confirmation. What remains of the endpoint
+  // is a GET and a refusal; neither may quote a version.
+  it("the per-load Quick Pay endpoint no longer carries an election sentence, and quotes no version", () => {
     const src = read("routes/carrierPayments.ts");
-    const line = src.split(/\r?\n/).find((l) => l.includes("I elect this Quick Pay option"));
-    expect(line, "attestation line not found").toBeTruthy();
-    expect(line).toContain("under the Caravan Quick Pay Agreement. The fee");
-    expect(line).not.toMatch(/version/i);
+    expect(src).not.toContain("I elect this Quick Pay option");
+    const put = src.slice(src.indexOf('router.put("/loads/:loadId/quickpay-speed"'));
+    const refusal = put.slice(0, put.indexOf("\n});"));
+    expect(refusal).toContain("QP_DECIDED_AT_OFFER");
+    expect(refusal).not.toMatch(/version/i);
   });
 
   it("the executed PDF filenames carry no version", () => {

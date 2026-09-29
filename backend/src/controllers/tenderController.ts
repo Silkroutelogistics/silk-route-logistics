@@ -13,7 +13,7 @@ const EVIDENCE_TYPE_MAP = {
 } as const;
 import { nextShipmentNumber } from "./shipmentController";
 import { complianceCheck } from "../services/complianceMonitorService";
-import { notifyTenderAction, notifyQuickPayElectionOpen } from "../services/notificationService";
+import { notifyTenderAction } from "../services/notificationService";
 import { autoGenerateRateConfirmation } from "../services/autoRateConfirmationService";
 import { voidLiveRateConfirmations } from "../services/rateConfirmationVoidService";
 import { voidForTender as voidQuickPayElection, record as recordQuickPayElection } from "../services/quickPayElectionService";
@@ -377,11 +377,6 @@ export async function acceptTender(req: AuthRequest, res: Response) {
   if (!offerRc) try {
     const rc = await autoGenerateRateConfirmation(load.id, tender.id, load.posterId);
     autoRcId = rc?.id;
-    // v3.8.asb — the Quick Pay election window opens HERE and closes when the
-    // AE sends that draft. Quick Pay defaults off per load, so a carrier who
-    // wants it has to ask, and nothing used to tell them the chance existed.
-    // Fire-and-forget: a failed notice must never fail an accept.
-    void notifyQuickPayElectionOpen(load.id);
   } catch (err) {
     log.error({ err, tenderId: tender.id, loadId: load.id }, "[Tender] auto-RC generation failed");
     // v3.8.ajw C8 — Write a queryable SystemLog WARNING so ops can find

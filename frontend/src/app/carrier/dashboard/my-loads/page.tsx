@@ -2,7 +2,7 @@
 import { formatStopDate } from "@/lib/stopDate";
 
 import { useState, useEffect } from "react";
-import { MapPin, Phone, FileText, CheckCircle, Clock, AlertCircle, Printer, Zap, Lock, Loader2, ArrowRight } from "lucide-react";
+import { MapPin, Phone, FileText, CheckCircle, Clock, AlertCircle, Printer, Zap, Lock, ArrowRight } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge, DriverAssignmentPanel, PaperworkPanel } from "@/components/carrier";
@@ -429,40 +429,22 @@ export default function MyLoadsPage() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Quick Pay — how you want THIS load paid
+// Quick Pay — what THIS load pays
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// The Caravan Quick Pay Agreement says twice that Quick Pay does not apply
-// automatically: the carrier elects it on the loads they want it on and skips
-// it on the ones they do not. GET/PUT /carrier-payments/loads/:loadId/
-// quickpay-speed is the only writer of that election, and nothing in the portal
-// called it — so no carrier could actually elect anything, and no carrier could
-// decline. This is that control, on the screen where a carrier is already
-// looking at the load.
-//
-// WHEN IT CLOSES. The fee is recorded on the load when its rate confirmation is
-// issued, and after that it is what the paperwork says. The endpoint reports
-// `locked` and this shows the frozen figure rather than a control that cannot
-// win.
-//
-// The dollar figures are the fee against the load's rate, shown so the choice
-// is between three prices rather than three words. At settlement the fee is
-// charged on line haul plus fuel plus approved accessorials and NOT on anything
-// reimbursed at cost, so it is described as approximate rather than quoted as
-// final.
+// v3.8.bos (Item 342, owner ruling 2026-09-28 (1)) — read-only. The rate
+// confirmation now goes out with the offer and accepting it is signing it, so
+// how the load is paid is set by the AE with the offer and printed on the
+// document the carrier signs. The choice this card used to offer after accept
+// could only contradict that document; the PUT behind it now refuses with
+// QP_DECIDED_AT_OFFER. The card says what the load pays, and how to ask for
+// Quick Pay on the next one.
 
-interface QpOption { speed: string; feePercent: number; label: string }
-interface QpElection {
+interface QpTerms {
   speed: string | null;
   feePercent: number | null;
   locked: boolean;
   eligible: boolean;
-  tier: string;
-  options: QpOption[];
-  /** Server-rendered attestation line, null when the carrier is not eligible. */
-  attestation: string | null;
-  /** The Quick Pay Agreement version the attestation is made under. */
-  quickPayVersion: string | null;
 }
 
 const QP_SPEED_LABEL: Record<string, string> = {
@@ -471,146 +453,37 @@ const QP_SPEED_LABEL: Record<string, string> = {
   SAME_DAY: "Same-day Quick Pay",
 };
 
-// B2/6.5 — the local money() took a plain number and so could not express
-// "no rate agreed yet". Replaced by the shared helper, which rounds the same
-// way and returns an em-dash for null.
-
 function QuickPayElection({ loadId, loadRate }: { loadId: string; loadRate: number }) {
-  const queryClient = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
-  const [action, setAction] = useState<{ label: string; href: string } | null>(null);
-
-  const { data, isLoading } = useQuery<QpElection>({
+  const { data, isLoading } = useQuery<QpTerms>({
     queryKey: ["carrier-load-quickpay", loadId],
     queryFn: () => api.get(`/carrier-payments/loads/${loadId}/quickpay-speed`).then((r) => r.data),
   });
 
-  const elect = useMutation({
-    mutationFn: (speed: string) => api.put(`/carrier-payments/loads/${loadId}/quickpay-speed`, { speed }),
-    onSuccess: () => {
-      setError(null);
-      setAction(null);
-      queryClient.invalidateQueries({ queryKey: ["carrier-load-quickpay", loadId] });
-      queryClient.invalidateQueries({ queryKey: ["carrier-my-load-detail", loadId] });
-    },
-    onError: (err: unknown) => {
-      const res = (err as { response?: { data?: { error?: string; action?: { label: string; href: string } } } })?.response?.data;
-      setError(res?.error || "Couldn't save your choice. Please try again.");
-      setAction(res?.action ?? null);
-    },
-  });
-
   if (isLoading || !data) return null;
 
-  // Nothing elected reads as standard terms: free, on your tier's net days.
-  const current = data.speed ?? "STANDARD";
-
-  // Locked — the rate confirmation has been issued, so the number on this load
-  // is the number on their paperwork. Show it and say why it cannot move.
-  if (data.locked) {
-    const frozen = data.feePercent && data.feePercent > 0;
-    return (
-      <CarrierCard padding="p-4">
-        <h4 className="text-xs font-bold text-[#0A2540] mb-2 flex items-center gap-1.5">
-          <Lock size={14} className="text-gray-500" /> Quick Pay on this load
-        </h4>
-        <p className="text-xs text-gray-700">
-          {frozen
-            ? `${QP_SPEED_LABEL[current] ?? current} at ${data.feePercent}%${loadRate > 0 ? ` — about ${money((loadRate * (data.feePercent as number)) / 100)}` : ""}.`
-            : "Standard terms, no fee."}
-        </p>
-        <p className="text-[11px] text-gray-500 mt-1.5">
-          Set on your rate confirmation, so it cannot change here. Call your rep if it needs to.
-        </p>
-      </CarrierCard>
-    );
-  }
-
-  // Not in the pilot, or in it without a signed agreement. Say what they are
-  // paid instead, because that is the part that matters, and point at the one
-  // page where anything can be done about it.
-  if (!data.eligible) {
-    return (
-      <CarrierCard padding="p-4">
-        <h4 className="text-xs font-bold text-[#0A2540] mb-2 flex items-center gap-1.5">
-          <Zap size={14} className="text-gray-500" /> Quick Pay on this load
-        </h4>
-        <p className="text-xs text-gray-700">
-          This load pays your standard tier terms, at no fee. Quick Pay is a limited pilot and is not on for your account.
-        </p>
+  const speed = data.speed ?? "STANDARD";
+  const paid = speed !== "STANDARD" && data.feePercent !== null && data.feePercent > 0;
+  return (
+    <CarrierCard padding="p-4">
+      <h4 className="text-xs font-bold text-[#0A2540] mb-2 flex items-center gap-1.5">
+        {data.locked ? <Lock size={14} className="text-gray-500" /> : <Zap size={14} className="text-gray-500" />} Quick Pay on this load
+      </h4>
+      <p className="text-xs text-gray-700" data-testid="qp-terms">
+        {paid
+          ? `${QP_SPEED_LABEL[speed] ?? speed} at ${data.feePercent}%${loadRate > 0 ? ` — about ${money((loadRate * (data.feePercent as number)) / 100)}` : ""}.`
+          : speed === "STANDARD"
+            ? "Standard terms, no fee."
+            : `${QP_SPEED_LABEL[speed] ?? speed}.`}
+      </p>
+      <p className="text-[11px] text-gray-500 mt-1.5">
+        Set with the offer and printed on your rate confirmation. Call your rep if it needs to change.
+        {data.eligible ? " To have a load paid by Quick Pay, ask your rep before they send the offer." : ""}
+      </p>
+      {!data.eligible && (
         <a href="/carrier/dashboard/activation" className="text-[11px] text-[#BA7517] font-semibold hover:underline mt-1.5 inline-block">
           See Quick Pay
         </a>
-      </CarrierCard>
-    );
-  }
-
-  return (
-    <CarrierCard padding="p-4">
-      <h4 className="text-xs font-bold text-[#0A2540] mb-1 flex items-center gap-1.5">
-        <Zap size={14} className="text-[#BA7517]" /> How do you want this load paid?
-      </h4>
-      <p className="text-[11px] text-gray-500 mb-3">
-        Your choice on this load only. Change it any time before we issue the rate confirmation.
-      </p>
-
-      {/* row 7d — the attestation, above the control that commits the choice.
-          Server-rendered copy: the wording lives beside the agreement it
-          quotes. The agreement is named without its version; the election row
-          records the version at decision time. */}
-      {data.attestation ? (
-        <p className="text-[11px] leading-relaxed text-[#3A4A5F] bg-[#F5EEE0] border border-[rgba(10,37,64,0.10)] rounded-md px-3 py-2 mb-3">
-          {data.attestation}
-        </p>
-      ) : null}
-
-      <div className="space-y-1.5">
-        {data.options.map((opt) => {
-          const selected = opt.speed === current;
-          const fee = opt.feePercent > 0 && loadRate > 0 ? (loadRate * opt.feePercent) / 100 : 0;
-          return (
-            <button
-              key={opt.speed}
-              onClick={() => elect.mutate(opt.speed)}
-              disabled={elect.isPending}
-              className={`w-full text-left px-3 py-2 rounded-md border text-xs transition disabled:opacity-60 ${
-                selected
-                  ? "border-[#BA7517] bg-[#FAEEDA] text-[#0A2540]"
-                  : "border-[#EFE6D3] bg-white text-gray-700 hover:border-[#C5A572]"
-              }`}
-            >
-              <span className="flex items-center justify-between gap-2">
-                <span className="font-semibold">{opt.label}</span>
-                <span className={selected ? "text-[#BA7517] font-semibold" : "text-gray-500"}>
-                  {opt.feePercent > 0 ? (fee > 0 ? `about ${money(fee)}` : `${opt.feePercent}%`) : "no fee"}
-                </span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {elect.isPending && (
-        <p className="text-[11px] text-gray-500 mt-2 flex items-center gap-1.5">
-          <Loader2 size={11} className="animate-spin" /> Saving your choice...
-        </p>
       )}
-
-      {error && (
-        <div className="mt-2 px-3 py-2 bg-[#F6E3E3] border-l-4 border-[#9B2C2C] text-[#9B2C2C] text-[11px] rounded">
-          {error}
-          {action && (
-            <a href={action.href} className="block mt-1 font-semibold underline">
-              {action.label}
-            </a>
-          )}
-        </div>
-      )}
-
-      <p className="text-[10px] text-gray-500 mt-2">
-        Fees are charged on what we pay you for the load, never on money we reimburse you at cost. The fee is confirmed in
-        writing on your rate confirmation before you haul.
-      </p>
     </CarrierCard>
   );
 }
