@@ -21,5 +21,6 @@
 /** Bill of Lading layout. Bumped by the stop-data arc from 2.9. */
 export const BOL_TEMPLATE_VERSION = "2.10";
 
-/** Rate Confirmation layout. */
-export const RC_TEMPLATE_VERSION = "1.4";
+/** Rate Confirmation layout. 2.0 (v3.8.boe) is Design System 3: letterhead with load and RC
+ * number, carrier and shipment panels, one row per stop, rate card, contacts strip, terms pages. */
+export const RC_TEMPLATE_VERSION = "2.0";

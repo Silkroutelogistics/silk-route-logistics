@@ -4,6 +4,7 @@ import { AuthRequest } from "../middleware/auth";
 import { generateBOLFromLoad, generateEnhancedRateConfirmation, generateShipperLoadConfirmation, generateInvoicePDF, generateSettlementPDF } from "../services/pdfService";
 import { generateBOLPrintToken } from "../services/shipperTrackingTokenService";
 import { resolveStopContacts } from "../lib/stopContact";
+import { RC_RENDER_LOAD_INCLUDE } from "../lib/rcRenderInclude";
 import { log } from "../lib/logger";
 import { readArchivedInvoice } from "../lib/invoiceArchive";
 import {
@@ -52,11 +53,8 @@ export async function downloadRateConfirmation(req: AuthRequest, res: Response) 
     const load = await prisma.load.findUnique({
       where: { id: req.params.loadId },
       include: {
-        carrier: {
-          select: { id: true, firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true, dotNumber: true, address: true, city: true, state: true, zip: true, contactPhone: true, contactEmail: true } } },
-        },
+        ...RC_RENDER_LOAD_INCLUDE,
         rateConfirmations: { where: { status: "SIGNED" }, orderBy: { createdAt: "desc" }, take: 1 },
-        customer: { select: { name: true, contactName: true, email: true, phone: true, address: true, city: true, state: true, zip: true } }, // v3.8.arr — address fields needed for the §3.9 last-resort fallback
       },
     });
 
@@ -97,11 +95,8 @@ export async function downloadEnhancedRateConfirmation(req: AuthRequest, res: Re
     const load = await prisma.load.findUnique({
       where: { id: req.params.loadId },
       include: {
-        carrier: {
-          select: { id: true, firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true, dotNumber: true, address: true, city: true, state: true, zip: true, contactPhone: true, contactEmail: true } } },
-        },
+        ...RC_RENDER_LOAD_INCLUDE,
         rateConfirmations: { where: { status: "SIGNED" }, orderBy: { createdAt: "desc" }, take: 1 },
-        customer: { select: { name: true, contactName: true, email: true, phone: true, address: true, city: true, state: true, zip: true } }, // v3.8.arr — address fields needed for the §3.9 last-resort fallback
       },
     });
 

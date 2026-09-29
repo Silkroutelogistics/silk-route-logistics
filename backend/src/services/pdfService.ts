@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import { INSURANCE_MINIMUMS } from "../lib/insurancePolicy";
+import { INSURANCE_MINIMUMS, formatMinimum } from "../lib/insurancePolicy";
 import * as path from "path";
 import * as fs from "fs";
 import bwipjs from "bwip-js";
@@ -69,6 +69,10 @@ import {
   FONT_BODY,
   FONT_BODY_BOLD,
   FONT_BODY_ITALIC,
+  FONT_DISPLAY_BOLD,
+  FONT_DISPLAY_ITALIC,
+  drawCompassMark,
+  BRAND,
   MARGIN,
   CONTENT_W,
   PAGE_W,
@@ -116,6 +120,8 @@ import {
   PRINCIPAL_ADDRESS_ZIP,
   PHONE,
   OPERATIONS_EMAIL,
+  ACCOUNTING_EMAIL,
+  COMPLIANCE_EMAIL,
   DOMAIN,
   MC_NUMBER,
   DOT_NUMBER,
@@ -1413,7 +1419,7 @@ interface EnhancedRCLoadData {
   rate: number; distance?: number | null;
   pickupDate: Date; deliveryDate: Date;
   notes?: string | null; specialInstructions?: string | null;
-  carrier?: { firstName: string; lastName: string; company?: string | null; phone?: string | null; carrierProfile?: { mcNumber?: string | null; dotNumber?: string | null } | null } | null;
+  carrier?: { firstName: string; lastName: string; company?: string | null; phone?: string | null; email?: string | null; carrierProfile?: { mcNumber?: string | null; dotNumber?: string | null; address?: string | null; city?: string | null; state?: string | null; zip?: string | null; contactPhone?: string | null } | null } | null;
   customer?: { name: string; contactName?: string | null; address?: string | null; city?: string | null; state?: string | null; zip?: string | null; phone?: string | null; email?: string | null } | null;
   // Sprint 48 (Item 108) — tender expiration banner data path. Active tender
   // is the latest OFFERED|ACCEPTED tender for this load; banner renders only
@@ -1423,7 +1429,7 @@ interface EnhancedRCLoadData {
   // Sprint 49 (Item 119) — AE header sub-line data path. poster is the AE
   // who created the load (canonical AE relation via Load.posterId → User).
   // Single-AE pre-Oct-2026 (Wasi); multi-AE deferred to future sprint.
-  poster?: { firstName: string; lastName: string; phone?: string | null } | null;
+  poster?: { firstName: string; lastName: string; phone?: string | null; email?: string | null } | null;
   // v3.8.bhq — `appointmentRequired` removed (ruling 7). It was declared here
   // as "Load.appointmentRequired (schema:2075)" and THERE IS NO SUCH FIELD ON
   // THE LOAD MODEL: schema line 2995 is customer_facilities.appointment_required.
@@ -1482,6 +1488,25 @@ interface EnhancedRCLoadData {
   tempSetpoint?: number | null;
   preCoolTo?: number | null;
   reeferContinuous?: boolean | null;
+  /** v3.8.boe — Design System 3 fields. All optional: every caller that
+   *  omits them renders the documented fallback, never a placeholder. */
+  pallets?: number | null;
+  hazmat?: boolean | null;
+  hazmatClass?: string | null;
+  cargoValue?: number | null;
+  declaredValue?: number | null;
+  pickupNumber?: string | null;
+  shipperReference?: string | null;
+  deliveryReference?: string | null;
+  pickupInstructions?: string | null;
+  deliveryInstructions?: string | null;
+  driverInstructions?: string | null;
+  loadStops?: Array<{
+    stopNumber: number; stopType: string; facilityName?: string | null; address?: string | null;
+    city: string; state: string; zip?: string | null; appointmentDate?: Date | string | null;
+    appointmentTime?: string | null; appointmentRef?: string | null; hookType?: string | null;
+    contactName?: string | null; contactPhone?: string | null; notes?: string | null;
+  }> | null;
 }
 
 function sectionTitle(doc: PDFDoc, title: string, y: number): number {
@@ -1654,1190 +1679,828 @@ export const RC_AGREEMENT_TO_BE_BOUND =
   "must decline the load and must not pick it up.";
 
 export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formData: Record<string, any>): PDFDoc {
+  // v3.8.boe — Design System 3 rate confirmation (docs/design/rc-final). The
+  // layout is the owner's final design; the CONTENT is the ratified one:
+  // accessorial figures read lib/accessorialPolicy (never the design's retired
+  // $50/$250), the Agreement to be Bound is RC_AGREEMENT_TO_BE_BOUND (bmx), the
+  // Quick Pay row prints the election recorded for this load (ruling 1,
+  // 2026-09-28), and everything the design dropped that the RC must carry is
+  // kept on the terms pages: broker statement, BCA governs, BOL discrepancy,
+  // dock and dispatch rules, insurance minimums, invoicing, the fraud notice,
+  // the verify link, the countersignature and both version stamps.
   const fd = formData || {};
-  // v3.8.arq — the footer RULE is drawn at PAGE_H - MARGIN - 12 - 4, which is
-  // 792 - 36 - 12 - 4 = 740. Body content must finish above it. The previous
-  // 749 ceiling sat NINE POINTS BELOW the rule it was supposed to protect,
-  // which is how three lines shipped rendering through the footer.
-  const RC_CONTENT_FLOOR = 738;
-  // v3.8.aro — bufferPages lets the footer be stamped AFTER all content is laid
-  // out, so "Page N of M" reports the real total instead of a hardcoded 2. Until
-  // now the page count was a constant and every content addition became a
-  // trimming exercise against a fixed budget; the maximal fixture has run as
-  // little as 14pt of slack. Content should not lose to layout on a document
-  // that carries money terms. References run longer than this: Scotlynn 2 pages,
-  // Allen Lund 4, Schneider 5.
+  const FLOOR = 734; // footer gold rule sits at 740
   const doc = new PDFDocument({ size: "LETTER", margin: 0, bufferPages: true });
-
-  // Sprint 47 (v3.8.abf, Item 101) — register skill canonical fonts on this
-  // doc instance. Required for Playfair-Bold / DMSans-* references inside
-  // skill chrome functions to resolve. Without this call, fontkit throws
-  // "Font not found" on first text() invocation. Mirror of BOL v2.9 pattern.
   registerSkillFonts(doc);
-
-  // Was `RC-SRL-${fd.referenceNumber || load.referenceNumber}`. Two defects in
-  // one line, both live in production output:
-  //   1. referenceNumber ALREADY carries the "SRL-" stem, so this rendered
-  //      RC-SRL-SRL-121488 on every page header of every Rate Confirmation.
-  //   2. it preferred formData over the load record and ignored loadNumber, so
-  //      the RC could print a different identifier than the BOL for one load.
-  // Now: the persisted rateConNumber, else revision 1 off the load stem.
-  // `fd.rateConNumber` is injected by the caller from the RateConfirmation row
-  // (see rateConfirmationController.renderFormData) rather than stored in
-  // formData, so there is still exactly one persisted copy: the rateConNumber
-  // column. Callers that render an unsaved preview pass nothing and get
-  // revision 1 derived from the stem, which is what a first issue would get.
+  const SEMI = "DMSans-SemiBold";
+  const X = MARGIN;
+  const W = CONTENT_W;
   const docId = documentNumberFor(fd.rateConNumber, load, "RATE_CONFIRMATION") ?? "";
-
-  // The load stem, which is NOT the document number. `docId` identifies THIS
-  // Rate Confirmation (121488-2 on a re-issue); `stem` identifies the
-  // freight (121488) and is what the body copy means when it tells a driver
-  // which load to check in against, or names the load in the invoicing subject
-  // line. Conflating them would put a revision suffix in a driver instruction.
-  // An RC issued before the bare scheme keeps its SRL- reference.
   const stem = bareLoadRef(docId, load) ?? resolveLoadStem(load) ?? "";
+  const money = (n: number) =>
+    `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const policyMoney = (n: number) => money(n);
 
-  // ─── PAGE 1 ────────────────────────────────────────────────────
-  // Header (no QR — RC carrier-portal artifact, no scan event per skill)
-  let y = drawHeaderFirstPage(doc, {
-    docTitle: "Rate Confirmation",
-    // "Carrier dispatch · binding on acceptance", verbatim from `.title-row .sub`
-    // in docs/design/rc.html. The old descriptor said CARRIER-ISSUED, which
-    // is factually wrong on the face of the document: SRL issues the Rate
-    // Confirmation and tenders it to the carrier. Measured before changing —
-    // drawHeaderFirstPage draws this with lineBreak:false, so a longer string
-    // overprints rather than wraps. 192.7pt of 540pt at Playfair Italic 8.5,
-    // against 112.6pt before, and nothing else renders on that row.
-    subtitle: "Carrier dispatch · Binding on acceptance",
-    loadId: docId,
-    includeQr: false,
-  });
+  // ── measuring helpers ────────────────────────────────────────────────────
+  const textH = (s: string, font: string, size: number, width: number, lineGap = 0.6) => {
+    doc.font(font, size);
+    return doc.heightOfString(s, { width, lineGap });
+  };
+  const fit = (s: string, font: string, size: number, width: number): string => {
+    doc.font(font, size);
+    if (doc.widthOfString(s) <= width) return s;
+    let t = s;
+    while (t.length > 1 && doc.widthOfString(t + "…") > width) t = t.slice(0, -1);
+    return t.trimEnd() + "…";
+  };
+  const capsLabel = (s: string, x: number, y: number, size: number, color: string, opts: { width?: number; align?: "left" | "right" | "center" } = {}) => {
+    doc.font(FONT_BODY_BOLD, size).fillColor(color);
+    doc.text(s.toUpperCase(), x, y, { characterSpacing: size * 0.12, lineBreak: false, ...opts });
+  };
+  const sectionLabel = (s: string, y: number, right?: string): number => {
+    capsLabel(s, X, y, 8, TOKENS.goldDark);
+    if (right) {
+      doc.font(FONT_BODY, 7).fillColor(TOKENS.navy);
+      doc.text(right, X, y + 1, { width: W, align: "right", lineBreak: false });
+    }
+    return y + 14;
+  };
+  const hRule = (y: number, color: string, weight: number, x = X, w = W) => {
+    doc.save().moveTo(x, y).lineTo(x + w, y).lineWidth(weight).strokeColor(color).stroke().restore();
+  };
 
-  // ── v3.8.azz — THE .ka-band RAIL, IN THE GUTTER ─────────────────────────
-  //
-  // docs/design/rc.html puts a navy rail down the left of each page-1 band,
-  // with the body indented past it. That version was measured and retired:
-  // every page-1 helper hardcodes MARGIN and CONTENT_W inside srl-chrome.ts,
-  // two of them are shared with other generators, and moving the body to
-  // MARGIN + 51.68 meant widening seven shared helpers and re-measuring 28
-  // lineBreak:false sites by hand against 488.32 — on a page with 20pt of
-  // slack, which narrowing would have consumed. §13.3 Item 256 carries the
-  // arithmetic.
-  //
-  // The rail lands in the LEFT MARGIN instead. The body does not move, no
-  // shared helper is touched, no string is re-measured, and nothing outside
-  // this function can change — which is why exactly one render pin moves.
-  //
-  // GEOMETRY, derived rather than hardcoded so it tracks MARGIN:
-  //   top    = the letterhead gold rule (yTop + 80, i.e. MARGIN + 80) + 8
-  //   bottom = the footer gold rule (PAGE_H - MARGIN - 16) - 8
-  //   x      = 6, width 22, so its right edge sits 8pt clear of MARGIN.
-  //
-  // Page 1 only, and drawn here rather than in the footer pass because that
-  // pass runs over every buffered page.
-  //
-  // Print note, recorded rather than silently designed around: x=6 puts the
-  // rail's left edge inside the non-printable margin of most desk printers,
-  // so a printed copy may show a narrower bar than the PDF. It degrades to a
-  // thinner rail rather than breaking, and moving it right would be a
-  // deviation from the ratified geometry rather than a fix.
-  //
-  // NO LABEL, deliberately. The design's rail carries the band name because
-  // each rail borders ONE band. This one spans the whole page and borders all
-  // of them, so a band name would be false and the document title would just
-  // be the title again, 90 degrees rotated.
-  const RAIL_TOP = MARGIN + 80 + 8;
-  const RAIL_BOTTOM = PAGE_H - MARGIN - 16 - 8;
-  doc.save()
-     .fillColor(TOKENS.navy)
-     .rect(6, RAIL_TOP, 22, RAIL_BOTTOM - RAIL_TOP)
-     .fill()
-     .restore();
+  // ── pagination ───────────────────────────────────────────────────────────
+  let y = 0;
+  const runningHeader = (): number => {
+    const top = MARGIN;
+    capsLabel(`${BRAND.legalName} · Rate Confirmation · Load ${stem}`, X, top, 7.5, TOKENS.navy);
+    doc.font(FONT_BODY, 8).fillColor(TOKENS.navy);
+    doc.text("Terms and conditions", X, top, { width: W, align: "right", lineBreak: false });
+    hRule(top + 14, TOKENS.gold, 1.5);
+    return top + 26;
+  };
+  const newPage = () => {
+    doc.addPage();
+    y = runningHeader();
+  };
+  const ensureRoom = (h: number) => {
+    if (y + h > FLOOR) newPage();
+  };
 
-  // Sprint 49 (Item 119) — AE header sub-line. Renders below the subtitle
-  // when poster relation is included on the load. Skips cleanly when null
-  // (older RCs pre-Sprint-49 controller include extension, or system-generated
-  // loads without an explicit AE). Format: "AE: <Name> · <Phone>".
-  if (load.poster) {
-    const aeName = `${load.poster.firstName} ${load.poster.lastName}`.trim();
-    const aePhone = load.poster.phone ? ` · ${load.poster.phone}` : "";
-    doc.font(FONT_BODY, 8).fillColor(TOKENS.fg2);
-    doc.text(`AE: ${aeName}${aePhone}`, MARGIN, y - 2, { lineBreak: false });
-    y += 12;
-  }
+  // ════════════════════════════════════════════════════════════════════════
+  // PAGE 1 — letterhead
+  // ════════════════════════════════════════════════════════════════════════
+  const LOGO = 56;
+  drawCompassMark(doc, X, MARGIN, LOGO);
+  const coX = X + LOGO + 14;
+  doc.font(FONT_DISPLAY_BOLD, 15).fillColor(TOKENS.navy);
+  doc.text(BRAND.legalName, coX, MARGIN + 1, { lineBreak: false });
+  doc.font(FONT_BODY, 8).fillColor(TOKENS.fg2);
+  doc.text(PRINCIPAL_ADDRESS_ONE_LINE, coX, MARGIN + 21, { lineBreak: false });
+  doc.text(`+1 ${PHONE} · ${OPERATIONS_EMAIL}`, coX, MARGIN + 32, { lineBreak: false });
+  doc.font(FONT_BODY_BOLD, 8).fillColor(TOKENS.navy);
+  doc.text(`MC# ${MC_NUMBER} · USDOT# ${DOT_NUMBER}`, coX, MARGIN + 43, { lineBreak: false });
+  doc.font(FONT_DISPLAY_ITALIC, 9).fillColor(TOKENS.goldDark);
+  doc.text(BRAND.tagline, coX, MARGIN + 55, { lineBreak: false });
 
-  // Sprint 51 (Item 129) — RC verification URL anti-fraud header sub-line.
-  // FreightWaves 2026 fake-rate-con pattern: carriers receive thousands of
-  // phishing RCs impersonating legitimate brokers; surfacing the verification
-  // URL lets honest carriers confirm authenticity before committing the load.
-  // Token is deterministic SHA-256 hash of (load.id + refNum + salt) — see
-  // verifyController.rcVerifyToken. Hash-scan-lookup on backend; Item 146
-  // tracks the O(1) schema-field migration when load volume reaches ~10K.
+  // Right: load number, RC number, issued. No revision field (owner,
+  // 2026-09-28); a re-issue already carries its own number (…R2) under
+  // RC NUMBER, which is what a dispute needs.
+  //
+  // ISSUED is the issuance instant, which the countersign already records
+  // (stamped once in sendRateConfirmation and the auto-issue path, and stored
+  // in formData as JSON, so it can arrive as a string). Only a draft, which has
+  // no countersign, falls back to the render time. Reading the clock here for
+  // an issued RC would restate its issue time on every re-render.
+  const csAt = (fd.rcCountersign as { at?: Date | string } | undefined)?.at;
+  const csDate = csAt ? new Date(csAt) : null;
+  const issuedAt = csDate && !Number.isNaN(csDate.getTime()) ? csDate : new Date();
+  const issuedStr =
+    issuedAt.toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric" }) +
+    " · " +
+    issuedAt.toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit", hour12: false }) +
+    " ET";
+  capsLabel("Load number", X, MARGIN, 7, TOKENS.navy, { width: W, align: "right" });
+  doc.font(FONT_BODY_BOLD, 17).fillColor(TOKENS.navy);
+  doc.text(stem || "—", X, MARGIN + 10, { width: W, align: "right", lineBreak: false });
+  const refColW = 118;
+  const issuedX = X + W - refColW;
+  const rcNoX = issuedX - 80;
+  capsLabel("RC number", rcNoX, MARGIN + 36, 7, TOKENS.navy, { width: 72, align: "right" });
+  capsLabel("Issued", issuedX, MARGIN + 36, 7, TOKENS.navy, { width: refColW, align: "right" });
+  doc.font(FONT_BODY, 8.5).fillColor(TOKENS.navy);
+  doc.text(docId || stem || "—", rcNoX, MARGIN + 47, { width: 72, align: "right", lineBreak: false });
+  doc.text(issuedStr, issuedX, MARGIN + 47, { width: refColW, align: "right", lineBreak: false });
+  hRule(MARGIN + LOGO + 12, TOKENS.gold, 1.5);
+  y = MARGIN + LOGO + 22;
+
+  // Title row
+  doc.font(FONT_DISPLAY_BOLD, 24).fillColor(TOKENS.navy);
+  doc.text("Rate Confirmation", X, y, { lineBreak: false });
+  capsLabel("Carrier dispatch · Binding on acceptance", X, y + 12, 7.5, TOKENS.navy, { width: W, align: "right" });
+  y += 30;
   if (load.id) {
     const verifyToken = rcVerifyToken({ id: load.id, referenceNumber: load.referenceNumber });
     doc.font(FONT_BODY, 7.5).fillColor(TOKENS.goldDark);
-    doc.text(`Verify this RC: silkroutelogistics.ai/verify/${verifyToken}`, MARGIN, y - 2, { lineBreak: false });
-    y += 12;
+    doc.text(`Verify this RC: ${DOMAIN}/verify/${verifyToken}`, X, y, { lineBreak: false });
+    y += 13;
   }
+  y += 4;
 
-  // Meta strip — Sprint 49 (Item 117) extended 6 → 8 cells. PICKUP # and PO #
-  // render conditionally (empty string passed when null/empty so the cell shows
-  // em-dash per drawMetaStrip skill canonical, instead of orphan labels).
-  // formData primary + Load fallback per Sprint 48 hybrid precedence pattern.
-  const dateStr = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  const pickupStr = documentDate(fd.pickupDate) ?? documentDate(load.pickupDate) ?? "—";
-  const deliveryStr = documentDate(fd.deliveryDate) ?? documentDate(load.deliveryDate) ?? "—";
-  const equipment = fd.equipmentType || load.equipmentType || "—";
-  const termsLabel = fd.paymentTerms || "Net-30";
-  // ── v3.8.asb — the QUICK PAY cell states the FEE APPLIED TO THIS LOAD ────
-  //
-  // It used to print the carrier's TIER NAME ("SILVER"), and before that the
-  // word "Standard". Neither is a fee. A carrier charged $60 on a $2,000 load
-  // could not find "3%" anywhere on any document, while carrierPayments.ts
-  // told them "the fee is confirmed in writing on the rate confirmation" and
-  // schema.prisma asserted "the RC prints quickPaySpeed + quickPayFeePercent
-  // as applied to THIS load". It printed neither. Quick Pay Agreement §7
-  // requires the deduction be verifiable on the document's face; a tier name
-  // is not verifiable against a dollar figure.
-  //
-  // The value is resolved from what the load actually elected, in this order:
-  //   1. fd.quickPaySpeed + fd.quickPayFeePercent — both halves, written by
-  //      autoRateConfirmationService. The fee alone is ambiguous (3% is Silver
-  //      seven-day AND Platinum same-day), so speed is what disambiguates it.
-  //   2. fd.quickPayFeePercent alone — validators/rateConfirmation.ts declares
-  //      quickPayFeePercent but NOT quickPaySpeed, so a Zod parse on any AE
-  //      edit strips the speed and leaves the percent. That path still has a
-  //      real fee to state and must not fall through to "not elected".
-  //   3. no fee — the load is on standard terms. Per the 2026-08-16 decision
-  //      Quick Pay defaults OFF per load, so this is the ordinary case and it
-  //      has to say so plainly rather than imply an election that never
-  //      happened.
-  //
-  // There WAS an fd.quickPayCellValue, pre-computed upstream, which this
-  // renderer never read. Its own comment claimed the strings were pre-measured
-  // to fit; they were not — "Same-day · 5%" measures 69.6pt against a 67.5pt
-  // cell and would have overprinted TERMS, the Item 152 defect. It was deleted
-  // in v3.8.asb. The renderer owns its own geometry and measures below rather
-  // than trusting an upstream claim about a font it cannot see.
-  const qpFeePct =
-    typeof fd.quickPayFeePercent === "number" && fd.quickPayFeePercent > 0 ? fd.quickPayFeePercent : null;
-  const qpSpeedRaw = typeof fd.quickPaySpeed === "string" ? fd.quickPaySpeed.toUpperCase() : null;
-  // A non-zero percent is what decides this, and NOT a speed of "STANDARD"
-  // sitting beside it. The two can disagree, and when they do the money
-  // follows the percent: integrationService derives the speed from the frozen
-  // percent (resolveQuickPaySpeed compares it against the tier's same-day
-  // rate) and only zeroes the fee when that derivation yields STANDARD, which
-  // it cannot do for a non-zero percent. So a load carrying 3% and a STANDARD
-  // label is charged 3%. Reading the label instead of the percent would print
-  // "not elected" on a load the ledger bills — which is the whole defect this
-  // change exists to close, reintroduced through the side door.
-  const qpElected = qpFeePct !== null;
-  const qpSameDay = qpSpeedRaw === "SAME_DAY";
-  // Speed wording matches what the TERMS cell beside it prints for the same
-  // load (autoRateConfirmationService election.paymentTerms), so the two cells
-  // read as one statement rather than two vocabularies.
-  const qpSpeedLabel = qpSameDay ? "Same day" : "7 days";
+  // ── carrier + shipment ───────────────────────────────────────────────────
+  const COL_GAP = 24;
+  const colW = (W - COL_GAP) / 2;
+  const rightX = X + colW + COL_GAP;
 
-  // Measured fit, not asserted fit. The meta strip draws every cell with
-  // lineBreak:false, so a value wider than its column silently overprints its
-  // neighbour — there is no wrap and no error. Rather than hand-check a string
-  // and leave the next editor to rediscover the constraint, the renderer walks
-  // a ladder of candidates and takes the first that measures inside the column
-  // with a 4pt gutter. Worst case it degrades to the bare percent, which is
-  // still the number the carrier is charged. Measured at DMSans-Regular 10pt
-  // (drawMetaStrip's own font/size) against CONTENT_W/8 = 67.5pt:
-  //   "3% · 7-day"  48.4pt   "5% same day"  61.5pt   "Not elected"  54.1pt
-  //   "5% · same day" 66.1pt is inside the column but inside the gutter too,
-  //   so it is not first in the ladder.
-  const qpCellValue = (() => {
-    const ladder = qpElected
-      ? qpSameDay
-        ? [`${qpFeePct}% same day`, `${qpFeePct}% SD`, `${qpFeePct}%`]
-        : [`${qpFeePct}% · 7-day`, `${qpFeePct}% 7-day`, `${qpFeePct}%`]
-      : ["Not elected", "None"];
-    const budget = CONTENT_W / 8 - 4;
-    doc.font(FONT_BODY, 10);
-    return ladder.find((s) => doc.widthOfString(s) <= budget) ?? ladder[ladder.length - 1];
-  })();
-  // Arc 13 — was `fd.pickupNumber || load.pickupNumber || ""`. The middle term
-  // read a column nothing has ever written, so it could only ever contribute an
-  // empty string to a chain that had already resolved or already failed.
-  const pickupNumStr = fd.pickupNumber || "";
-  // Arc 13 — the trailing `|| load.shipperPoNumber` is gone with the column.
-  // poNumbers is the populated source and always was; the removed link could
-  // only ever have contributed an empty string.
-  const poNumStr = fd.poNumber || (load.poNumbers && load.poNumbers.length > 0 ? load.poNumbers[0] : "") || "";
-
-  y = drawMetaStrip(doc, {
-    "DATE ISSUED": dateStr,
-    "LOAD REF": stem,
-    "PICKUP": pickupStr,
-    "DELIVERY": deliveryStr,
-    "PICKUP #": pickupNumStr,
-    "PO #": poNumStr,
-    "QUICK PAY": qpCellValue,
-    "TERMS": termsLabel,
-  }, y - 4);
-
-  // Parties block — Shipper + Consignee in cream-2 panels
-  // Sprint 47 (Item 102) — y-offset bumped from `y - 4` to `y + 12`.
-  // The drawMetaStrip return value y is at the meta strip's bottom edge;
-  // the parties block has its own PARTIES small-caps label that needs
-  // clearance from the meta-strip row above. Sprint 45-RC's `y - 4`
-  // collided the parties label with the meta strip's DATE value row;
-  // user-visible overlap on every RC PDF.
-  // v3.8.arr — §3.9 order: AE override, then the load's own physical origin,
-  // then the billing customer only as a last resort.
-  const shipperAddrLines: string[] = [];
-  const shipperStreet = fd.shipperAddress || load.originAddress || load.customer?.address;
-  if (shipperStreet) shipperAddrLines.push(shipperStreet);
-  // v3.8.arr — the load's ORIGIN city is authoritative, not the customer's.
-  // This previously preferred load.customer?.city, so a load picking up in
-  // Colton for a customer headquartered elsewhere printed the customer's city
-  // beside the customer's name — a pickup address that exists nowhere on the
-  // trip. Only an explicit AE override outranks the origin.
-  const shipperCSZ = fd.shipperCity
-    ? `${fd.shipperCity}, ${fd.shipperState || ""} ${fd.shipperZip || ""}`.replace(/\s+/g, " ").trim()
-    : `${load.originCity}, ${load.originState} ${load.originZip}`;
-  shipperAddrLines.push(shipperCSZ);
-
-  const consigneeAddrLines: string[] = [];
-  // v3.8.arr — read the load destination, not just an AE override.
-  const consigneeStreet = fd.consigneeAddress || load.destAddress;
-  if (consigneeStreet) consigneeAddrLines.push(consigneeStreet);
-  const consigneeCSZ = fd.consigneeCity
-    ? `${fd.consigneeCity}, ${fd.consigneeState || ""} ${fd.consigneeZip || ""}`.replace(/\s+/g, " ").trim()
-    : `${load.destCity}, ${load.destState} ${load.destZip}`;
-  consigneeAddrLines.push(consigneeCSZ);
-
-  // v3.8.arr — appointment windows. Page 2 conditions BOTH detention ("not
-  // payable if you arrive outside your appointment window") and TONU ("you must
-  // have been inside your appointment window") on a window the document was
-  // printing as a bare date with no times. The load carries the times already;
-  // only an AE-typed override was ever read. Conditioning payment on an
-  // undisclosed window is unenforceable against the carrier and indefensible
-  // to them. 7 of 7 reference rate confirmations print a time or an explicit
-  // hours range.
-  // formatStopWindow is shared with the bill of lading, so the two documents
-  // cannot word the same window differently. An AE's typed override is passed
-  // through UNTOUCHED: it is their words, and appending "local" to a value that
-  // may already name a zone would contradict what they wrote.
-  const pickupWindowStr = fd.pickupTimeWindow || formatStopWindow(load.pickupTimeStart, load.pickupTimeEnd);
-  const deliveryWindowStr = fd.deliveryTimeWindow || formatStopWindow(load.deliveryTimeStart, load.deliveryTimeEnd);
-
-  // WHO IS AT THE DOCK — decided by lib/stopContact, never here.
-  //
-  // The comment that stood here said it plainly: "the person at the DOCK, not
-  // the billing contact... a driver calling it reaches accounts payable, not
-  // the gate" — and then the line below it fell back to `load.customer?.phone`
-  // anyway. The bill of lading carried the same fallback on the name; between
-  // them the two documents could put an accounts-payable contact on the paper a
-  // driver takes to a gate. The fallback is gone from both, and the resolver
-  // exposes no tier that could reach a billing contact.
-  //
-  // formData still wins over everything: an AE who typed a contact into the RC
-  // modal knows something the database does not, and that is the whole point of
-  // the override layer. The RESOLVER is what replaced the guessing underneath it.
-  //
-  // The RC prints the email where the BOL does not (ruling 4) — it is read at a
-  // desk before the load moves, not at a gate, and it has the width.
-  const shipResolved = load.stopContacts?.shipper;
-  const shipContact = fd.shipperContact || shipResolved?.name;
-  const shipPhone = fd.shipperPhone || shipResolved?.phone;
-  const shipEmail = fd.shipperEmail || shipResolved?.email;
-  const shipperContactLine = [shipContact, shipPhone, shipEmail].filter(Boolean).join(" · ") || undefined;
-  const consResolved = load.stopContacts?.consignee;
-  const consContact = fd.consigneeContact || consResolved?.name;
-  const consPhone = fd.consigneePhone || consResolved?.phone;
-  const consEmail = fd.consigneeEmail || consResolved?.email;
-  const consigneeContactLine = [consContact, consPhone, consEmail].filter(Boolean).join(" · ") || undefined;
-
-  // v3.8.bhq — the " · APPT" window suffix is gone (ruling 7).
-  //
-  // It read `fd.appointmentRequired === true || load.appointmentRequired === true`.
-  // The second half named a Load field that does not exist — the comment cited
-  // "schema:2075", which is customer_facilities.appointment_required — so it was
-  // permanently undefined. The first half is a toggle the RC modal never
-  // surfaced. A suffix neither half could produce is not a feature.
-  //
-  // `fd.appointmentRequired` SURVIVES in the instructions block below, where an
-  // AE who sets it still gets "** APPOINTMENT REQUIRED **" in writing. That one
-  // is a live formData read on a different surface, not a window variant.
-  //
-  // The real flag is CustomerFacility.appointment_required — Pattern Warehouse
-  // in Hebron carries it — reachable only through a facility link the
-  // load-creation path stopped writing in May (0 of 9 September loads). Banked
-  // at §13.3 with that regression, because surfacing it needs the link first.
-  // Sprint 49 (Item 121) — consignee name fallback changed from em-dash to
-  // "Consignee TBD" so the field communicates intent (data missing, fill in)
-  // rather than ambiguous em-dash that could read as "no consignee."
-  // Shipper retains 2-tier fallback (formData → load.customer → em-dash)
-  // because customer is usually populated; em-dash there is rare.
-  // Appointments ride the window line, same reasoning as the BOL: the party
-  // panel is a fixed box and a new row would push text past its own border.
-  // The side is named by the panel the line sits in. Delivery falls back to the
-  // legacy single column, where pre-split loads still carry their number, and
-  // formData wins when the RC was built with one (frozen-snapshot rule).
-  const puAppt = fd.pickupAppointment || load.pickupAppointment || "";
-  const delAppt = fd.deliveryAppointment || load.deliveryAppointment || load.appointmentNumber || "";
-  const apptSuffix = (a: string) => (a ? ` · Appt: ${a}` : "");
-  const shipperParty: Party = {
-    // v3.8.arr — §3.9: the facility at pickup, never the billing entity.
-    name: fd.shipperName || load.originCompany || load.shipperFacility || load.customer?.name || "—",
-    addressLines: shipperAddrLines,
-    contact: shipperContactLine,
-    window: pickupStr !== "—"
-      ? `${pickupStr}${pickupWindowStr ? " · " + pickupWindowStr : ""}${apptSuffix(puAppt)}`
-      : undefined,
-  };
-  const consigneeParty: Party = {
-    // v3.8.arr — §3.9: the facility at delivery. "Consignee TBD" was printed
-    // unconditionally because no load-level fallback existed at all.
-    name: fd.consigneeName || load.destCompany || load.consigneeFacility || "Consignee TBD",
-    addressLines: consigneeAddrLines,
-    contact: consigneeContactLine,
-    window: deliveryStr !== "—"
-      ? `${deliveryStr}${deliveryWindowStr ? " · " + deliveryWindowStr : ""}${apptSuffix(delAppt)}`
-      : undefined,
-  };
-  y = drawPartiesBlock(doc, shipperParty, consigneeParty, y + 12);
-
-  // Lane economics — MILES / TRANSIT / $/MILE pills (only with distance)
-  // ARC 21 — CLOSES §13.3 Item 220.1.
-  //
-  // Arc 14 found this fallback reads the CUSTOMER rate — `load.rate` on the
-  // primary creation path — and recorded it as latent because both live
-  // producers happen to set `lineHaulRate`. Latent is not fixed: a future
-  // producer that omits the key would print SRL's customer rate as carrier
-  // pay on a document the carrier signs. Arc 14's own rehearsal demonstrated
-  // it accidentally, reading $5,100 against an agreed $4,100.
-  const linehaul = (fd.lineHaulRate ?? load.carrierRate ?? 0) as number;
-  const fsc = (fd.fuelSurcharge as number | undefined) ?? 0;
-  const accs = (fd.accessorials as Array<{ description?: string; type?: string; amount: number }> | undefined) ?? [];
-  const accSum = accs.reduce((s, a) => s + Number(a.amount || 0), 0);
-  const totalCarrierPay = (fd.totalCharges as number | undefined) ?? (linehaul + fsc + accSum);
-  const miles = load.distance ?? null;
-  if (miles && miles > 0) {
-    // Sprint 47 (Item 100) — transit in drive hours per broker industry
-    // standard (carriers think in HOS-relevant drive hours, not calendar
-    // days). 55 mph industry-standard highway average for solo loaded.
-    // Pre-Sprint-47 was `miles / 500` days which renders "2.7 days" for a
-    // 1,352-mile lane — technically correct under 500 mi/day HOS solo but
-    // UX-poor; carriers convert mentally to drive hours regardless.
-    const transitHours = miles / 55;
-    y = drawLaneEconomics(doc, miles, transitHours, totalCarrierPay, y - 4, "hours");
-  }
-
-  // Equipment spec — type + temp-setpoint if reefer.
-  // v3.8.arm — the setpoint now falls back to the LOAD's own temperature
-  // fields. Pre-arm this read only fd.tempRequirements, which is populated
-  // solely when an AE types it into the RC form — so a reefer load built in
-  // Order Builder (which captures temperatureControlled + tempMin + tempMax as
-  // REQUIRED fields) rendered a rate confirmation with no temperature on it at
-  // all. A retrieved-corpus check makes the cost concrete: all 4 real rate
-  // confirmations (Scotlynn, TQL x2, Leonard's) carry a setpoint on the face.
-  const tempRaw = fd.tempRequirements ? String(fd.tempRequirements) : "";
-  const tempMatch = tempRaw.match(/-?\d+(\.\d+)?/);
-  const loadTempMin = (load as any).tempMin;
-  const loadTempMax = (load as any).tempMax;
-  // v3.8.art — resolution order: the AE's free-text override, then the load's own
-  // setpoint (the field Order Builder now captures), then the bottom of the
-  // acceptable range as a last resort. `typeof === "number"` rather than a
-  // truthiness check throughout, because 0°F is a legitimate frozen setpoint.
-  const loadSetpoint = load.tempSetpoint;
-  const tempSetpointResolved = tempMatch
-    ? parseFloat(tempMatch[0])
-    : (typeof loadSetpoint === "number"
-        ? loadSetpoint
-        : (typeof loadTempMin === "number" ? loadTempMin : undefined));
-  const isTempControlled = Boolean(
-    load.temperatureControlled === true
-    || tempRaw
-    || typeof loadSetpoint === "number"
-    || typeof loadTempMin === "number",
-  );
-  // v3.8.art — the full reefer spec now reaches page 1, where a driver actually
-  // looks before rolling. Previously only the setpoint was passed, so run mode
-  // and pre-cool lived four paragraphs into page 2 — and most reefers default to
-  // cycle-sentry, so a driver reading "38°F" on page 1 and setting 38 on cycle
-  // is the excursion claim SRL cannot afford on its first cold-chain customer.
-  // Every check is against null/undefined, never truthiness: 0°F is a legitimate
-  // frozen setpoint and reeferContinuous === false is a deliberate instruction.
-  const equipSpec: EquipmentSpec = {
-    type: equipment,
-    tempControlled: load.temperatureControlled === true || tempSetpointResolved !== undefined,
-    tempSetpointF: tempSetpointResolved,
-    tempMinF: load.tempMin ?? undefined,
-    tempMaxF: load.tempMax ?? undefined,
-    tempContinuous: load.reeferContinuous ?? undefined,
-    preCoolToF: load.preCoolTo ?? undefined,
-  };
-  y = drawEquipmentSpec(doc, equipSpec, y);
-
-  // CARRIER · ASSIGNED body section (Sprint 48 Item 106) — Sprint 45-RC
-  // removed this per too-purist skill interpretation; industry-standard RCs
-  // (CHR/Coyote/RXO/Landstar) all surface carrier identity body-section
-  // above commodity. Signature block alone is insufficient for at-a-glance
-  // recognition. formData primary + load.carrier fallback per hybrid pattern
-  // already used for shipper/consignee in this generator.
   const carrierName = fd.carrierName
     || load.carrier?.company
-    || (load.carrier ? `${load.carrier.firstName} ${load.carrier.lastName}`.trim() : "—");
-  // Sprint 49 (Items 120 + 120.a) — render-time strip via precise regex
-  // /^MC[-#\s]*(?=\d)/i + /^DOT[-#\s]*(?=\d)/i. Storage shape varies by
-  // data source; the digit lookahead ensures we only strip the prefix
-  // when an MC/DOT number digit follows, avoiding over-match on edge
-  // cases like a carrier company name starting with "MC".
-  const rawMc = fd.carrierMcNumber || load.carrier?.carrierProfile?.mcNumber;
-  const rawDot = fd.carrierDotNumber || load.carrier?.carrierProfile?.dotNumber;
-  const carrierMcDigits = mcDigits(rawMc) || "—";
-  const carrierDot = normalizeDotNumber(rawDot) || "—";
-  const carrierPhone = fd.carrierPhone || load.carrier?.phone || "—";
+    || (load.carrier ? `${load.carrier.firstName} ${load.carrier.lastName}`.trim() : "")
+    || "—";
+  const prof = load.carrier?.carrierProfile ?? null;
+  const carrierStreet = fd.carrierAddress || prof?.address || "";
+  const carrierCsz = fd.carrierCity
+    ? `${fd.carrierCity}, ${fd.carrierState || ""} ${fd.carrierZip || ""}`.replace(/\s+/g, " ").trim()
+    : prof?.city
+      ? `${prof.city}, ${prof.state || ""} ${prof.zip || ""}`.replace(/\s+/g, " ").trim()
+      : "";
+  const carrierAddr = [carrierStreet, carrierCsz].filter(Boolean);
+  const carrierDot = normalizeDotNumber(fd.carrierDotNumber || prof?.dotNumber) || "—";
+  const carrierPhone = fd.carrierPhone || load.carrier?.phone || prof?.contactPhone || "—";
   const carrierContact = fd.carrierContact
     || fd.dispatcherName
-    || (load.carrier ? `${load.carrier.firstName} ${load.carrier.lastName}`.trim() : "—");
+    || (load.carrier ? `${load.carrier.firstName} ${load.carrier.lastName}`.trim() : "")
+    || "—";
 
-  const carrierLabelY = y;
-  doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
-  doc.text("CARRIER · ASSIGNED", MARGIN, carrierLabelY, {
-    characterSpacing: 7 * 0.08,
-    lineBreak: false,
-  });
+  // Shipment facts
+  const equipment = fd.equipmentType || load.equipmentType || "—";
+  const tempRaw = fd.tempRequirements ? String(fd.tempRequirements) : "";
+  const tempMatch = tempRaw.match(/-?\d+(\.\d+)?/);
+  const loadTempMin = load.tempMin;
+  const loadTempMax = load.tempMax;
+  const setpoint: number | undefined = tempMatch
+    ? parseFloat(tempMatch[0])
+    : typeof load.tempSetpoint === "number"
+      ? load.tempSetpoint
+      : typeof loadTempMin === "number" ? loadTempMin : undefined;
+  const isTempControlled = Boolean(
+    load.temperatureControlled === true || tempRaw || typeof load.tempSetpoint === "number" || typeof loadTempMin === "number",
+  );
+  const runMode = load.reeferContinuous === false ? "cycle" : "continuous";
+  const tempSpec = isTempControlled
+    ? typeof setpoint === "number"
+      ? `${setpoint}°F ${runMode}`
+      : typeof loadTempMin === "number" && typeof loadTempMax === "number"
+        ? `${loadTempMin}°F to ${loadTempMax}°F`
+        : "temperature per BOL"
+    : "";
+  const equipmentLine = tempSpec ? `${equipment} · ${tempSpec}` : equipment;
+  const commodityName = fd.commodity || load.commodity || "General freight";
+  const hazmat = Boolean(fd.hazmat ?? load.hazmat);
+  const hazmatText = hazmat ? `Hazmat: Yes${load.hazmatClass ? ` (Class ${load.hazmatClass})` : ""}` : "Hazmat: No";
+  const wt = (fd.weight as number | undefined) ?? load.weight ?? null;
+  const pcs = (fd.pieces as number | undefined) ?? load.pieces ?? null;
+  const pallets = (fd.pallets as number | undefined) ?? load.pallets ?? null;
+  const weightParts = [
+    wt ? `${Number(wt).toLocaleString("en-US")} lb` : null,
+    pallets ? `${pallets} pallets` : pcs ? `${pcs} pcs` : null,
+  ].filter(Boolean) as string[];
+  const valueNum = (fd.cargoValue as number | undefined) ?? load.cargoValue ?? load.declaredValue ?? null;
+  const miles = load.distance ?? null;
 
-  const carrierPanelY = carrierLabelY + 12;
-  const carrierPanelH = 58;
-  // Item 94 (A-5) — frame via drawPanel instead of a hand-built
-  // roundedRect + fillAndStroke, per SKILL.md "Don't hand-build chrome".
-  // FRAME ONLY, deliberately: the body is three rows at three different
-  // font/size/color combinations (11pt bold fg1 name, 8.5pt fg2 MC/DOT,
-  // 8.5pt fg2 conditional contact) at fixed offsets, and drawPanel takes a
-  // single bodyText rendered at one font, so the rows stay hand-rendered
-  // below. With wrap omitted (false) and no bodyText, drawPanel honors `h`
-  // and emits exactly the save/fill/stroke/roundedRect/fillAndStroke/restore
-  // sequence this replaced — byte-identical output, one owner for the tokens.
-  drawPanel(doc, { x: MARGIN, y: carrierPanelY, w: CONTENT_W, h: carrierPanelH });
-
-  doc.font(FONT_BODY_BOLD, 11).fillColor(TOKENS.fg1);
-  doc.text(carrierName, MARGIN + 12, carrierPanelY + 9, { lineBreak: false });
-  doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg2);
-  doc.text(`MC# ${carrierMcDigits}    DOT# ${carrierDot}`, MARGIN + 12, carrierPanelY + 26, { lineBreak: false });
-
-  // Sprint 49.b (Item 138) — contact + phone line empty-suppression. When
-  // both values fall through to em-dash sentinel (profile-only carriers
-  // without linked User record, no phone), render no line at all instead
-  // of "— · —" which reads as broken. Same defensive class as Sprint 48
-  // DRIVER & EQUIPMENT row gating.
-  const hasCarrierContact = carrierContact && carrierContact !== "—";
-  const hasCarrierPhone = carrierPhone && carrierPhone !== "—";
-  if (hasCarrierContact || hasCarrierPhone) {
-    const contactParts: string[] = [];
-    if (hasCarrierContact) contactParts.push(carrierContact);
-    if (hasCarrierPhone) contactParts.push(carrierPhone);
-    doc.text(contactParts.join(" · "), MARGIN + 12, carrierPanelY + 41, { lineBreak: false });
-  }
-
-  y = carrierPanelY + carrierPanelH + 10;
-
-  // Driver & Equipment mini-row (Sprint 48 Item 107) — renders only when
-  // at least one field populated; driver assignment can post-date RC issue.
-  if (fd.driverName || fd.driverPhone || fd.truckNumber || fd.trailerNumber) {
-    doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
-    doc.text("DRIVER & EQUIPMENT", MARGIN, y, {
-      characterSpacing: 7 * 0.08,
-      lineBreak: false,
-    });
-    y += 12;
-    const driverParts = [
-      fd.driverName ? `Driver: ${fd.driverName}` : null,
-      fd.driverPhone ? String(fd.driverPhone) : null,
-      fd.truckNumber ? `Tractor #${fd.truckNumber}` : null,
-      fd.trailerNumber ? `Trailer #${fd.trailerNumber}` : null,
-    ].filter(Boolean) as string[];
-    doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg2);
-    doc.text(driverParts.join("  ·  "), MARGIN, y, { lineBreak: false });
-    y += 16;
-  }
-
-  // Shipment table — single commodity row
-  const wt = (fd.weight as number | undefined) ?? load.weight;
-  const pcs = (fd.pieces as number | undefined) ?? load.pieces;
-  const commodityName = fd.commodity || load.commodity || "General Freight";
-  y = drawShipmentTable(doc, {
-    headers: ["PCS", "DESCRIPTION", "WEIGHT", "DIMS", "HM"],
-    rows: [
-      [
-        pcs ? String(pcs) : "—",
-        String(commodityName),
-        wt ? `${wt.toLocaleString()} lbs` : "—",
-        fd.dims || "—",
-        fd.hazmat ? "Y" : "N",
-      ],
-    ],
-    yTop: y,
-  });
-
-  // Rate breakdown ON PAGE 1 (Sprint 45-RC finding #8 — was on page 4)
-  const rate: RateBreakdown = {
-    linehaul,
-    fuelSurcharge: fsc > 0 ? fsc : undefined,
-    accessorials: accs.length > 0
-      ? accs.map((a) => ({ label: a.description || a.type || "Accessorial", amount: Number(a.amount || 0) }))
-      : undefined,
+  // Stops. The load's stop list when it has one (multi-stop); otherwise the
+  // origin and destination on the load. Per-stop contacts come from the
+  // resolved dock contacts, never the billing customer (§3.9).
+  type RcStop = {
+    type: "Pickup" | "Delivery"; city: string; name: string; address: string; contact: string;
+    date: string; window: string; appt: string; mode: string; refs: string; note: string;
   };
-  y = drawRateBreakdown(doc, rate, y - 8);
+  const hookLabel = (h: string | null | undefined, type: "Pickup" | "Delivery") =>
+    h === "DROP_HOOK" ? "Drop trailer" : h === "PRELOADED" ? "Preloaded trailer" : h === "LIVE_LOAD_UNLOAD" ? (type === "Pickup" ? "Live load" : "Live unload") : "";
+  const pickupNumber = fd.pickupNumber || load.pickupNumber || "";
+  const poList = (fd.poNumber ? [String(fd.poNumber)] : (load.poNumbers ?? [])).filter(Boolean);
+  const poText = poList.length > 2 ? `${poList.slice(0, 2).join(", ")} +${poList.length - 2} more` : poList.join(", ");
+  const pickupRefs = [
+    pickupNumber ? `PU# ${pickupNumber}` : null,
+    poText ? `PO ${poText}` : null,
+    load.shipperReference ? `Shipper ref ${load.shipperReference}` : null,
+  ].filter(Boolean).join(" · ");
+  const deliveryRefs = [load.deliveryReference ? `Ref ${load.deliveryReference}` : null].filter(Boolean).join(" · ");
 
-  // ── v3.8.asb — the panel states the APPLIED terms, not a price list ──────
-  //
-  // This panel used to print a hardcoded 4-cell grid of the whole §8 ladder
-  // whenever a tier was set: TIER / STANDARD / 7-DAY QP / SAME-DAY QP. A menu
-  // is fine as context. A menu INSTEAD of the applied number is what let a
-  // carrier be charged a fee that appears on no document, because the grid
-  // showed all three prices and never said which one was taken on this load.
-  //
-  // So the panel now has two states and they are decided by the ELECTION, not
-  // by whether a tier happens to be set:
-  //
-  //   elected     → what was applied to this load: speed, fee, and where the
-  //                 fee lands in dollars on the rate confirmed here. That is
-  //                 the "verifiable on its face" the Quick Pay Agreement §7
-  //                 requires — a carrier can check the deduction against this
-  //                 document without asking anyone.
-  //   not elected → says so plainly, then the carrier's OWN tier's terms as
-  //                 context for a future load. Their tier, not all three:
-  //                 a carrier has one tier and the other two rows were never
-  //                 information, only noise. It cannot contradict the meta
-  //                 strip cell because both read the same election.
-  //
-  // The tier ladder below is context ONLY and is never the source of what is
-  // charged; the applied fee comes from the election frozen onto the load.
-  const tierUpper = (fd.carrierPaymentTier as string | undefined)?.toUpperCase();
-  const tierFees: Record<string, { netDays: number; sevenDay: number; sameDay: number }> = {
-    SILVER:   { netDays: 30, sevenDay: 3, sameDay: 5 },
-    GOLD:     { netDays: 21, sevenDay: 2, sameDay: 4 },
-    PLATINUM: { netDays: 14, sevenDay: 1, sameDay: 3 },
-  };
-  const tierData = tierUpper && tierFees[tierUpper] ? tierFees[tierUpper] : null;
-  const tierLabel = tierUpper ? tierUpper.charAt(0) + tierUpper.slice(1).toLowerCase() : null;
-
-  // Dollar figures print only when this rate confirmation carries no
-  // accessorial lines, which is every auto-generated one. The reason is
-  // narrow and deliberate: the fee base is line haul plus fuel plus approved
-  // accessorials, LESS anything reimbursed at cost, and the at-cost test lives
-  // in integrationService (isAtCostReimbursement — lumper is the ratified
-  // case). Re-implementing that test here would put a second copy of a money
-  // rule in the codebase, which is the way two ladders diverged before. So
-  // when accessorials exist the panel states speed and fee and leaves the
-  // arithmetic to the settlement, which owns the rule. When they do not, the
-  // base is unambiguous and the carrier gets the arithmetic on the page.
-  const qpFeeBase = accs.length === 0 ? linehaul + fsc : null;
-  const qpFeeAmount =
-    qpElected && qpFeeBase !== null ? Math.round(qpFeeBase * (qpFeePct as number)) / 100 : null;
-  const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-  const qpLabelY = y;
-  doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
-  doc.text("QUICK PAY · CARAVAN PARTNER PROGRAM", MARGIN, qpLabelY, {
-    characterSpacing: 7 * 0.08,
-    lineBreak: false,
-  });
-  // The basis for the percentage, right-aligned on the label row.
-  //
-  // It belongs beside the number, but it cannot cost height: page 1 renders
-  // with 22pt of clearance above the footer rule, and one accessorial line in
-  // the rate breakdown eats 16pt of that. A third row inside the panel was
-  // written first and scripts/verify-rc-matrix.ts caught it colliding with the
-  // footer on the accessorial fixture — which is what that gate is for. The
-  // label row has 88pt of unused width at this size, so this is free.
-  // Measured: label 163.6pt + note 276.2pt + 12pt gap = 451.8pt of 540pt.
-  if (qpElected) {
-    doc.font(FONT_BODY, 7).fillColor(TOKENS.fg3);
-    doc.text(
-      "Fee applies to line haul, fuel and approved accessorials, less at-cost reimbursements.",
-      MARGIN,
-      qpLabelY + 1,
-      { width: CONTENT_W, align: "right", lineBreak: false },
-    );
-  }
-  const qpPanelY = qpLabelY + 12;
-  const qpPanelH = 42;
-  // Item 94 (A-5) — frame via drawPanel, per SKILL.md "Don't hand-build
-  // chrome". FRAME ONLY: both body paths are unexpressible as a single
-  // bodyText. The tier path is a 4-column grid (per-cell align:center, 7pt
-  // fg3 header over 10pt bold fg1 value); the no-tier path is two 8pt fg2
-  // lines at a 12pt inset. drawPanel renders one string at FONT_BODY 9 /
-  // fg1 / 10pt inset, so both bodies stay hand-rendered below. `h` is
-  // honored with wrap omitted, so the rect is byte-identical.
-  drawPanel(doc, { x: MARGIN, y: qpPanelY, w: CONTENT_W, h: qpPanelH });
-  if (qpElected) {
-    // ELECTED — what was applied to this load. Two or four cells depending on
-    // whether the arithmetic can be stated without re-implementing the at-cost
-    // rule (see qpFeeBase above).
-    const qpCells: [string, string][] =
-      qpFeeAmount !== null && qpFeeBase !== null
-        ? [
-            ["SPEED", qpSpeedLabel],
-            ["QUICK PAY FEE", `${qpFeePct}%`],
-            ["FEE ON THIS RATE", money(qpFeeAmount)],
-            ["NET ON THIS RATE", money(Math.round((qpFeeBase - qpFeeAmount) * 100) / 100)],
-          ]
-        : [
-            ["SPEED", qpSpeedLabel],
-            ["QUICK PAY FEE", `${qpFeePct}%`],
-          ];
-    const cellW = CONTENT_W / qpCells.length;
-    qpCells.forEach(([head, val], i) => {
-      const cx = MARGIN + i * cellW;
-      doc.font(FONT_BODY, 7).fillColor(TOKENS.fg3);
-      doc.text(head, cx, qpPanelY + 8, { width: cellW, align: "center", lineBreak: false });
-      doc.font(FONT_BODY_BOLD, 10).fillColor(TOKENS.fg1);
-      doc.text(val, cx, qpPanelY + 22, { width: cellW, align: "center", lineBreak: false });
+  const stops: RcStop[] = [];
+  const loadStops = (load.loadStops ?? []).slice().sort((a, b) => a.stopNumber - b.stopNumber);
+  if (loadStops.length >= 2) {
+    loadStops.forEach((s, i) => {
+      const type = s.stopType === "DELIVERY" ? "Delivery" : "Pickup";
+      const csz = `${s.city}, ${s.state} ${s.zip || ""}`.trim();
+      stops.push({
+        type,
+        city: `${s.city}, ${s.state}`,
+        name: s.facilityName || (type === "Pickup" ? "Shipper" : "Consignee"),
+        address: [s.address, csz].filter(Boolean).join(", "),
+        contact: [s.contactName, s.contactPhone].filter(Boolean).join(" · "),
+        date: documentDate(s.appointmentDate) ?? "",
+        window: s.appointmentTime || "",
+        appt: s.appointmentRef || "",
+        mode: hookLabel(s.hookType, type),
+        refs: i === 0 ? pickupRefs : i === loadStops.length - 1 && type === "Delivery" ? deliveryRefs : "",
+        note: s.notes || "",
+      });
     });
   } else {
-    // NOT ELECTED — the ordinary case, since Quick Pay is off per load unless
-    // the carrier elects it. Line 1 states the absence so the cell above is
-    // never read as a fee that was hidden. Line 2 is the carrier's own tier as
-    // context for a future load, or the ladder when no tier is on the form.
-    doc.font(FONT_BODY, 8).fillColor(TOKENS.fg2);
-    const noneLine1 = tierLabel
-      ? `No Quick Pay elected on this load. It pays on standard ${tierLabel} terms at no fee.`
-      : "No Quick Pay elected on this load. It pays on your standard tier terms at no fee.";
-    const noneLine2 =
-      tierData && tierLabel
-        ? `${tierLabel} Quick Pay, if elected on a later load: ${tierData.sevenDay}% at 7 days, ${tierData.sameDay}% same day. Ask operations@silkroutelogistics.ai.`
-        : "Caravan Partner Program Quick Pay: Silver 3% · Gold 2% · Platinum 1% at 7 days, plus 2% for same day.";
-    doc.text(noneLine1, MARGIN + 12, qpPanelY + 10, { width: CONTENT_W - 24, lineBreak: false });
-    doc.text(noneLine2, MARGIN + 12, qpPanelY + 24, { width: CONTENT_W - 24, lineBreak: false });
-  }
-  y = qpPanelY + qpPanelH + 12;
-
-
-  // The OPERATIONAL TERMS grid's QUICK PAY cell gets the applied election, not
-  // the tier name. Its cells are 202pt at FONT_BODY 9 (srl-chrome
-  // drawRateConTerms, labelGutter 68), so the long form fits with room:
-  // "5% same day on this load" measures 106.3pt.
-  const qpTermsCell = qpElected
-    ? `${qpFeePct}% ${qpSameDay ? "same day" : "at 7 days"} on this load`
-    : "Not elected on this load";
-  const opTerms: RateConTerms = buildRateConOperationalTerms(fd, qpTermsCell);
-  y = drawRateConTerms(doc, opTerms, y - 4);
-
-  // ── v3.8.arm — DOCK & DISPATCH ──────────────────────────────────────────
-  // Sourced from a corpus of REAL rate confirmations retrieved this sprint
-  // (Scotlynn and TQL court exhibits via CourtListener, TQL modern, Leonard's
-  // Express live TMS output). Frequencies below are over those 4 documents.
-  // Every line here is an OPERATING INSTRUCTION for the driver or dispatcher,
-  // never a covenant — covenants stay in the BCA per the counsel-confirmed
-  // architecture (Dirk Beckwith, Foster Swift). Placed on page 1 below the
-  // operational terms grid: this is the last thing the driver reads before
-  // rolling, and page 1 carried ~85pt of dead space pre-arm.
-  // v3.8.arq — the label is drawn inside drawDockBlock below, so it travels with
-  // the body when the block defers to page 2. Drawing it here as well left an
-  // orphan heading stranded on page 1 above nothing.
-  y -= 6;
-
-  const dockLines: string[] = [
-    // Driver / truck / trailer capture — driver 4 of 4, truck+trailer 3 of 4.
-    // SRL captured the carrier as a legal entity and nothing about the physical
-    // unit, so dispatch could not tell a shipper gate who was arriving and
-    // tracking had no driver cell to start from.
-    // V-2 — colon, not an em-dash: this is a label introducing fields, and
-    // references/voice.md does not want em-dashes as sentence connectors.
-    "Before pickup: Driver ____________  Cell ____________  Truck # ________  Trailer # ________",
-    // Identity at the dock — 0 of 18 retrieved documents carry this, yet every
-    // fraud source in the corpus names check-in identity as the highest-signal
-    // tell. NOT a restatement of the BCA re-brokering covenant: that binds the
-    // carrier; this tells an honest driver what to do when someone ELSE tries it.
-    "Check in at both stops as Silk Route Logistics, load " + stem + ". The BOL must name SRL as broker. If it names another company or MC number, do not load. Call (269) 220-6760.",
-    // Seals — 4 of 4 real rate confirmations address seals; SRL printed nothing.
-    "Seals: record the number on the BOL at pickup; the receiver removes it, not the driver. Broken or missing seal at delivery: call before the doors open.",
-    // Check calls — 2 of 4 state an explicit clock time. SRL runs check calls
-    // (CheckCall model; SRL-handled check calls are a published §4 floor
-    // benefit) but never told the driver when they were due.
-    "Check calls: by 8:00 AM Eastern daily in transit and on arrival at each stop. Running late: call before the appointment.",
-    // v3.8.art — detention evidence. SRL promises detention and never required
-    // the proof needed to bill it, so the first disputed claim costs $250 out of
-    // margin with nothing to present to the shipper. MoLo: "Signed in/out times
-    // and all accessorial or lumper receipts must be submitted within 24 hours
-    // or they will not be reimbursed." Schneider: detention "must be clearly
-    // noted on the bill of lading".
-    "Detention pay needs proof: have the facility write your in and out times on the BOL. No times on the BOL, no detention.",
-    // v3.8.art — Transervice, the single most practical clause in the corpus:
-    // "Carrier shall call TIS and make appropriate notations prior to signing
-    // the BOL or leaving the shipping facility in the event Carrier is not
-    // allowed on the shipping dock to witness loading."
-    "If the dock will not let you watch the load or count it, note that on the BOL before you sign and call SRL. Signing a clean BOL says you received everything on it in good order.",
-    // v3.8.art — Allen Lund requires the driver to verify the seal number
-    // MATCHES the BOL, not merely to record it; MoLo requires a reseal after
-    // each stop. SRL said only "record the number".
-    "Check the seal number on the trailer matches the number written on the BOL before you leave. Reseal after any stop where the doors open.",
-    // v3.8.art — Transervice OS&D. SRL carried nothing on overage, shortage or
-    // damage anywhere on the document: "All overage, shortage, and damage must
-    // be reported to TIS immediately following the occurrence of the OS&D, with
-    // such OS&D noted on the Bill of Lading."
-    "Overage, shortage, damage, accident, theft or any delay that puts delivery at risk: note it on the BOL and call SRL immediately, not at delivery.",
-    // v3.8.art — Schneider: "Carrier must contact Schneider (do not call the
-    // customer)". SRL has ONE customer; a driver negotiating directly with them
-    // both disintermediates SRL and removes SRL's visibility of the load.
-    "Bring every issue to SRL, not to the shipper or receiver. Do not negotiate appointments, rates or accessorials with the facility.",
-    // v3.8.art — Allen Lund states trailer condition four separate ways on the
-    // only food load in the corpus; MoLo names FSMA explicitly. SRL hauls
-    // refrigerated food for a food shipper and named neither.
-    "Trailer must be clean, dry, odor-free and empty on arrival, and food-grade for food loads. No trailer that last hauled garbage, chemicals or hazmat. If it fails any of these, do not load.",
-  ];
-
-  // v3.8.arq — MEASURE before drawing, and defer to page 2 when page 1 cannot
-  // hold it. v3.8.arm moved this block onto page 1 on the strength of "page 1
-  // has 85pt of dead space" — a number produced by a gate fixture that set
-  // `miles` while the generator reads `load.distance`, so drawLaneEconomics
-  // (~54pt) never rendered under test. On a real load page 1 has no slack, and
-  // these lines rendered at y=783 on a 792pt page: below the footer and inside
-  // most printers' non-printable margin. The three lines falling off the page
-  // were the seal protocol, the check-call schedule, and the phone number a
-  // driver is told to call when a document looks forged.
-  const drawDockBlock = (): void => {
-    // Art. 20 food safety, 21 seals, 22 tracking and check calls, 23 incident
-    // reporting — checked clause by clause against docs/legal/bca-content-F11.md
-    // rather than copied from the design, whose own Requirements block cites 19
-    // to 22. Temperature (19) is deliberately absent: it has its own block here.
-    y = drawSectionHeading(doc, "DOCK & DISPATCH", MARGIN, y, { ref: "BCA Art. 20 to 23" }) - 2;
-    doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
-    doc.text(dockLines.join("\n"), MARGIN, y, { width: CONTENT_W, lineGap: 0.5, paragraphGap: 1.5 });
-    y = doc.y;
-  };
-
-  doc.font(FONT_BODY, 7.5);
-  const dockH = 12 + doc.heightOfString(dockLines.join("\n"), {
-    width: CONTENT_W, lineGap: 0.5, paragraphGap: 1.5,
-  });
-  const dockOnPage1 = y + dockH <= RC_CONTENT_FLOOR;
-  if (dockOnPage1) drawDockBlock();
-
-  // v3.8.aro — footers are stamped at the end over the buffered page range, so
-  // no drawFooter call belongs here any more.
-  doc.addPage();
-
-  // ─── PAGE 2 ────────────────────────────────────────────────────
-  y = drawContinuationHeader(doc, "Rate Confirmation", docId);
-
-  // v3.8.arq — deferred from page 1 when the lane band left no room. Dock and
-  // dispatch instructions lead page 2 rather than being buried after the terms:
-  // they are the last thing a driver needs before rolling.
-  if (!dockOnPage1) {
-    drawDockBlock();
-    y += 14;
-  }
-
-  // v3.8.aro — page-break helper. Any page-2+ block that might not fit calls
-  // this first. PDFKit's own auto-pagination would add a bare page with no
-  // continuation header, so overflow has to be handled explicitly. The 749
-  // ceiling matches the clearance gate in scripts/verify-rc-matrix.ts: the
-  // footer rule is drawn at y≈755 and a body baseline past 749 collides with
-  // it — which is exactly how a line once rendered THROUGH the footer while
-  // the matrix still scored it clean.
-  const rcEnsureRoom = (needed: number): void => {
-    if (y + needed <= RC_CONTENT_FLOOR) return;
-    doc.addPage();
-    y = drawContinuationHeader(doc, "Rate Confirmation", docId);
-  };
-
-  // Carrier requirements — insurance minimums (skill canonical defaults).
-  // Sprint 51 (Item 130) — trackingAcceptance bullet added per sub-pattern 4
-  // application (Phase A correction: tracking is preconditions-tier, not
-  // legal exposure tier — belongs alongside insurance minimums, not in T&C).
-  const reqs: CarrierRequirements = {
-    cargoInsuranceMin: INSURANCE_MINIMUMS.cargoInsurance,
-    autoLiabilityMin: INSURANCE_MINIMUMS.autoLiability,
-    generalLiabilityMin: INSURANCE_MINIMUMS.generalLiability,
-    trackingAcceptance: true,
-  };
-  y = drawCarrierRequirements(doc, reqs, y);
-
-  // Special instructions — cream-2 frame via drawPanel, body still rendered
-  // here. Item 94 (A-5): drawPanel now HAS a wrap mode, but this block cannot
-  // adopt it without moving pixels, so only the frame was migrated.
-  //
-  // Why wrap is not used here. drawPanel's measured mode is built around an
-  // INSIDE label: it fixes the body at panelTop + PANEL_BODY_TOP (22) to clear
-  // a 6.5pt label at +8, and pads PANEL_PAD_BOTTOM (10) below. This panel
-  // renders its label OUTSIDE and above the rect, so its body sits at
-  // panelTop + 10 with 18pt below. Adopting wrap would push the body down 12pt
-  // into a gap reserved for a label that is not there, cut the bottom pad from
-  // 18 to 10, and grow the rect by ~4pt plus one lineGap per wrapped line.
-  // That is a visible change to a shipped document, so the frame is migrated
-  // and the measure + body render stay put. Closing the gap properly means
-  // teaching drawPanel a label-outside body offset — a change to srl-chrome.ts,
-  // which is not this file's to make.
-  //
-  // Known latent defect, deliberately preserved: the height below is measured
-  // WITHOUT lineGap but the body renders WITH lineGap: 1, so the panel
-  // under-measures by ~1pt per wrapped line. Correcting it would also move
-  // pixels; it belongs with the wrap migration above, not here.
-  const instructions = fd.specialInstructions || load.specialInstructions || load.notes;
-  if (instructions || fd.pickupInstructions || fd.deliveryInstructions || fd.appointmentRequired) {
-    const instrParts: string[] = [];
-    if (instructions) instrParts.push(String(instructions));
-    if (fd.pickupInstructions) instrParts.push(`Pickup: ${fd.pickupInstructions}`);
-    if (fd.deliveryInstructions) instrParts.push(`Delivery: ${fd.deliveryInstructions}`);
-    if (fd.appointmentRequired) instrParts.push("** APPOINTMENT REQUIRED **");
-    const instrBody = instrParts.join("\n\n");
-
-    const labelY = y;
-    doc.font("Helvetica-Bold", 7).fillColor(TOKENS.goldDark);
-    doc.text("SPECIAL INSTRUCTIONS", MARGIN, labelY, {
-      characterSpacing: 7 * 0.08,
-      lineBreak: false,
+    const shipResolved = load.stopContacts?.shipper;
+    const consResolved = load.stopContacts?.consignee;
+    const shipContact = [fd.shipperContact || shipResolved?.name, fd.shipperPhone || shipResolved?.phone].filter(Boolean).join(" · ");
+    const consContact = [fd.consigneeContact || consResolved?.name, fd.consigneePhone || consResolved?.phone].filter(Boolean).join(" · ");
+    const shipStreet = fd.shipperAddress || load.originAddress || "";
+    const shipCsz = fd.shipperCity
+      ? `${fd.shipperCity}, ${fd.shipperState || ""} ${fd.shipperZip || ""}`.replace(/\s+/g, " ").trim()
+      : `${load.originCity}, ${load.originState} ${load.originZip}`;
+    const consStreet = fd.consigneeAddress || load.destAddress || "";
+    const consCsz = fd.consigneeCity
+      ? `${fd.consigneeCity}, ${fd.consigneeState || ""} ${fd.consigneeZip || ""}`.replace(/\s+/g, " ").trim()
+      : `${load.destCity}, ${load.destState} ${load.destZip}`;
+    stops.push({
+      type: "Pickup",
+      city: `${load.originCity}, ${load.originState}`,
+      name: fd.shipperName || load.originCompany || load.shipperFacility || "Shipper",
+      address: [shipStreet, shipCsz].filter(Boolean).join(", "),
+      contact: shipContact,
+      date: documentDate(fd.pickupDate) ?? documentDate(load.pickupDate) ?? "",
+      window: fd.pickupTimeWindow || formatStopWindow(load.pickupTimeStart, load.pickupTimeEnd) || "",
+      appt: fd.pickupAppointment || load.pickupAppointment || "",
+      mode: "",
+      refs: pickupRefs,
+      note: fd.pickupInstructions || load.pickupInstructions || "",
     });
-
-    // Sprint 47.b (Item 104) — body height measurement + body render must
-    // use SAME font for heightOfString to match actual text height. Both
-    // swapped from Helvetica (legacy fallback) to FONT_BODY skill canonical
-    // (DMSans-Regular). Safe post-Item-103 monkey-patch which suppresses
-    // fontkit ligature substitution that would otherwise affect DMSans.
-    doc.font(FONT_BODY, 9).fillColor(TOKENS.fg1);
-    const bodyHeight = doc.heightOfString(instrBody, { width: CONTENT_W - 20 });
-    const panelH = bodyHeight + 28;
-
-    // cream-2 frame — drawPanel with wrap omitted honors the measured `h`
-    // computed above and emits the identical rect. See the block comment
-    // above for why the wrap mode itself is not used.
-    drawPanel(doc, { x: MARGIN, y: labelY + 12, w: CONTENT_W, h: panelH });
-
-    // wrapped body text
-    doc.font(FONT_BODY, 9).fillColor(TOKENS.fg1);
-    doc.text(instrBody, MARGIN + 10, labelY + 22, { width: CONTENT_W - 20, lineGap: 1 });
-
-    y = labelY + 12 + panelH + 12;
+    stops.push({
+      type: "Delivery",
+      city: `${load.destCity}, ${load.destState}`,
+      name: fd.consigneeName || load.destCompany || load.consigneeFacility || "Consignee",
+      address: [consStreet, consCsz].filter(Boolean).join(", "),
+      contact: consContact,
+      date: documentDate(fd.deliveryDate) ?? documentDate(load.deliveryDate) ?? "",
+      window: fd.deliveryTimeWindow || formatStopWindow(load.deliveryTimeStart, load.deliveryTimeEnd) || "",
+      appt: fd.deliveryAppointment || load.deliveryAppointment || load.appointmentNumber || "",
+      mode: "",
+      refs: deliveryRefs,
+      note: fd.deliveryInstructions || load.deliveryInstructions || "",
+    });
   }
+  const many = stops.length > 2;
+  const nPick = stops.filter((s) => s.type === "Pickup").length;
+  const nDel = stops.length - nPick;
 
-  // Governing Terms — v3.8 counsel-confirmed architecture (Dirk Beckwith,
-  // Foster Swift, 2026-06). The substantive legal terms (Carmack, insurance
-  // limits, indemnification, governing law, venue, the full re-brokering
-  // covenant, food-safety, and CARB) now live in the Broker-Carrier Agreement.
-  // This Rate Confirmation is a clean operational form that REFERENCES the
-  // BCA — per Dirk's confirmed structure ("substantive terms in the BCA; the
-  // BOL and Rate Confirmation become clean standard forms that reference it").
-  // The prior embedded numbered T&C enumeration and the stale "BCA v3.1 dated
-  // February 26, 2026" citation are removed; only per-load operational
-  // reminders remain. E2E RC_PDF_REQUIRED updated in the same commit — the
-  // governing-law + venue strings ("State of Michigan", "Kalamazoo County")
-  // now assert on the BCA, not the RC; "BCA v3.1" added to RC_PDF_FORBIDDEN.
-  // Art. 8 this Agreement governs, 24 rates and accessorials, 25 documentation
-  // and payment — the three the clauses below actually rest on. The design cites
-  // 8, 24, 25, 29, 31 for its Conditions block, and 29 (service standards) and
-  // 31 (double brokering) are NOT in this block, so citing them would send a
-  // carrier to articles this text does not derive from.
-  y = drawSectionHeading(doc, "GOVERNING TERMS", MARGIN, y, { ref: "BCA Art. 8, 24, 25" }) + 2;
-
-  const governingClauses = [
-    // v3.8.arl — 49 CFR 371.7 requires a broker to operate under its registered
-    // name and bars it from representing its operations to be those of a
-    // carrier. None of the 5 reference rate confirmations carried an equivalent
-    // statement; it is the cheapest compliance line available to us.
-    "Silk Route Logistics Inc. is an FMCSA-licensed property broker (USDOT 4526880, MC# 1794414). SRL arranges transportation. SRL does not transport freight.",
-    "This Rate Confirmation is governed by the Broker-Carrier Agreement between Silk Route Logistics Inc. and Carrier (the “BCA”). In the event of conflict, the BCA controls.",
-    // v3.8.arp — detention clock-start. "2 hrs free" never said free from WHAT,
-    // which is the single largest money ambiguity on the document: a driver who
-    // gates in four hours early could bill from arrival while SRL believed it
-    // owed from the appointment. Scotlynn runs the clock from appointment time;
-    // Landstar from arrival-plus-notification; an earlier draft here used "later
-    // of arrival or appointment", which adversarial review showed is wrong in
-    // BOTH directions — it pays for a carrier's own lateness (money the shipper
-    // will correctly refuse to reimburse) and pays nothing when a driver arrives
-    // early to help and is taken before the appointment. This wording mirrors
-    // the on-time gate the TONU clause below already applies, so one rule
-    // governs both rather than two different ones on one page.
-    // v3.8.ars — the conversion sentence is the point of raising the cap to
-    // equal the layover rate. Without it the two instruments could both bill the
-    // same hours: an overnight hold would collect the $250 cap AND $250 layover
-    // for one day. Landstar's published tariff makes layover explicitly ADDITIVE
-    // to detention, so a carrier citing the only public tariff in the corpus
-    // would win that argument against a document that stayed silent.
-    // v3.8.asc — the three figures in this clause are interpolated, not typed.
-    // They were correct, but this is the sentence a carrier signs, and it was the
-    // last place stating the cap, the layover rate and the notice window as prose
-    // literals. If policy moves and this string does not, SRL is contractually
-    // bound to the old number on every document already in a carrier's inbox.
-    `Accessorial charges require SRL's prior written approval (operations@silkroutelogistics.ai). Detention free time starts when you arrive, and runs separately at each stop. Detention is not payable if you arrive outside your appointment window. At the $${DETENTION_CAP_PER_STOP} per stop cap detention converts to layover at $${LAYOVER_RATE_PER_DAY} per day; the two do not stack for the same hours. Notify SRL by call or text at least ${DETENTION_NOTICE_MINUTES} minutes before detention begins and again on departure.`,
-    // v3.8.arp — TONU qualification. SRL priced TONU at $200 and printed no rule
-    // for earning it, so a carrier who dispatched and drove 90 miles and one who
-    // never left the yard had identical claims. Two gates, per Wasi 2026-08-14.
-    // Gate 1 is the only TONU condition found verbatim on a real rate
-    // confirmation (TQL PO# 33614902: no TONU "UNLESS TQL HAS PROVIDED THE
-    // CARRIER WITH LOAD DETAILS ... AND APPROVED THE CARRIER TO BEGIN DRIVING").
-    // Gate 2 is Wasi's Bison rule. They are deliberately NOT a strict AND: a
-    // cancellation while the driver is still en route would otherwise deny a
-    // carrier who did everything right, which is the bad-faith pattern the
-    // research flagged. Arrival only gates the case where arrival happened.
-    // Notice is satisfiable by TEXT precisely because §6 business hours are
-    // Mon-Fri 7-7 — a voicemail at 6pm Friday must not cost a carrier $200.
-    "TONU: payable only if SRL gave you the pickup number and shipper address and cleared you to head to pickup, and SRL or the shipper then cancels. If you already arrived, you must have been inside your appointment window. Not payable if you cancel, or if your trailer is rejected as non-compliant. Call or text SRL before you leave.",
-    // v3.8.asc — the 24 is interpolated. It had four independent copies: here, the
-    // Broker-Carrier Agreement §5, the Compass document-timeliness grading window,
-    // and PAPERWORK_DUE_HOURS itself. CLAUDE.md §9 instructs that a change to one
-    // "must move the other in the same commit" — an instruction only needed because
-    // nothing enforced it. Now three of the four read the constant.
-    `Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Signed BOL, POD, and supporting paperwork are due within ${PAPERWORK_DUE_HOURS} hours of delivery.`,
+  // Column tops: section label, bold name, address lines.
+  const drawColumnTop = (x: number, label: string, name: string, lines: string[]): number => {
+    let cy = sectionLabel(label, y);
+    doc.font(SEMI, 12).fillColor(TOKENS.navy);
+    doc.text(fit(name, SEMI, 12, colW), x, cy, { lineBreak: false });
+    cy += 16;
+    doc.font(FONT_BODY, 9).fillColor(TOKENS.fg2);
+    for (const l of lines) {
+      doc.text(fit(l, FONT_BODY, 9, colW), x, cy, { lineBreak: false });
+      cy += 12;
+    }
+    return cy + 3;
+  };
+  // sectionLabel draws at X; draw the right label by hand.
+  const carrierTopEnd = drawColumnTop(X, "Carrier", carrierName, carrierAddr.length ? carrierAddr : ["Address on file with SRL"]);
+  capsLabel("Shipment", rightX, y, 8, TOKENS.goldDark);
+  let sy = y + 14;
+  doc.font(SEMI, 12).fillColor(TOKENS.navy);
+  doc.text(fit(equipmentLine, SEMI, 12, colW), rightX, sy, { lineBreak: false });
+  sy += 16;
+  doc.font(FONT_BODY, 9).fillColor(TOKENS.fg2);
+  doc.text(fit(`${commodityName} · ${hazmatText}`, FONT_BODY, 9, colW), rightX, sy, { lineBreak: false });
+  sy += 12;
+  doc.text("Exclusive use", rightX, sy, { lineBreak: false });
+  sy += 15;
+  const kvTop = Math.max(carrierTopEnd, sy);
+  const KV_LABEL = 76;
+  const kvRow = 13;
+  const drawKv = (x: number, rows: [string, string][], h: number) => {
+    doc.save().rect(x, kvTop, colW, h).fill(TOKENS.cream2).restore();
+    doc.save().rect(x, kvTop, colW, 2).fill(TOKENS.gold).restore();
+    rows.forEach(([k, v], i) => {
+      const ry = kvTop + 9 + i * kvRow;
+      capsLabel(k, x + 12, ry + 1, 7, TOKENS.navy);
+      doc.font(FONT_BODY, 9).fillColor(TOKENS.navy);
+      doc.text(fit(v, FONT_BODY, 9, colW - KV_LABEL - 24), x + 12 + KV_LABEL, ry, { lineBreak: false });
+    });
+  };
+  const carrierRows: [string, string][] = [
+    ["MC · USDOT", `MC# ${mcDigits(fd.carrierMcNumber || prof?.mcNumber) || "—"} · USDOT# ${carrierDot}`],
+    ["Dispatch", carrierContact],
+    ["Phone", carrierPhone],
   ];
-  // v3.8.arl — customTerms APPENDS; it must never REPLACE the mandatory core.
-  // Pre-arl this read `(fd.customTerms) || governingClauses.join()`, so the
-  // first AE to set per-load custom terms would ship a Rate Confirmation with
-  // NO governing clauses at all: no BCA incorporation, no acceptance clause, no
-  // accessorial prior-approval requirement, no paperwork deadline. The core
-  // block is now always printed and per-load additions append under their own
-  // heading.
-  const customAddendum = (fd.customTerms as string | undefined)?.trim();
-  const governingBody = customAddendum
-    ? governingClauses.join("\n") + "\nADDITIONAL TERMS FOR THIS LOAD: " + customAddendum
-    : governingClauses.join("\n");
+  const shipmentRows: [string, string][] = [
+    ["Weight", weightParts.join(" · ") || "—"],
+    ["Value", typeof valueNum === "number" && valueNum > 0 ? money(valueNum).replace(/\.00$/, "") : "Not declared"],
+    ["Distance", miles && miles > 0 ? `${Math.round(miles).toLocaleString("en-US")} mi` : "—"],
+    ["Stops", `${stops.length} · ${nPick} ${nPick === 1 ? "pickup" : "pickups"}, ${nDel} ${nDel === 1 ? "delivery" : "deliveries"}`],
+  ];
+  const kvH = 12 + Math.max(carrierRows.length, shipmentRows.length) * kvRow;
+  drawKv(X, carrierRows, kvH);
+  drawKv(rightX, shipmentRows, kvH);
+  y = kvTop + kvH + 12;
 
-  doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
-  // v3.8.arm — page-2 blocks run tighter (lineGap 1→0.5, gap 14→10). The
-  // maximal fixture (long special instructions + per-load custom terms +
-  // reefer temperature block, all at once) overflowed the footer rule by ~18pt
-  // once DOCK & DISPATCH and TEMPERATURE CONTROL landed. A terms page tolerates
-  // bottom whitespace in the common case far better than it tolerates a body
-  // line rendering through the footer, so the compression is unconditional
-  // rather than an adaptive shave.
-  doc.text(governingBody, MARGIN, y, { width: CONTENT_W, lineGap: 0.5, paragraphGap: 1.5 });
-  y = doc.y + 10;
+  // ── route and stops ──────────────────────────────────────────────────────
+  const C1 = 40, GAP = 12;
+  const restW = W - C1 - GAP * 3;
+  const C2 = Math.round(restW * (2.1 / 5.8));
+  const C3 = Math.round(restW * (1.3 / 5.8));
+  const C4 = restW - C2 - C3;
+  const x2 = X + C1 + GAP, x3 = x2 + C2 + GAP, x4 = x3 + C3 + GAP;
+  const stopRowH = (s: RcStop): number => {
+    const h2 = 13 + textH(s.address, FONT_BODY, 8.5, C2, 0.4) + (s.contact ? 11 : 0);
+    const h3 = 13 + (s.window ? 11 : 0) + (s.appt ? 11 : 0);
+    const h4 = (s.mode ? 12 : 0) + (s.refs ? textH(s.refs, FONT_BODY, 8.5, C4, 0.4) + 1 : 0) + (s.note ? textH(s.note, FONT_BODY_ITALIC, 8, C4, 0.4) + 2 : 0);
+    return Math.max(many ? 30 : 34, h2, h3, h4) + (many ? 8 : 12);
+  };
+  ensureRoom(40 + stopRowH(stops[0]));
+  hRule(y, TOKENS.borderStrong, 0.75);
+  y += 9;
+  const fromCity = stops[0]?.city ?? "";
+  const toCity = stops[stops.length - 1]?.city ?? "";
+  doc.font(FONT_BODY_BOLD, 10.5).fillColor(TOKENS.navy);
+  const fromW = doc.widthOfString(fromCity);
+  const toW = doc.widthOfString(toCity);
+  doc.text(fromCity, X, y, { lineBreak: false });
+  doc.text(toCity, X + W - toW, y, { lineBreak: false });
+  const lineY = y + 6;
+  const l0 = X + fromW + 10, l1 = X + W - toW - 10;
+  const summary = `${miles && miles > 0 ? `${Math.round(miles).toLocaleString("en-US")} mi · ` : ""}${stops.length} stops`.toUpperCase();
+  doc.font(FONT_BODY_BOLD, 7.5);
+  const sumW = doc.widthOfString(summary) + summary.length * 7.5 * 0.12;
+  const mid = (l0 + l1) / 2;
+  doc.save().circle(l0 + 3, lineY, 3).fill(TOKENS.navy).restore();
+  doc.save().circle(l1 - 3, lineY, 3).fill(TOKENS.navy).restore();
+  doc.save().dash(2, { space: 2 }).lineWidth(0.75).strokeColor(TOKENS.gold)
+    .moveTo(l0 + 8, lineY).lineTo(mid - sumW / 2 - 6, lineY).stroke()
+    .moveTo(mid + sumW / 2 + 6, lineY).lineTo(l1 - 8, lineY).stroke().undash().restore();
+  capsLabel(summary, mid - sumW / 2, lineY - 3.5, 7.5, TOKENS.goldDark);
+  y += 20;
 
-  // ── v3.8.arm — TEMPERATURE CONTROL (conditional) ────────────────────────
-  // Renders only on temp-controlled loads, same conditional pattern as the
-  // BOL's hazmat contact line. Setpoint + run mode appear on 4 of 4 real rate
-  // confirmations in the retrieved corpus; SRL had no temperature semantics on
-  // the document at all. The BOL-mismatch instruction is the operationally
-  // important half: it stops a driver signing a bill that contradicts the
-  // tender, which is where cold-chain claims are won or lost.
-  if (isTempControlled) {
-    const tempRangeStr =
-      typeof loadTempMin === "number" && typeof loadTempMax === "number"
-        ? String(loadTempMin) + "°F to " + String(loadTempMax) + "°F"
-        : tempRaw || (typeof tempSetpointResolved === "number" ? String(tempSetpointResolved) + "°F" : "per bill of lading");
-    doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
-    rcEnsureRoom(60);
-    doc.text("TEMPERATURE CONTROL", MARGIN, y, { characterSpacing: 7 * 0.08, lineBreak: false });
-    y += 12;
-    doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
-    doc.text(
-      // v3.8.art — the numbers now print on page 1 in the EQUIPMENT block, so
-      // this block carries only what page 1 cannot: the conflict procedure and
-      // the download. Repeating the setpoint here invited the two to drift.
-      // Transervice inverts the authority ("Always refer to BOL for the required
-      // reefer temperature ... obtain written confirmation of the correct
-      // temperature from the shipper"); SRL asserts its own number and stops the
-      // driver instead, which suits a broker whose customer set the spec.
-      "Set point and run mode are on page 1 under EQUIPMENT. Run continuous, not cycle-sentry, unless this Rate Confirmation says otherwise in writing. Pre-cool the trailer before loading. If the BOL shows a different temperature than this Rate Confirmation, do not sign it and do not load. Call (269) 220-6760 and SRL will confirm the correct temperature with the shipper in writing. Download the reefer at delivery and send it with your paperwork.",
-      MARGIN, y, { width: CONTENT_W, lineGap: 0.5 },
-    );
-    y = doc.y + 10;
-  }
-
-  // ── v3.8.arl — INVOICING ────────────────────────────────────────────────
-  // Present on 5 of 5 reference rate confirmations (Greatwide, MoLo, Steam,
-  // Transervice) and absent from BOTH the SRL rate confirmation and the BCA —
-  // a genuine gap, not something the counsel-confirmed architecture moved.
-  // The RC previously told a carrier WHEN paperwork was due but never where to
-  // send it, what to attach, or when the payment clock starts. That left an
-  // undefined clock underneath a PUBLISHED §8 Net-30/21/14 commitment.
-  // Operational only: no new contractual obligation is created here.
-
-  const invoiceMcRaw = mcDigits(fd.carrierMcNumber || load.carrier?.carrierProfile?.mcNumber) ?? "";
-  const invoiceSubject = invoiceMcRaw
-    ? "Subject: Invoice · Load " + stem + " · MC " + invoiceMcRaw
-    : "Subject: Invoice · Load " + stem;
-
-  const invoiceLines = [
-    "Send to: accounting@silkroutelogistics.ai",
-    invoiceSubject,
-    // v3.8.art — the signed Rate Confirmation joins the packet. Allen Lund makes
-    // it a hard gate ("FINAL PAYMENT CANNOT BE MADE WITHOUT A SIGNED COPY OF THE
-    // BILL OF LADING AND A SIGNED COPY OF THE RATE CONFIRMATION"); MoLo and
-    // Schneider both require the document returned with the invoice. SRL printed
-    // a signature block and never said where to send it, so it asked for a
-    // signature it could not collect.
-    //
-    // v3.8.bls — "a signed copy" named a document that no longer exists: the
-    // Rate Confirmation has no signature fields, and the carrier's signature is
-    // recorded electronically against the stored copy. The packet still carries
-    // the Rate Confirmation itself.
-    "Attach this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.",
-    "Put the SRL load number on the invoice. One invoice per load; do not batch loads onto one invoice.",
-    // v3.8.art — Steam: "Your invoice should match the final Rate Confirmation
-    // sent from Steam. Any invoice that does not match ... may be disputed and
-    // delayed. Please contact your broker before invoicing." Preventing the
-    // mismatch is cheaper than adjudicating it.
-    "Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather than billing a different number.",
-    "Payment terms run from the date SRL receives a complete packet. An incomplete packet does not start the clock.",
-  ].join("\n");
-
-  // v3.8.azu — hoisted to a const so the reserve below can MEASURE it. It was
-  // an inline literal, which is why the reserve above was a hardcoded guess.
-  const antiFraudText =
-    // v3.8.arp — reworded from a NEGATION to an ESCALATION. This line used to
-    // read "do not call the number printed on this document", which flatly
-    // contradicted the two places on page 1 that tell a driver to call
-    // (269) 220-6760 the moment something looks wrong. On a legitimate document
-    // that made the fastest correct action look forbidden; the contradiction was
-    // the defect, not the number. Wasi's call (2026-08-14): keep the number.
-    // The independent-verification path still exists for the case it was written
-    // for — a FORGED rate confirmation, where every printed contact detail is
-    // the forger's — but now as a second step rather than a denial of the first.
-    "SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, call SRL at (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before you move the freight.";
-
-  // v3.8.azu — the payment-instruction reserve, MEASURED rather than guessed.
-  //
-  // It was rcEnsureRoom(160) — a worst-case estimate written when the block was
-  // an unmeasurable pile of inline literals. Measured against the 15 matrix
-  // fixtures the real chain is 116.9pt, so 160 over-reserved by 43pt and there
-  // were 146.9pt available: the block FIT and was pushed to a third page anyway,
-  // by 13.1pt of guess. That third page then carried 374pt of dead space.
-  //
-  // This is NOT a loosening of the split-prevention the reserve exists for. It
-  // reserves exactly what the next four draws consume, including the tender
-  // banner only when a live tender will actually render it — so it is also
-  // STRICTER than 160 in the case a long invoice packet plus a banner would
-  // have overrun the old guess.
-  const activeTender = load.tenders?.find((t) =>
-    (t.status === "OFFERED" || t.status === "ACCEPTED")
-    && new Date(t.expiresAt) > new Date(),
-  );
-  doc.font(FONT_BODY, 7.5);
-  const invoiceBodyH = doc.heightOfString(invoiceLines, { width: CONTENT_W, lineGap: 0.5, paragraphGap: 1.5 });
-  doc.font(FONT_BODY, 6.75);
-  const antiFraudH = doc.heightOfString(antiFraudText, { width: CONTENT_W, lineGap: 0.5 });
-  const invoicingChainH = 12 + invoiceBodyH + 10 + antiFraudH + 12 + (activeTender ? 40 : 0);
-  rcEnsureRoom(invoicingChainH);
-
-  doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
-  doc.text("INVOICING", MARGIN, y, { characterSpacing: 7 * 0.08, lineBreak: false });
+  stops.forEach((s, i) => {
+    const rh = stopRowH(s);
+    if (y + rh > FLOOR) newPage();
+    if (i > 0) hRule(y, TOKENS.border2, 0.5);
+    const ry = y + (many ? 5 : 7);
+    const isPickup = s.type === "Pickup";
+    doc.save().circle(X + 10, ry + 9, 9).fill(isPickup ? TOKENS.navy : TOKENS.gold).restore();
+    doc.font(FONT_BODY_BOLD, 9.5).fillColor(isPickup ? TOKENS.white : TOKENS.navy);
+    doc.text(String(i + 1), X + 1, ry + 4, { width: 18, align: "center", lineBreak: false });
+    capsLabel(s.type, X, ry + 22, 6.5, TOKENS.goldDark);
+    // facility
+    doc.font(SEMI, 10).fillColor(TOKENS.navy);
+    doc.text(fit(s.name, SEMI, 10, C2), x2, ry, { lineBreak: false });
+    doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg2);
+    doc.text(s.address, x2, ry + 13, { width: C2, lineGap: 0.4 });
+    let fy = doc.y;
+    if (s.contact) {
+      doc.text(fit(s.contact, FONT_BODY, 8.5, C2), x2, fy, { lineBreak: false });
+      fy += 11;
+    }
+    // when
+    doc.font(FONT_BODY_BOLD, 9.5).fillColor(TOKENS.navy);
+    doc.text(s.date || "Date to be confirmed", x3, ry, { width: C3, lineBreak: false });
+    let wy = ry + 13;
+    doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg2);
+    if (s.window) { doc.text(fit(s.window, FONT_BODY, 8.5, C3), x3, wy, { lineBreak: false }); wy += 11; }
+    if (s.appt) {
+      doc.font(FONT_BODY_BOLD, 8).fillColor(TOKENS.goldDark);
+      doc.text(fit(`Appt ${s.appt}`, FONT_BODY_BOLD, 8, C3), x3, wy, { lineBreak: false });
+    }
+    // service, refs, note
+    let ny = ry;
+    if (s.mode) {
+      doc.font(FONT_BODY_BOLD, 8.5).fillColor(TOKENS.navy);
+      doc.text(s.mode, x4, ny, { width: C4, lineBreak: false });
+      ny += 12;
+    }
+    if (s.refs) {
+      doc.font(FONT_BODY, 8.5).fillColor(TOKENS.navy);
+      doc.text(s.refs, x4, ny, { width: C4, lineGap: 0.4 });
+      ny = doc.y + 1;
+    }
+    if (s.note) {
+      doc.font(FONT_BODY_ITALIC, 8).fillColor(TOKENS.fg2);
+      doc.text(s.note, x4, ny, { width: C4, lineGap: 0.4 });
+    }
+    y += rh;
+  });
+  hRule(y, TOKENS.borderStrong, 0.75);
   y += 12;
 
-  doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
-  doc.text(invoiceLines, MARGIN, y, { width: CONTENT_W, lineGap: 0.5, paragraphGap: 1.5 });
-  y = doc.y + 10;
+  // ── rate + total card ────────────────────────────────────────────────────
+  const linehaul = Number(fd.lineHaulRate ?? load.carrierRate ?? 0);
+  const fsc = Number((fd.fuelSurcharge as number | undefined) ?? 0);
+  const accs = (fd.accessorials as Array<{ description?: string; type?: string; amount: number }> | undefined) ?? [];
+  const accSum = accs.reduce((s, a) => s + Number(a.amount || 0), 0);
+  const totalCarrierPay = Number((fd.totalCharges as number | undefined) ?? (linehaul + fsc + accSum));
 
-  // ── v3.8.arl — anti-fraud domain anchor ─────────────────────────────────
-  // The verify URL (Sprint 51, Item 129) is genuinely ahead of the field —
-  // none of the 5 reference rate confirmations had one — but it has a
-  // structural hole: a forger impersonating SRL prints their OWN lookalike
-  // verify URL and it resolves against their own site. Anchoring the sending
-  // domain, and directing a suspicious carrier to the number on our FMCSA
-  // record rather than the number printed here, is what makes the control
-  // mean something. The last sentence is deliberately self-distrusting:
-  // every contact detail on a forged rate confirmation is chosen by the forger.
-  doc.font(FONT_BODY, 6.75).fillColor(TOKENS.fg3);
-  doc.text(antiFraudText, MARGIN, y, { width: CONTENT_W, lineGap: 0.5 });
-  y = doc.y + 12;
+  const qpFeePct = typeof fd.quickPayFeePercent === "number" && fd.quickPayFeePercent > 0 ? fd.quickPayFeePercent : null;
+  const qpSpeedRaw = typeof fd.quickPaySpeed === "string" ? fd.quickPaySpeed.toUpperCase() : null;
+  const qpElected = qpFeePct !== null;
+  const qpSameDay = qpSpeedRaw === "SAME_DAY";
+  const qpLabel = qpElected ? (qpSameDay ? `${qpFeePct}% same day` : `${qpFeePct}% · 7-day`) : "Not elected";
+  const qpFeeBase = accs.length === 0 ? linehaul + fsc : null;
+  const qpFeeAmount = qpElected && qpFeeBase !== null ? Math.round(qpFeeBase * (qpFeePct as number)) / 100 : null;
+  const tierUpper = (fd.carrierPaymentTier as string | undefined)?.toUpperCase();
+  const tierLabel = tierUpper ? tierUpper.charAt(0) + tierUpper.slice(1).toLowerCase() : null;
+  const termsLabel = fd.paymentTerms || "Net-30";
 
-  // Tender expiration banner (Sprint 48 Item 108) — surfaces tender SLA
-  // deadline above signature block so carrier sees expiry at point of
-  // commitment. Defensive: renders ONLY when active tender exists with
-  // expiresAt > now. <2h until expiry escalates from warning (amber) to
-  // danger (red). Semantic colours are TOKENS.warning/warningBg and
-  // TOKENS.danger/dangerBg since v3.8.azh — the values are unchanged, they just
-  // stopped being a private copy of §2.1 living in this function.
-  if (activeTender) {
-    const expiresAt = new Date(activeTender.expiresAt);
-    const hoursUntilExpiry = (expiresAt.getTime() - Date.now()) / (1000 * 60 * 60);
-    const isUrgent = hoursUntilExpiry < 2;
-    const bannerBg = isUrgent ? TOKENS.dangerBg : TOKENS.warningBg;
-    const bannerFg = isUrgent ? TOKENS.danger : TOKENS.warning;
-    const bannerH = 28;
-    doc.save()
-      .fillColor(bannerBg)
-      .strokeColor(bannerFg)
-      .lineWidth(1)
-      .roundedRect(MARGIN, y, CONTENT_W, bannerH, 6)
-      .fillAndStroke()
-      .restore();
-    const expiryStr = expiresAt.toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZoneName: "short",
-    });
-    doc.font(FONT_BODY_BOLD, 9).fillColor(bannerFg);
-    doc.text(
-      `TENDER EXPIRES: ${expiryStr}${isUrgent ? "  ·  URGENT" : ""}`,
-      MARGIN,
-      y + 9,
-      { width: CONTENT_W, align: "center", lineBreak: false },
-    );
-    y += bannerH + 12;
+  const CARD_W = 170;
+  const tableW = W - CARD_W - 24;
+  const cardX = X + tableW + 24;
+  const chargeRows: { d: string; note?: string; amt: string }[] = [
+    {
+      d: "Line haul",
+      note: miles && miles > 0 && linehaul > 0 ? `${Math.round(miles).toLocaleString("en-US")} mi · ${money(linehaul / miles)} per mi` : undefined,
+      amt: money(linehaul),
+    },
+  ];
+  if (fsc > 0) chargeRows.push({ d: "Fuel surcharge", amt: money(fsc) });
+  for (const a of accs) chargeRows.push({ d: a.description || a.type || "Accessorial", note: "Approved before dispatch", amt: money(Number(a.amount || 0)) });
+  if (fsc <= 0 && accs.length === 0) chargeRows.push({ d: "Accessorials", note: "None pre-approved · see terms", amt: money(0) });
+  const chargeRowH = (r: { note?: string }) => (r.note ? 24 : 16);
+  const tableH = 14 + 6 + chargeRows.reduce((s, r) => s + chargeRowH(r), 0);
+
+  const cardRows: [string, string][] = [
+    ["Payment", tierLabel ? `${tierLabel} · ${termsLabel}` : termsLabel],
+    ["Quick Pay", qpLabel],
+  ];
+  if (qpElected && qpFeeAmount !== null && qpFeeBase !== null) {
+    cardRows.push(["Quick Pay fee", money(qpFeeAmount)]);
+    cardRows.push(["Net on this rate", money(Math.round((qpFeeBase - qpFeeAmount) * 100) / 100)]);
   }
+  const cardNote = qpElected
+    ? "Fee applies to line haul, fuel and approved accessorials, less at-cost reimbursements."
+    : tierLabel
+      ? `No Quick Pay elected on this load. It pays on standard ${tierLabel} terms at no fee.`
+      : "No Quick Pay elected on this load. It pays on your standard tier terms at no fee.";
+  const cardNoteH = textH(cardNote, FONT_BODY, 7, CARD_W - 24, 0.4);
+  const cardH = 10 + 28 + cardRows.length * 16 + 6 + cardNoteH + 10;
+  const rateH = 14 + Math.max(tableH, cardH);
+  ensureRoom(rateH + 4);
 
-  // ── AGREEMENT TO BE BOUND (v3.8.bls) ──────────────────────────────────────
-  //
-  // Owner, 2026-09-26: the binding clause goes at the end of the Rate
-  // Confirmation "so no signature field for broker and carrier exists".
-  //
-  // The two-column acceptance strip is gone, and with it the return-by-email
-  // line. Neither was how an RC is accepted: a carrier accepts through the
-  // signing link (v3.8.axu, which records name, IP, user agent and time against
-  // the stored bytes) or by moving the freight. Ruled lines for a pen asked for
-  // a mark this process never collects, and made an unsigned page look like an
-  // unfinished one. The clause that governs acceptance used to sit in GOVERNING
-  // TERMS and point at "Carrier's signature below"; it now closes the document,
-  // once, and says a signature on the page is not required.
-  //
-  // SRL's countersignature stays as the full statement below the clause. It
-  // records who bound SRL, when, and on what act; it was never a mark.
-  const countersign = (fd.rcCountersign ?? null) as RcCountersign | null;
-  const csStatement = countersign ? rcCountersignStatement(countersign) : null;
+  sectionLabel("Carrier rate", y);
+  capsLabel("Total carrier pay", cardX, y, 8, TOKENS.goldDark);
+  const blockTop = y + 14;
+  // charges table
+  let ty = blockTop;
+  capsLabel("Description", X, ty, 7, TOKENS.navy);
+  capsLabel("Amount", X, ty, 7, TOKENS.navy, { width: tableW, align: "right" });
+  ty += 11;
+  hRule(ty, TOKENS.navy, 0.75, X, tableW);
+  ty += 6;
+  for (const r of chargeRows) {
+    doc.font(SEMI, 10).fillColor(TOKENS.navy);
+    doc.text(fit(r.d, SEMI, 10, tableW - 90), X, ty, { lineBreak: false });
+    doc.font(FONT_BODY, 10).fillColor(TOKENS.navy);
+    doc.text(r.amt, X, ty, { width: tableW, align: "right", lineBreak: false });
+    if (r.note) {
+      doc.font(FONT_BODY, 8).fillColor(TOKENS.fg2);
+      doc.text(fit(r.note, FONT_BODY, 8, tableW - 90), X, ty + 12, { lineBreak: false });
+    }
+    ty += chargeRowH(r);
+    hRule(ty - 3, TOKENS.border2, 0.5, X, tableW);
+  }
+  // card
+  const cardH2 = Math.max(cardH, tableH);
+  doc.save().rect(cardX, blockTop, CARD_W, cardH2).fillAndStroke(TOKENS.cream, TOKENS.border2).restore();
+  doc.save().rect(cardX, blockTop, CARD_W, 1.5).fill(TOKENS.navy).restore();
+  doc.font(FONT_BODY_BOLD, 22).fillColor(TOKENS.navy);
+  doc.text(money(totalCarrierPay), cardX + 12, blockTop + 10, { width: CARD_W - 24, lineBreak: false });
+  let cy = blockTop + 40;
+  for (const [k, v] of cardRows) {
+    hRule(cy, TOKENS.border1, 0.5, cardX + 12, CARD_W - 24);
+    doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg2);
+    doc.text(k, cardX + 12, cy + 4, { lineBreak: false });
+    doc.font(FONT_BODY_BOLD, 8.5).fillColor(TOKENS.navy);
+    doc.text(fit(v, FONT_BODY_BOLD, 8.5, CARD_W - 90), cardX + 12, cy + 4, { width: CARD_W - 24, align: "right", lineBreak: false });
+    cy += 16;
+  }
+  doc.font(FONT_BODY, 7).fillColor(TOKENS.fg3);
+  doc.text(cardNote, cardX + 12, cy + 4, { width: CARD_W - 24, lineGap: 0.4 });
+  y = blockTop + Math.max(tableH, cardH2) + 12;
 
-  // Measured, never estimated: the heading, the clause and the statement stay
-  // together, so the statement is never orphaned from the clause it follows.
-  // drawSectionHeading advances 15.1pt at its own font (measured on the
-  // matrix fixtures), and the section adds 2pt below it.
-  const RC_BOUND_HEADING_H = 17.2;
-  doc.font(FONT_BODY, 7.5);
-  const boundH = doc.heightOfString(RC_AGREEMENT_TO_BE_BOUND, { width: CONTENT_W, lineGap: 0.5 });
-  const csStatementH = csStatement
-    ? doc.font(FONT_BODY_ITALIC, 8).heightOfString(csStatement, { width: CONTENT_W, lineGap: 1 }) + 8
-    : 0;
-  rcEnsureRoom(RC_BOUND_HEADING_H + boundH + csStatementH);
-  // v3.8.blz — Art. 24, where the BCA says an accepted Rate Confirmation binds.
-  // bls cited Art. 8, which only decides which document wins a conflict, so a
-  // carrier following the reference to check the rule found nothing there.
-  // v3.8.bmx — still Art. 24 alone, although the clause now also incorporates
-  // the BCA. That sentence is the Rate Confirmation's own statement: no BCA
-  // article incorporates the BCA into a Rate Confirmation, and Art. 8, which
-  // decides conflicts, is already cited once, by GOVERNING TERMS.
-  y = drawSectionHeading(doc, "AGREEMENT TO BE BOUND", MARGIN, y, { ref: "BCA Art. 24" }) + 2;
-  doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
-  doc.text(RC_AGREEMENT_TO_BE_BOUND, MARGIN, y, { width: CONTENT_W, lineGap: 0.5 });
+  // ── contacts ─────────────────────────────────────────────────────────────
+  const aeName = load.poster ? `${load.poster.firstName} ${load.poster.lastName}`.trim() : "";
+  const RIB_GAP = 10;
+  const ribW = (W - RIB_GAP * 2) / 3;
+  const ribbon: { label: string; bold: string; lines: string[]; small: string }[] = [
+    {
+      label: "Your SRL dispatcher",
+      bold: aeName || "SRL Operations",
+      lines: [load.poster?.phone || `+1 ${PHONE}`, load.poster?.email || OPERATIONS_EMAIL],
+      small: "Call before heading to the shipper, at loading, at delivery. Any delay: call us before the customer.",
+    },
+    {
+      label: "After hours · emergency",
+      bold: `+1 ${PHONE}`,
+      lines: ["Business hours Mon–Fri 7am–7pm ET"],
+      small: "After-hours emergency line for loads in transit: breakdowns, accidents, appointment changes.",
+    },
+    {
+      label: "Paperwork · claims",
+      bold: OPERATIONS_EMAIL,
+      lines: [`BOL, POD, receipts within ${PAPERWORK_DUE_HOURS} hours`],
+      small: `Invoices: ${ACCOUNTING_EMAIL} · Claims: ${COMPLIANCE_EMAIL}`,
+    },
+  ];
+  const ribInner = ribW - 20;
+  const ribContentH = (r: (typeof ribbon)[number]) =>
+    14 + 13 + r.lines.length * 11 + textH(r.small, FONT_BODY, 7, ribInner, 0.3) + 6;
+  const ribH = Math.max(...ribbon.map(ribContentH));
+  ensureRoom(ribH + 6);
+  ribbon.forEach((r, i) => {
+    const bx = X + i * (ribW + RIB_GAP);
+    doc.save().rect(bx, y, ribW, ribH).lineWidth(0.5).strokeColor(TOKENS.border2).stroke().restore();
+    doc.save().rect(bx, y, ribW, 14).fill(TOKENS.navy).restore();
+    capsLabel(r.label, bx + 10, y + 4, 6.5, TOKENS.gold);
+    const boldSize = doc.font(FONT_BODY_BOLD, 10).widthOfString(r.bold) <= ribInner ? 10 : 8.5;
+    doc.font(FONT_BODY_BOLD, boldSize).fillColor(TOKENS.navy);
+    doc.text(fit(r.bold, FONT_BODY_BOLD, boldSize, ribInner), bx + 10, y + 18, { lineBreak: false });
+    let ly = y + 31;
+    doc.font(FONT_BODY, 8).fillColor(TOKENS.fg2);
+    for (const l of r.lines) {
+      doc.text(fit(l, FONT_BODY, 8, ribInner), bx + 10, ly, { lineBreak: false });
+      ly += 11;
+    }
+    doc.font(FONT_BODY, 7).fillColor(TOKENS.fg3);
+    doc.text(r.small, bx + 10, ly + 1, { width: ribInner, lineGap: 0.3 });
+  });
+  y += ribH + 8;
+
+  const finePrint =
+    `This rate is inclusive of fuel and all accessorials unless listed above. Send the signed BOL, POD and lumper receipts to ` +
+    `${OPERATIONS_EMAIL} within ${PAPERWORK_DUE_HOURS} hours of delivery, and your invoice to ${ACCOUNTING_EMAIL} as set out ` +
+    `in the terms. Payment terms are tier-based under the Caravan Partner Program: Silver Net-30, Gold Net-21, Platinum ` +
+    `Net-14. Quick Pay is governed by the Caravan Quick Pay Agreement. Terms and conditions follow.`;
+  ensureRoom(textH(finePrint, FONT_BODY, 7.75, W, 0.5) + 2);
+  doc.font(FONT_BODY, 7.75).fillColor(TOKENS.fg2);
+  doc.text(finePrint, X, y, { width: W, lineGap: 0.5 });
   y = doc.y;
 
-  if (csStatement) {
-    const csY = y + 8;
-    doc.font(FONT_BODY_ITALIC, 8).fillColor(TOKENS.fg2);
-    doc.text(csStatement, MARGIN, csY, { width: CONTENT_W, lineGap: 1 });
-    y = doc.y;
+  // ════════════════════════════════════════════════════════════════════════
+  // TERMS AND CONDITIONS
+  // ════════════════════════════════════════════════════════════════════════
+  if (doc.bufferedPageRange().count === 1) newPage();
+  else y += 14;
+  const KCOL = 112;
+  const VCOL = W - KCOL - 10;
+
+  // Accessorial terms — every figure from lib/accessorialPolicy.
+  const accessorialRows: { item: string; rate: string; cond: string }[] = [
+    {
+      item: "Detention",
+      rate: `${policyMoney(DETENTION_RATE_PER_HOUR)} per hour`,
+      cond:
+        `${DETENTION_FREE_HOURS} hours free at each stop from arrival; free time does not carry over between stops. Then ` +
+        `${policyMoney(DETENTION_RATE_PER_HOUR)} per hour, capped at ${policyMoney(DETENTION_CAP_PER_STOP)} per stop. Not ` +
+        `payable if Carrier arrived outside the appointment window. Carrier notifies SRL dispatch ${DETENTION_NOTICE_MINUTES} ` +
+        `minutes before detention begins and again on departure. Have the facility write your in and out times on the BOL: ` +
+        `no times on the BOL, no detention.`,
+    },
+    {
+      item: "Layover",
+      rate: `${policyMoney(LAYOVER_RATE_PER_DAY)} per day`,
+      cond:
+        `Where Carrier must stay overnight at SRL or shipper request through no fault of Carrier. Once detention reaches its ` +
+        `${policyMoney(DETENTION_CAP_PER_STOP)} cap the first layover day begins; detention and layover do not both run for ` +
+        `the same hours.`,
+    },
+    {
+      item: "Truck order not used",
+      rate: policyMoney(TONU_AMOUNT),
+      cond:
+        `Where SRL or the shipper cancels a confirmed load on the day of pickup or after Carrier has been dispatched. Not ` +
+        `owed where cancellation results from Carrier's late arrival, non-compliant equipment, insurance lapse, or other ` +
+        `Carrier breach. Call or text SRL before you leave for the shipper.`,
+    },
+    {
+      item: "Carrier release window",
+      rate: `${CARRIER_RELEASE_WINDOW_HOURS} hours before pickup`,
+      cond:
+        `Carrier may release the load without penalty by notice not less than ${CARRIER_RELEASE_WINDOW_HOURS} hours before ` +
+        `the scheduled pickup appointment.`,
+    },
+    {
+      item: "Lumper",
+      rate: "At cost",
+      cond:
+        "Reimbursed at cost against a legible original receipt submitted with the delivery paperwork. No markup and no admin " +
+        "fee. SRL issues no money codes, so dispatch authorization is required before the driver pays.",
+    },
+  ];
+  const accRowH = (r: { cond: string }) => Math.max(26, textH(r.cond, FONT_BODY, 8.5, VCOL, 0.6)) + 9;
+  ensureRoom(14 + 16 + accRowH(accessorialRows[0]));
+  y = sectionLabel("Accessorial terms", y);
+  capsLabel("Item · rate", X, y, 7, TOKENS.navy);
+  capsLabel("Condition", X + KCOL + 10, y, 7, TOKENS.navy);
+  y += 11;
+  hRule(y, TOKENS.navy, 0.75);
+  y += 5;
+  for (const r of accessorialRows) {
+    const rh = accRowH(r);
+    if (y + rh > FLOOR) newPage();
+    doc.font(FONT_BODY_BOLD, 8.5).fillColor(TOKENS.navy);
+    doc.text(r.item, X, y, { width: KCOL, lineBreak: false });
+    doc.font(SEMI, 8).fillColor(TOKENS.goldDark);
+    doc.text(r.rate, X, y + 11, { width: KCOL, lineBreak: false });
+    doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg1);
+    doc.text(r.cond, X + KCOL + 10, y, { width: VCOL, lineGap: 0.6 });
+    y += rh;
+    hRule(y - 4, TOKENS.border2, 0.5);
+  }
+  y += 8;
+
+  // Paragraph section (conditions, invoicing, special instructions).
+  const paragraphs = (label: string, paras: string[], right?: string) => {
+    const first = textH(paras[0], FONT_BODY, 8.5, W, 0.6);
+    ensureRoom(14 + first);
+    y = sectionLabel(label, y, right);
+    paras.forEach((p, i) => {
+      const h = textH(p, FONT_BODY, 8.5, W, 0.6);
+      if (i > 0) ensureRoom(h);
+      doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg1);
+      doc.text(p, X, y, { width: W, lineGap: 0.6 });
+      y = doc.y + 5;
+    });
+    y += 6;
+  };
+
+  paragraphs("Conditions", [
+    `Silk Route Logistics Inc. is an FMCSA-licensed property broker (USDOT ${DOT_NUMBER}, MC# ${MC_NUMBER}). SRL arranges ` +
+      `transportation. SRL does not transport freight. This Rate Confirmation is governed by the Broker-Carrier Agreement ` +
+      `between Silk Route Logistics Inc. and Carrier (the “BCA”). In the event of conflict, the BCA controls.`,
+    `Accessorial charges not listed above must be approved in writing by SRL dispatch (${OPERATIONS_EMAIL}) before they are ` +
+      `incurred; unapproved charges will not be honored. Carrier shall not re-broker, assign, or subcontract this load, and ` +
+      `SRL pays only the carrier named on page 1. Any change to rate, stops, or schedule is valid only when issued by SRL as ` +
+      `a revised Rate Confirmation.`,
+    `If Carrier will miss a pickup or delivery appointment for any reason, Carrier must notify SRL dispatch immediately and ` +
+      `before contacting the customer. Where Carrier's late pickup or delivery, missed appointment, or documentation failure ` +
+      `directly causes a documented customer chargeback, fine, or penalty, Carrier is liable for that amount, not to exceed ` +
+      `the line-haul revenue of this load absent gross negligence. Carrier communicates driver available hours at booking and ` +
+      `again when empty; where hours prevent on-time service SRL will adjust the schedule or release Carrier without penalty. ` +
+      `The safe and legal operation of the vehicle supersedes any instruction from SRL or its customer.`,
+    `Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. ` +
+      `Bring every issue to SRL, not to the shipper or receiver. Do not negotiate appointments, rates or accessorials with ` +
+      `the facility.`,
+  ], "BCA Art. 8, 24, 25");
+
+  // Requirements: label / text rows.
+  const tempRange =
+    typeof loadTempMin === "number" && typeof loadTempMax === "number"
+      ? `${loadTempMin}°F to ${loadTempMax}°F`
+      : typeof setpoint === "number" ? `${setpoint}°F` : "the temperature on the BOL";
+  const reqRows: [string, string][] = [
+    [
+      "Before dispatch",
+      `Driver calls SRL dispatch before heading to the shipper. Check in at every stop as Silk Route Logistics, load ${stem}. ` +
+        `The BOL must name SRL as broker; if it names another company or MC number, do not load and call (269) 220-6760. ` +
+        `Trailer must be food grade, clean, dry, odor free, fully empty, and used exclusively for this load. No trailer that ` +
+        `last hauled garbage, chemicals or hazmat. If it fails any of these, do not load.`,
+    ],
+    [
+      "At the shipper",
+      `Driver verifies load number, PO, and destination on the BOL before leaving. Seal is applied at origin and the seal ` +
+        `number recorded on the BOL. Freight secured with a minimum of two load locks or straps. Carrier scales the load ` +
+        `before departing and is responsible for legal weight. If the dock will not let you watch the load or count it, note ` +
+        `that on the BOL before you sign and call SRL.`,
+    ],
+    [
+      "In transit",
+      (isTempControlled
+        ? `Maintain ${tempRange} ${runMode} for the full transit; pre-cool the trailer before loading and download the reefer ` +
+          `at delivery. If the BOL shows a different temperature than this Rate Confirmation, do not sign it and do not load; ` +
+          `call SRL. `
+        : "") +
+        `Tracking for the duration of the load by any mutually agreed method: ELD integration, third-party platform, the ` +
+        `Caravan carrier portal, driver location sharing, or check calls at pickup, in transit, and at delivery. Check calls ` +
+        `by 8:00 AM Eastern daily in transit and on arrival at each stop; running late, call before the appointment. ` +
+        `Check-call requests are answered within 30 minutes during business hours. Reseal after any stop where the doors open.`,
+    ],
+    [
+      "At delivery",
+      `A broken or missing seal must be reported to SRL dispatch before the doors open; the receiver removes the seal, not ` +
+        `the driver. Overage, shortage, damage, accident, theft or any delay that puts delivery at risk: note it on the BOL ` +
+        `and call SRL immediately, not at delivery. Signing a clean BOL says you received everything on it in good order. ` +
+        `Signed BOL, POD, and supporting paperwork are due within ${PAPERWORK_DUE_HOURS} hours of delivery.`,
+    ],
+    [
+      "Insurance",
+      `Carrier keeps its insurance in force for the full duration of this load at or above these minimums: Cargo: ` +
+        `${formatMinimum(INSURANCE_MINIMUMS.cargoInsurance)} · Auto liability: ${formatMinimum(INSURANCE_MINIMUMS.autoLiability)} · ` +
+        `General liability: ${formatMinimum(INSURANCE_MINIMUMS.generalLiability)}, and notifies SRL at once of any ` +
+        `cancellation or lapse.`,
+    ],
+    [
+      "California",
+      `Any equipment operating in California must comply with California Air Resources Board regulations, including the ` +
+        `Truck and Bus Rule and TRU requirements. Carrier is responsible for resulting fines.`,
+    ],
+  ];
+  const reqRowH = (t: string) => textH(t, FONT_BODY, 8.5, VCOL, 0.6) + 9;
+  ensureRoom(14 + reqRowH(reqRows[0][1]));
+  y = sectionLabel("Requirements", y, "BCA Art. 20 to 23");
+  for (const [k, t] of reqRows) {
+    const rh = reqRowH(t);
+    if (y + rh > FLOOR) newPage();
+    capsLabel(k, X, y + 1, 7.5, TOKENS.navy);
+    doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg1);
+    doc.text(t, X + KCOL + 10, y, { width: VCOL, lineGap: 0.6 });
+    y += rh;
+    hRule(y - 4, TOKENS.border2, 0.5);
+  }
+  y += 8;
+
+  // Special instructions + per-load additional terms.
+  const special: string[] = [];
+  const general = fd.specialInstructions || load.specialInstructions || load.notes;
+  if (general) special.push(String(general));
+  const driverNotes = fd.driverInstructions || load.driverInstructions;
+  if (driverNotes) special.push(`Driver: ${driverNotes}`);
+  if (fd.appointmentRequired) special.push("Appointment required at every stop.");
+  const customAddendum = (fd.customTerms as string | undefined)?.trim();
+  if (customAddendum) special.push(`Additional terms for this load: ${customAddendum}`);
+  if (special.length) paragraphs("Special instructions", special);
+
+  const invoiceMc = mcDigits(fd.carrierMcNumber || prof?.mcNumber) ?? "";
+  paragraphs("Invoicing and payment", [
+    `Send your invoice to ${ACCOUNTING_EMAIL} with the subject “Invoice · Load ${stem}${invoiceMc ? ` · MC ${invoiceMc}` : ""}”. ` +
+      `Attach this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or ` +
+      `accessorial charge. Put the SRL load number on the invoice; one invoice per load, never batched.`,
+    `Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather ` +
+      `than billing a different number. Payment terms run from the date SRL receives a complete packet; an incomplete packet ` +
+      `does not start the clock.`,
+  ]);
+
+  const antiFraud =
+    `SRL sends rate confirmations only from @${DOMAIN}. We will never change our remit-to address or banking details by ` +
+    `email. If anything here looks wrong, call SRL at ${PHONE}. If you have any doubt this document is genuine, verify us ` +
+    `independently against our FMCSA record for MC# ${MC_NUMBER} before you move the freight.`;
+  ensureRoom(textH(antiFraud, FONT_BODY, 7.25, W, 0.5) + 8);
+  doc.font(FONT_BODY, 7.25).fillColor(TOKENS.fg3);
+  doc.text(antiFraud, X, y, { width: W, lineGap: 0.5 });
+  y = doc.y + 10;
+
+  const activeTender = load.tenders?.find(
+    (t) => (t.status === "OFFERED" || t.status === "ACCEPTED") && new Date(t.expiresAt) > new Date(),
+  );
+  if (activeTender) {
+    ensureRoom(40);
+    const expiresAt = new Date(activeTender.expiresAt);
+    const isUrgent = (expiresAt.getTime() - Date.now()) / 3_600_000 < 2;
+    const bg = isUrgent ? TOKENS.dangerBg : TOKENS.warningBg;
+    const fg = isUrgent ? TOKENS.danger : TOKENS.warning;
+    doc.save().fillColor(bg).strokeColor(fg).lineWidth(1).roundedRect(X, y, W, 28, 6).fillAndStroke().restore();
+    const expiryStr = expiresAt.toLocaleString("en-US", {
+      timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short",
+    });
+    doc.font(FONT_BODY_BOLD, 9).fillColor(fg);
+    doc.text(`TENDER EXPIRES: ${expiryStr}${isUrgent ? "  ·  URGENT" : ""}`, X, y + 9, { width: W, align: "center", lineBreak: false });
+    y += 40;
   }
 
-  // v3.8.aro — stamp every buffered page with a truthful "Page N of M". Before
-  // this the total was the literal 2, so any third page would have shipped with
-  // no footer at all: no gold rule, no MC#/DOT#, no page number. A carrier
-  // holding an unnumbered page cannot tell whether they received the whole
-  // document, which matters on a document that incorporates the BCA by
-  // reference and carries a signature block.
-  const rcPages = doc.bufferedPageRange();
-  for (let i = 0; i < rcPages.count; i++) {
-    doc.switchToPage(rcPages.start + i);
-    // "unversioned" rather than blank or today's constant: rate confirmations
-    // issued before v3.8.awm were issued under terms nobody recorded, and the
-    // document should say so instead of implying a version it cannot prove.
+  // Agreement to be bound, with SRL's countersignature inside the box.
+  const countersign = (fd.rcCountersign ?? null) as RcCountersign | null;
+  const csStatement = countersign ? rcCountersignStatement(countersign) : null;
+  const BOX_PAD = 18;
+  const boundTextH = textH(RC_AGREEMENT_TO_BE_BOUND, FONT_BODY, 8.5, W - BOX_PAD * 2, 0.8);
+  const csH = csStatement ? textH(csStatement, FONT_BODY_ITALIC, 8, W - BOX_PAD * 2, 1) + 8 : 0;
+  const boxH = 12 + 20 + 12 + boundTextH + csH + 14;
+  ensureRoom(boxH);
+  doc.save().rect(X, y, W, boxH).fill(TOKENS.cream2).restore();
+  doc.save().rect(X, y, W, 2).fill(TOKENS.gold).restore();
+  doc.font(FONT_DISPLAY_BOLD, 13).fillColor(TOKENS.navy);
+  doc.text("Agreement to be bound", X, y + 12, { width: W, align: "center", lineBreak: false });
+  // The article this clause rests on: BCA Art. 24 binds an accepted Rate
+  // Confirmation (Art. 8 only settles which document wins a conflict).
+  doc.font(FONT_BODY_ITALIC, 7.5).fillColor(TOKENS.goldDark);
+  doc.text("Broker-Carrier Agreement, BCA Art. 24", X, y + 30, { width: W, align: "center", lineBreak: false });
+  doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg1);
+  doc.text(RC_AGREEMENT_TO_BE_BOUND, X + BOX_PAD, y + 44, { width: W - BOX_PAD * 2, lineGap: 0.8 });
+  if (csStatement) {
+    doc.font(FONT_BODY_ITALIC, 8).fillColor(TOKENS.fg2);
+    doc.text(csStatement, X + BOX_PAD, doc.y + 8, { width: W - BOX_PAD * 2, lineGap: 1 });
+  }
+  y += boxH;
+
+  // Footer on every page: identity, tagline, page N of M, template and terms versions.
+  const pages = doc.bufferedPageRange();
+  for (let i = 0; i < pages.count; i++) {
+    doc.switchToPage(pages.start + i);
     drawFooter(doc, {
       pageNum: i + 1,
-      totalPages: rcPages.count,
+      totalPages: pages.count,
       docId,
       termsVersion: fd.rcTermsVersion || "unversioned",
       templateVersion: RC_TEMPLATE_VERSION,
     });
   }
   doc.flushPages();
-
   doc.end();
   return doc;
 }

@@ -23,6 +23,10 @@ import { buildRcCountersign } from "../../../src/lib/rcCountersign";
 const AT = new Date("2026-09-22T14:31:07.000Z");
 const CS = buildRcCountersign(AT);
 const squash = (s: string) => s.replace(/\s+/g, "");
+// Design System 3 (v3.8.boe) sets the heading in Playfair, sentence case; the
+// all-caps heading of the bls layout no longer exists. The property held here is
+// unchanged: a heading, then the Art. 24 citation, then the clause, last.
+const HEADING = "Agreement to be bound";
 
 async function render(fd: Record<string, unknown>): Promise<string> {
   // @ts-expect-error pdf-parse ships no bundled types
@@ -50,7 +54,7 @@ describe.each([
 ])("%s closes with the Agreement to be Bound", (_label, get) => {
   it("carries the heading and the clause, word for word", async () => {
     const text = await get();
-    expect(text).toContain(squash("AGREEMENT TO BE BOUND"));
+    expect(text).toContain(squash(HEADING));
     expect(text).toContain(CLAUSE);
     expect(text.split(CLAUSE).length - 1, "the clause is stated once").toBe(1);
   }, 60_000);
@@ -58,7 +62,7 @@ describe.each([
   it("the clause comes after every other section", async () => {
     const text = await get();
     const at = text.indexOf(CLAUSE);
-    for (const earlier of ["GOVERNING TERMS", "Put the SRL load number on the invoice", "verify us independently"]) {
+    for (const earlier of ["ACCESSORIAL TERMS", "REQUIREMENTS", "Put the SRL load number on the invoice", "verify us independently"]) {
       const i = text.indexOf(squash(earlier));
       expect(i, `vacuity: "${earlier}" must be on the page`).toBeGreaterThan(-1);
       expect(at, `the clause must follow "${earlier}"`).toBeGreaterThan(i);
@@ -77,7 +81,7 @@ describe.each([
     // decides which document wins a conflict. The reference sits right after
     // the heading, before the clause.
     const text = await get();
-    const at = text.indexOf(squash("AGREEMENT TO BE BOUND"));
+    const at = text.indexOf(squash(HEADING));
     expect(at, "vacuity: the heading must be on the page").toBeGreaterThan(-1);
     const ref = text.slice(at, text.indexOf(CLAUSE));
     expect(ref).toContain(squash("BCA Art. 24"));
@@ -99,6 +103,13 @@ describe("SRL's countersignature is stated in full, and only once issued", () =>
     expect(s, "the statement follows the clause").toBeGreaterThan(text.indexOf(CLAUSE));
     expect(text.split(squash(STATEMENT)).length - 1).toBe(1);
     expect(text).toContain(squash("Countersigned at (UTC, ISO 8601): 2026-09-22T14:31:07.000Z"));
+  }, 60_000);
+
+  it("ISSUED prints the countersign instant, not the render time (v3.8.boe)", async () => {
+    // 2026-09-22T14:31:07Z is 10:31 Eastern. A renderer reading the clock would
+    // print today instead, and restate the issue time on every re-render.
+    const text = await issued();
+    expect(text).toContain(squash("Sep 22, 2026 · 10:31 ET"));
   }, 60_000);
 
   it("a draft carries no statement", async () => {

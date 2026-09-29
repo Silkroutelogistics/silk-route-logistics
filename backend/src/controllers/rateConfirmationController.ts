@@ -8,6 +8,7 @@ import {
   sendToShipperSchema,
 } from "../validators/rateConfirmation";
 import { generateEnhancedRateConfirmation, generateShipperLoadConfirmation } from "../services/pdfService";
+import { RC_RENDER_LOAD_INCLUDE } from "../lib/rcRenderInclude";
 import { resolveStopContacts } from "../lib/stopContact";
 import { sendRateConfirmationEmail, sendEmail, wrap } from "../services/emailService";
 import { hashPdfBytes } from "../lib/rcSignToken";
@@ -257,21 +258,7 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
     where: { id: req.params.id },
     include: {
       load: {
-        include: {
-          // carrierProfile.tier prices the election: §8 says the speed decides
-          // how fast and the tier decides how much, so the freeze cannot be
-          // resolved without it.
-          carrier: { select: { firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { id: true, mcNumber: true, dotNumber: true, tier: true, quickPayEnabled: true } } } },
-          customer: true,
-          // Sprint 49 (Item 119) — poster relation for AE header sub-line.
-          poster: { select: { firstName: true, lastName: true, phone: true } },
-          tenders: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-            where: { status: { in: ["OFFERED", "ACCEPTED"] } },
-            select: { expiresAt: true, status: true },
-          },
-        },
+        include: RC_RENDER_LOAD_INCLUDE,
       },
     },
   });
@@ -647,18 +634,7 @@ export async function downloadRateConfirmationPdf(req: AuthRequest, res: Respons
     where: { id: req.params.id },
     include: {
       load: {
-        include: {
-          carrier: { select: { id: true, firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true, dotNumber: true } } } },
-          customer: true,
-          // Sprint 49 (Item 119) — poster relation for AE header sub-line.
-          poster: { select: { firstName: true, lastName: true, phone: true } },
-          tenders: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-            where: { status: { in: ["OFFERED", "ACCEPTED"] } },
-            select: { expiresAt: true, status: true },
-          },
-        },
+        include: RC_RENDER_LOAD_INCLUDE,
       },
     },
   });

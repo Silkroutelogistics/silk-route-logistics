@@ -60,7 +60,14 @@ export const CURRENT_VERSIONS: Record<string, string> = {
 // Art. 24 names, electronic acceptance or pickup of the shipment, instead of
 // four. It now says acceptance binds even without a signature, and restates
 // that the BCA is incorporated by reference.
-export const RC_TERMS_VERSION = "2026-09-28-v3";
+//
+// v4 (2026-09-28, v3.8.boe) — Design System 3. The TONU clause pays on the ratified
+// two-sided trigger (SRL or the shipper cancels on the day of pickup or after dispatch;
+// not owed on carrier breach), layover is stated as beginning at the detention cap, and
+// the owner's new clauses join the terms: no re-brokering, changes only by a revised RC,
+// chargeback liability capped at the line haul, driver hours, two load locks, scaling,
+// tracking methods and CARB. Figures unchanged (lib/accessorialPolicy).
+export const RC_TERMS_VERSION = "2026-09-28-v4";
 
 export type DocumentKey = keyof typeof CURRENT_VERSIONS;
 

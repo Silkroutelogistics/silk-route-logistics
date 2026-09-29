@@ -1,6 +1,6 @@
 SRL RATE CONFIRMATION — RENDERED CAPTURE
 
-Generated 2026-09-29 from no version letter in HEAD subject (commit be85e9a8) PLUS uncommitted changes to backend/src/services/pdfService.ts.
+Generated 2026-09-29 from no version letter in HEAD subject (commit 8d3d4aa4) PLUS uncommitted changes to backend/src/services/pdfService.ts.
 Regenerate:  cd backend && npx tsx scripts/verify-rc-matrix.ts --dump
 
 Y coordinates are top-down from the page top, rounded to 0.5pt. Items sharing
@@ -26,115 +26,164 @@ read as a page map and taught the wrong one for several sprints.
 ################ CASE: baseline 1 line — 3 pages ################
 
 ─────────── PAGE 1 ───────────
-   46.5  REFERENCE
+     43  LOA D N U M B E R
      53  SILK ROUTE LOGISTICS INC.
-     61  121488
-   64.5  2317 S 35th St, Galesburg, MI 49053
-   76.5  +1 (269) 220-6760 | operations@silkroutelogistics.ai | silkroutelogistics.ai
-   88.5  MC# 1794414 · DOT# 4526880
-  101.5  Where Trust Travels.
-    152  Rate Confirmation
-    165  CARRIER DISPATCH · BINDING ON ACCEPTANCE
-    178  AE: Wasi Haider · (269) 220-6760
-  189.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
-  202.5  DATE ISSUED ⟂ LOAD REF ⟂ PICKUP ⟂ DELIVERY ⟂ PICKUP # ⟂ PO # ⟂ QUICK PAY ⟂ TERMS
-    218  Sep 28, 2026 ⟂ 121488 ⟂ Aug 13, 2026 ⟂ Aug 17, 2026 ⟂ — ⟂ PO1770 ⟂ Not elected ⟂ Net-30
-    237  PARTIES
-  258.5  SHIPPER · PICKUP FROM ⟂ CONSIGNEE · DELIVER TO
-    277  Virun ⟂ Mainfreight North Lake
-  290.5  1750 North 8th Street ⟂ 17801 Interstate 35 West Service Road
-  301.5  Colton, CA 92324 ⟂ Northlake, TX 76262
-  314.5  Window: Aug 13, 2026 ⟂ Window: Aug 17, 2026
-  359.5  MILES ⟂ TRANSIT ⟂ $/ MILE
-    374  Lane mileage ⟂ Standard pace ⟂ Carrier rate
-    378  1,350 ⟂ 24.5 hrs ⟂ $3.04
-  412.5  EQUIPMENT
-  415.5  Dry Van 53'
-    438  CARRIER · ASSIGNED
-    463  ZO Enterprises LLC
-  477.5  MC# 596655 ⟂ DOT# 1911857
-  492.5  Test Carrier · 555-555-5555
-    523  PCS ⟂ DESCRIPTION ⟂ WEIGHT ⟂ DIMS ⟂ HM
-    541  26 ⟂ Mixed ⟂ 16,500 lbs ⟂ — ⟂ N
-    552  CARRIER RATE
-    571  Linehaul ⟂ $4,100.00
-    598  Total Carrier Pay
-    599  $4,100.00
-    610  QUICK PAY · CARAVAN PARTNER PROGRAM
-    633  No Quick Pay elected on this load. It pays on your standard tier terms at no fee.
-    647  Caravan Partner Program Quick Pay: Silver 3% · Gold 2% · Platinum 1% at 7 days, plus 2% for same day.
-    672  OPERATIONAL TERMS
-  687.5  DETENTION ⟂ TONU
-    690  $40/hr after 2 hrs free, $200/stop cap · notify ⟂ $200 (truck-order-not-used)
-  700.5  LAYOVER ⟂ LUMPER
-    703  $200/day ⟂ Reimbursed with original receipt
-  713.5  CANCELLATION ⟂ QUICK PAY
-    716  24-hour notice without penalty ⟂ Not elected on this load
-    754  Template v1.4
+     63  121488
+     65  2317 S 35th St, Galesburg, MI 49053
+     76  +1 (269) 220-6760 · operations@silkroutelogistics.ai
+     79  R C N U M B E R ⟂ I S S U E D
+     87  MC# 1794414 · USDOT# 4526880
+   91.5  121488 ⟂ Sep 28, 2026 · 22:33 ET
+  100.5  Where Trust Travels.
+  133.5  C A R R I E R D I S PATC H · B I N D I N G O N AC C E P TA N C E
+    140  Rate Confirmation
+  151.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
+    169  C A R R I E R ⟂ S H I P M E N T
+    187  ZO Enterprises LLC ⟂ Dry Van 53'
+    200  Address on file with SRL ⟂ Mixed · Hazmat: No
+    212  Exclusive use
+    235  M C · U S D OT ⟂ W E I G H T
+    236  MC# 596655 · USDOT# 1911857 ⟂ 16,500 lb · 26 pcs
+    248  D I S PATC H ⟂ VA LU E
+    249  Test Carrier ⟂ Not declared
+    261  P H O N E ⟂ D I S TA N C E
+    262  555-555-5555 ⟂ 1,350 mi
+    274  S TO P S
+    275  2 · 1 pickup, 1 delivery
+    313  1 , 3 5 0 M I · 2 S TO P S
+  313.5  Colton, CA ⟂ Northlake, TX
+  338.5  PO PO1770
+  339.5  Aug 13, 2026
+    340  Virun
+  343.5  1
+  351.5  1750 North 8th Street, Colton, CA 92324
+  358.5  P I C K U P
+  385.5  Aug 17, 2026
+    386  Mainfreight North Lake
+  389.5  2
+  397.5  17801 Interstate 35 West Service Road,
+  404.5  D E L I V E RY
+    409  Northlake, TX 76262
+    437  C A R R I E R R AT E ⟂ TOTA L C A R R I E R PAY
+    450  D E S C R I P T I O N ⟂ A M O U N T
+    470  Line haul ⟂ $4,100.00
+    475  $4,100.00
+    480  1,350 mi · $3.04 per mi
+    494  Accessorials ⟂ $0.00
+  495.5  Payment ⟂ Net-30
+    504  None pre-approved · see terms
+  511.5  Quick Pay ⟂ Not elected
+    526  No Quick Pay elected on this load. It pays on
+  535.5  your standard tier terms at no fee.
+  570.5  YO U R S R L D I S PATC H E R ⟂ A F T E R H O U R S · E M E R G E N CY ⟂ PA P E R WO R K · C L A I M S
+  586.5  operations@silkroutelogistics.ai
+    588  Wasi Haider ⟂ +1 (269) 220-6760
+    599  (269) 220-6760 ⟂ Business hours Mon–Fri 7am–7pm ET ⟂ BOL, POD, receipts within 24 hours
+    610  operations@silkroutelogistics.ai ⟂ After-hours emergency line for loads in ⟂ Invoices: accounting@silkroutelogistics.ai ·
+  619.5  transit: breakdowns, accidents, appointment ⟂ Claims: compliance@silkroutelogistics.ai
+    621  Call before heading to the shipper, at loading,
+  628.5  changes.
+  630.5  at delivery. Any delay: call us before the
+  639.5  customer.
+    659  This rate is inclusive of fuel and all accessorials unless listed above. Send the signed BOL, POD and lumper receipts to operations@silkroutelogistics.ai
+  669.5  within 24 hours of delivery, and your invoice to accounting@silkroutelogistics.ai as set out in the terms. Payment terms are tier-based under the
+    680  Caravan Partner Program: Silver Net-30, Gold Net-21, Platinum Net-14. Quick Pay is governed by the Caravan Quick Pay Agreement. Terms and
+  690.5  conditions follow.
+    754  Template v2.0
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 1 of 3
   763.5  Terms version unversioned
 
 ─────────── PAGE 2 ───────────
-     49  121488
-     51  SILK ROUTE LOGISTICS INC.
-     60  121488 · Rate Confirmation (continued)
-     95  D O C K & D I S PAT C H ⟂ BCA Art. 20 to 23
-  108.5  Before pickup: Driver ____________ Cell ____________ Truck # ________ Trailer # ________
-  120.5  Check in at both stops as Silk Route Logistics, load 121488. The BOL must name SRL as broker. If it names another company or MC number, do not load. Call
-  130.5  (269) 220-6760.
-  142.5  Seals: record the number on the BOL at pickup; the receiver removes it, not the driver. Broken or missing seal at delivery: call before the doors open.
-    154  Check calls: by 8:00 AM Eastern daily in transit and on arrival at each stop. Running late: call before the appointment.
-    166  Detention pay needs proof: have the facility write your in and out times on the BOL. No times on the BOL, no detention.
-  177.5  If the dock will not let you watch the load or count it, note that on the BOL before you sign and call SRL. Signing a clean BOL says you received everything
-    188  on it in good order.
-  199.5  Check the seal number on the trailer matches the number written on the BOL before you leave. Reseal after any stop where the doors open.
-  211.5  Overage, shortage, damage, accident, theft or any delay that puts delivery at risk: note it on the BOL and call SRL immediately, not at delivery.
-    223  Bring every issue to SRL, not to the shipper or receiver. Do not negotiate appointments, rates or accessorials with the facility.
-    235  Trailer must be clean, dry, odor-free and empty on arrival, and food-grade for food loads. No trailer that last hauled garbage, chemicals or hazmat. If it fails
-    245  any of these, do not load.
-  282.5  CARRIER REQUIREMENTS
-  298.5  • Cargo: $100,000 min
-  310.5  • Auto Liability: $1,000,000 min
-  322.5  • General Liability: $1,000,000 min
-  334.5  • Status updates through the SRL carrier portal, or by call or text to (269) 220-6760.
-  352.5  SPECIAL INSTRUCTIONS
-  378.5  Driver Assist is Needed
-    418  G O V E R N I N G T E R M S ⟂ BCA Art. 8, 24, 25
-    436  Silk Route Logistics Inc. is an FMCSA-licensed property broker (USDOT 4526880, MC# 1794414). SRL arranges transportation. SRL does not transport
-    446  freight.
-    458  This Rate Confirmation is governed by the Broker-Carrier Agreement between Silk Route Logistics Inc. and Carrier (the “BCA”). In the event of conflict, the
-    468  BCA controls.
-    480  Accessorial charges require SRL's prior written approval (operations@silkroutelogistics.ai). Detention free time starts when you arrive, and runs separately
-    490  at each stop. Detention is not payable if you arrive outside your appointment window. At the $200 per stop cap detention converts to layover at $200 per
-  500.5  day; the two do not stack for the same hours. Notify SRL by call or text at least 30 minutes before detention begins and again on departure.
-    512  TONU: payable only if SRL gave you the pickup number and shipper address and cleared you to head to pickup, and SRL or the shipper then cancels. If you
-  522.5  already arrived, you must have been inside your appointment window. Not payable if you cancel, or if your trailer is rejected as non-compliant. Call or text
-  532.5  SRL before you leave.
-  544.5  Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Signed BOL, POD, and supporting
-  554.5  paperwork are due within 24 hours of delivery.
-    576  INVOICING
-  588.5  Send to: accounting@silkroutelogistics.ai
-  600.5  Subject: Invoice · Load 121488 · MC 596655
-    612  Attach this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.
-    624  Put the SRL load number on the invoice. One invoice per load; do not batch loads onto one invoice.
-  635.5  Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather than billing a different number.
-  647.5  Payment terms run from the date SRL receives a complete packet. An incomplete packet does not start the clock.
-  668.5  SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, call SRL at
-  677.5  (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before you move the freight.
-    754  Template v1.4
+   43.5  S I L K R O U T E LO G I S T I C S I N C . · R AT E C O N F I R M AT I O N · LOA D 1 2 1 4 8 8
+     44  Terms and conditions
+     70  AC C E S S O R I A L T E R M S
+     83  I T E M · R AT E ⟂ C O N D I T I O N
+  100.5  Detention ⟂ 2 hours free at each stop from arrival; free time does not carry over between stops. Then $40.00 per
+    111  $40.00 per hour
+    112  hour, capped at $200.00 per stop. Not payable if Carrier arrived outside the appointment window. Carrier
+    124  notifies SRL dispatch 30 minutes before detention begins and again on departure. Have the facility write
+  135.5  your in and out times on the BOL: no times on the BOL, no detention.
+    156  Layover ⟂ Where Carrier must stay overnight at SRL or shipper request through no fault of Carrier. Once detention
+  166.5  $200.00 per day
+    168  reaches its $200.00 cap the first layover day begins; detention and layover do not both run for the same
+  179.5  hours.
+    200  Truck order not used ⟂ Where SRL or the shipper cancels a confirmed load on the day of pickup or after Carrier has been
+  210.5  $200.00
+    212  dispatched. Not owed where cancellation results from Carrier's late arrival, non-compliant equipment,
+  223.5  insurance lapse, or other Carrier breach. Call or text SRL before you leave for the shipper.
+    244  Carrier release window ⟂ Carrier may release the load without penalty by notice not less than 24 hours before the scheduled
+  254.5  24 hours before pickup
+    256  pickup appointment.
+    279  Lumper ⟂ Reimbursed at cost against a legible original receipt submitted with the delivery paperwork. No markup
+  289.5  At cost
+    291  and no admin fee. SRL issues no money codes, so dispatch authorization is required before the driver
+  302.5  pays.
+  330.5  C O N D I T I O N S ⟂ BCA Art. 8, 24, 25
+    345  Silk Route Logistics Inc. is an FMCSA-licensed property broker (USDOT 4526880, MC# 1794414). SRL arranges transportation. SRL does
+    357  not transport freight. This Rate Confirmation is governed by the Broker-Carrier Agreement between Silk Route Logistics Inc. and Carrier
+  368.5  (the “BCA”). In the event of conflict, the BCA controls.
+    385  Accessorial charges not listed above must be approved in writing by SRL dispatch (operations@silkroutelogistics.ai) before they are
+    397  incurred; unapproved charges will not be honored. Carrier shall not re-broker, assign, or subcontract this load, and SRL pays only the
+  408.5  carrier named on page 1. Any change to rate, stops, or schedule is valid only when issued by SRL as a revised Rate Confirmation.
+    425  If Carrier will miss a pickup or delivery appointment for any reason, Carrier must notify SRL dispatch immediately and before contacting
+    437  the customer. Where Carrier's late pickup or delivery, missed appointment, or documentation failure directly causes a documented
+  448.5  customer chargeback, fine, or penalty, Carrier is liable for that amount, not to exceed the line-haul revenue of this load absent gross
+    460  negligence. Carrier communicates driver available hours at booking and again when empty; where hours prevent on-time service SRL will
+    472  adjust the schedule or release Carrier without penalty. The safe and legal operation of the vehicle supersedes any instruction from SRL
+  483.5  or its customer.
+    500  Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Bring every issue to
+    512  SRL, not to the shipper or receiver. Do not negotiate appointments, rates or accessorials with the facility.
+    534  R E Q U I R E M E N T S ⟂ BCA Art. 20 to 23
+  548.5  B E F O R E D I S PATC H ⟂ Driver calls SRL dispatch before heading to the shipper. Check in at every stop as Silk Route Logistics,
+    560  load 121488. The BOL must name SRL as broker; if it names another company or MC number, do not load
+    572  and call (269) 220-6760. Trailer must be food grade, clean, dry, odor free, fully empty, and used
+  583.5  exclusively for this load. No trailer that last hauled garbage, chemicals or hazmat. If it fails any of these, do
+    595  not load.
+    616  AT T H E S H I P P E R ⟂ Driver verifies load number, PO, and destination on the BOL before leaving. Seal is applied at origin and
+  627.5  the seal number recorded on the BOL. Freight secured with a minimum of two load locks or straps. Carrier
+    639  scales the load before departing and is responsible for legal weight. If the dock will not let you watch the
+    651  load or count it, note that on the BOL before you sign and call SRL.
+  671.5  I N T R A N S I T ⟂ Tracking for the duration of the load by any mutually agreed method: ELD integration, third-party
+    683  platform, the Caravan carrier portal, driver location sharing, or check calls at pickup, in transit, and at
+    695  delivery. Check calls by 8:00 AM Eastern daily in transit and on arrival at each stop; running late, call
+  706.5  before the appointment. Check-call requests are answered within 30 minutes during business hours.
+    718  Reseal after any stop where the doors open.
+    754  Template v2.0
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 2 of 3
   763.5  Terms version unversioned
 
 ─────────── PAGE 3 ───────────
-     49  121488
-     51  SILK ROUTE LOGISTICS INC.
-     60  121488 · Rate Confirmation (continued)
-     95  A G R E E M E N T T O B E B O U N D ⟂ BCA Art. 24
-  112.5  Carrier has read this entire Rate Confirmation. By accepting it electronically through SRL's signing link, or by picking up the shipment, Carrier agrees to be
-    123  bound by this Rate Confirmation, even without a signature on it, and to comply with every rate, term, condition, special instruction and other requirement it
-    133  contains. In addition to the terms of this Rate Confirmation, this shipment is governed by the Broker-Carrier Agreement between SRL and Carrier, which is
-  143.5  incorporated in this Rate Confirmation by reference. A carrier that does not agree to every term must decline the load and must not pick it up.
-    754  Template v1.4
+   43.5  S I L K R O U T E LO G I S T I C S I N C . · R AT E C O N F I R M AT I O N · LOA D 1 2 1 4 8 8
+     44  Terms and conditions
+   70.5  AT D E L I V E RY ⟂ A broken or missing seal must be reported to SRL dispatch before the doors open; the receiver removes
+     82  the seal, not the driver. Overage, shortage, damage, accident, theft or any delay that puts delivery at risk:
+     94  note it on the BOL and call SRL immediately, not at delivery. Signing a clean BOL says you received
+  105.5  everything on it in good order. Signed BOL, POD, and supporting paperwork are due within 24 hours of
+    117  delivery.
+    138  I N S U R A N C E ⟂ Carrier keeps its insurance in force for the full duration of this load at or above these minimums: Cargo:
+  149.5  $100,000 · Auto liability: $1,000,000 · General liability: $1,000,000, and notifies SRL at once of any
+    161  cancellation or lapse.
+    182  C A L I F O R N I A ⟂ Any equipment operating in California must comply with California Air Resources Board regulations,
+  193.5  including the Truck and Bus Rule and TRU requirements. Carrier is responsible for resulting fines.
+  221.5  S P E C I A L I N S T R U C T I O N S
+    236  Driver Assist is Needed
+  258.5  I N VO I C I N G A N D PAY M E N T
+    273  Send your invoice to accounting@silkroutelogistics.ai with the subject “Invoice · Load 121488 · MC 596655”. Attach this Rate
+  284.5  Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge. Put the SRL load number
+    296  on the invoice; one invoice per load, never batched.
+    313  Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather than billing a
+  324.5  different number. Payment terms run from the date SRL receives a complete packet; an incomplete packet does not start the clock.
+    346  SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks
+    356  wrong, call SRL at (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before
+  365.5  you move the freight.
+  404.5  Agreement to be bound
+    416  Broker-Carrier Agreement, BCA Art. 24
+    431  Carrier has read this entire Rate Confirmation. By accepting it electronically through SRL's signing link, or by picking up the
+    443  shipment, Carrier agrees to be bound by this Rate Confirmation, even without a signature on it, and to comply with every rate,
+  454.5  term, condition, special instruction and other requirement it contains. In addition to the terms of this Rate Confirmation, this
+  466.5  shipment is governed by the Broker-Carrier Agreement between SRL and Carrier, which is incorporated in this Rate
+  478.5  Confirmation by reference. A carrier that does not agree to every term must decline the load and must not pick it up.
+    754  Template v2.0
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 3 of 3
   763.5  Terms version unversioned
 
@@ -142,119 +191,166 @@ read as a page map and taught the wrong one for several sprints.
 ################ CASE: reefer — 3 pages ################
 
 ─────────── PAGE 1 ───────────
-   46.5  REFERENCE
+     43  LOA D N U M B E R
      53  SILK ROUTE LOGISTICS INC.
-     61  121488
-   64.5  2317 S 35th St, Galesburg, MI 49053
-   76.5  +1 (269) 220-6760 | operations@silkroutelogistics.ai | silkroutelogistics.ai
-   88.5  MC# 1794414 · DOT# 4526880
-  101.5  Where Trust Travels.
-    152  Rate Confirmation
-    165  CARRIER DISPATCH · BINDING ON ACCEPTANCE
-    178  AE: Wasi Haider · (269) 220-6760
-  189.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
-  202.5  DATE ISSUED ⟂ LOAD REF ⟂ PICKUP ⟂ DELIVERY ⟂ PICKUP # ⟂ PO # ⟂ QUICK PAY ⟂ TERMS
-    218  Sep 28, 2026 ⟂ 121488 ⟂ Aug 13, 2026 ⟂ Aug 17, 2026 ⟂ — ⟂ PO1770 ⟂ Not elected ⟂ Net-30
-    237  PARTIES
-  258.5  SHIPPER · PICKUP FROM ⟂ CONSIGNEE · DELIVER TO
-    277  Virun ⟂ Mainfreight North Lake
-  290.5  1750 North 8th Street ⟂ 17801 Interstate 35 West Service Road
-  301.5  Colton, CA 92324 ⟂ Northlake, TX 76262
-  314.5  Window: Aug 13, 2026 ⟂ Window: Aug 17, 2026
-  359.5  MILES ⟂ TRANSIT ⟂ $/ MILE
-    374  Lane mileage ⟂ Standard pace ⟂ Carrier rate
-    378  1,350 ⟂ 24.5 hrs ⟂ $3.04
-  412.5  EQUIPMENT ⟂ TEMPERATURE
-  415.5  Reefer 53' ⟂ 34°F (34–38°F)
-    438  CARRIER · ASSIGNED
-    463  ZO Enterprises LLC
-  477.5  MC# 596655 ⟂ DOT# 1911857
-  492.5  Test Carrier · 555-555-5555
-    523  PCS ⟂ DESCRIPTION ⟂ WEIGHT ⟂ DIMS ⟂ HM
-    541  26 ⟂ Mixed ⟂ 16,500 lbs ⟂ — ⟂ N
-    552  CARRIER RATE
-    571  Linehaul ⟂ $4,100.00
-    598  Total Carrier Pay
-    599  $4,100.00
-    610  QUICK PAY · CARAVAN PARTNER PROGRAM
-    633  No Quick Pay elected on this load. It pays on your standard tier terms at no fee.
-    647  Caravan Partner Program Quick Pay: Silver 3% · Gold 2% · Platinum 1% at 7 days, plus 2% for same day.
-    672  OPERATIONAL TERMS
-  687.5  DETENTION ⟂ TONU
-    690  $40/hr after 2 hrs free, $200/stop cap · notify ⟂ $200 (truck-order-not-used)
-  700.5  LAYOVER ⟂ LUMPER
-    703  $200/day ⟂ Reimbursed with original receipt
-  713.5  CANCELLATION ⟂ QUICK PAY
-    716  24-hour notice without penalty ⟂ Not elected on this load
-    754  Template v1.4
+     63  121488
+     65  2317 S 35th St, Galesburg, MI 49053
+     76  +1 (269) 220-6760 · operations@silkroutelogistics.ai
+     79  R C N U M B E R ⟂ I S S U E D
+     87  MC# 1794414 · USDOT# 4526880
+   91.5  121488 ⟂ Sep 28, 2026 · 22:33 ET
+  100.5  Where Trust Travels.
+  133.5  C A R R I E R D I S PATC H · B I N D I N G O N AC C E P TA N C E
+    140  Rate Confirmation
+  151.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
+    169  C A R R I E R ⟂ S H I P M E N T
+    187  ZO Enterprises LLC ⟂ Reefer 53' · 34°F continuous
+    200  Address on file with SRL ⟂ Mixed · Hazmat: No
+    212  Exclusive use
+    235  M C · U S D OT ⟂ W E I G H T
+    236  MC# 596655 · USDOT# 1911857 ⟂ 16,500 lb · 26 pcs
+    248  D I S PATC H ⟂ VA LU E
+    249  Test Carrier ⟂ Not declared
+    261  P H O N E ⟂ D I S TA N C E
+    262  555-555-5555 ⟂ 1,350 mi
+    274  S TO P S
+    275  2 · 1 pickup, 1 delivery
+    313  1 , 3 5 0 M I · 2 S TO P S
+  313.5  Colton, CA ⟂ Northlake, TX
+  338.5  PO PO1770
+  339.5  Aug 13, 2026
+    340  Virun
+  343.5  1
+  351.5  1750 North 8th Street, Colton, CA 92324
+  358.5  P I C K U P
+  385.5  Aug 17, 2026
+    386  Mainfreight North Lake
+  389.5  2
+  397.5  17801 Interstate 35 West Service Road,
+  404.5  D E L I V E RY
+    409  Northlake, TX 76262
+    437  C A R R I E R R AT E ⟂ TOTA L C A R R I E R PAY
+    450  D E S C R I P T I O N ⟂ A M O U N T
+    470  Line haul ⟂ $4,100.00
+    475  $4,100.00
+    480  1,350 mi · $3.04 per mi
+    494  Accessorials ⟂ $0.00
+  495.5  Payment ⟂ Net-30
+    504  None pre-approved · see terms
+  511.5  Quick Pay ⟂ Not elected
+    526  No Quick Pay elected on this load. It pays on
+  535.5  your standard tier terms at no fee.
+  570.5  YO U R S R L D I S PATC H E R ⟂ A F T E R H O U R S · E M E R G E N CY ⟂ PA P E R WO R K · C L A I M S
+  586.5  operations@silkroutelogistics.ai
+    588  Wasi Haider ⟂ +1 (269) 220-6760
+    599  (269) 220-6760 ⟂ Business hours Mon–Fri 7am–7pm ET ⟂ BOL, POD, receipts within 24 hours
+    610  operations@silkroutelogistics.ai ⟂ After-hours emergency line for loads in ⟂ Invoices: accounting@silkroutelogistics.ai ·
+  619.5  transit: breakdowns, accidents, appointment ⟂ Claims: compliance@silkroutelogistics.ai
+    621  Call before heading to the shipper, at loading,
+  628.5  changes.
+  630.5  at delivery. Any delay: call us before the
+  639.5  customer.
+    659  This rate is inclusive of fuel and all accessorials unless listed above. Send the signed BOL, POD and lumper receipts to operations@silkroutelogistics.ai
+  669.5  within 24 hours of delivery, and your invoice to accounting@silkroutelogistics.ai as set out in the terms. Payment terms are tier-based under the
+    680  Caravan Partner Program: Silver Net-30, Gold Net-21, Platinum Net-14. Quick Pay is governed by the Caravan Quick Pay Agreement. Terms and
+  690.5  conditions follow.
+    754  Template v2.0
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 1 of 3
   763.5  Terms version unversioned
 
 ─────────── PAGE 2 ───────────
-     49  121488
-     51  SILK ROUTE LOGISTICS INC.
-     60  121488 · Rate Confirmation (continued)
-     95  D O C K & D I S PAT C H ⟂ BCA Art. 20 to 23
-  108.5  Before pickup: Driver ____________ Cell ____________ Truck # ________ Trailer # ________
-  120.5  Check in at both stops as Silk Route Logistics, load 121488. The BOL must name SRL as broker. If it names another company or MC number, do not load. Call
-  130.5  (269) 220-6760.
-  142.5  Seals: record the number on the BOL at pickup; the receiver removes it, not the driver. Broken or missing seal at delivery: call before the doors open.
-    154  Check calls: by 8:00 AM Eastern daily in transit and on arrival at each stop. Running late: call before the appointment.
-    166  Detention pay needs proof: have the facility write your in and out times on the BOL. No times on the BOL, no detention.
-  177.5  If the dock will not let you watch the load or count it, note that on the BOL before you sign and call SRL. Signing a clean BOL says you received everything
-    188  on it in good order.
-  199.5  Check the seal number on the trailer matches the number written on the BOL before you leave. Reseal after any stop where the doors open.
-  211.5  Overage, shortage, damage, accident, theft or any delay that puts delivery at risk: note it on the BOL and call SRL immediately, not at delivery.
-    223  Bring every issue to SRL, not to the shipper or receiver. Do not negotiate appointments, rates or accessorials with the facility.
-    235  Trailer must be clean, dry, odor-free and empty on arrival, and food-grade for food loads. No trailer that last hauled garbage, chemicals or hazmat. If it fails
-    245  any of these, do not load.
-  282.5  CARRIER REQUIREMENTS
-  298.5  • Cargo: $100,000 min
-  310.5  • Auto Liability: $1,000,000 min
-  322.5  • General Liability: $1,000,000 min
-  334.5  • Status updates through the SRL carrier portal, or by call or text to (269) 220-6760.
-  352.5  SPECIAL INSTRUCTIONS
-  378.5  Driver Assist is Needed
-    418  G O V E R N I N G T E R M S ⟂ BCA Art. 8, 24, 25
-    436  Silk Route Logistics Inc. is an FMCSA-licensed property broker (USDOT 4526880, MC# 1794414). SRL arranges transportation. SRL does not transport
-    446  freight.
-    458  This Rate Confirmation is governed by the Broker-Carrier Agreement between Silk Route Logistics Inc. and Carrier (the “BCA”). In the event of conflict, the
-    468  BCA controls.
-    480  Accessorial charges require SRL's prior written approval (operations@silkroutelogistics.ai). Detention free time starts when you arrive, and runs separately
-    490  at each stop. Detention is not payable if you arrive outside your appointment window. At the $200 per stop cap detention converts to layover at $200 per
-  500.5  day; the two do not stack for the same hours. Notify SRL by call or text at least 30 minutes before detention begins and again on departure.
-    512  TONU: payable only if SRL gave you the pickup number and shipper address and cleared you to head to pickup, and SRL or the shipper then cancels. If you
-  522.5  already arrived, you must have been inside your appointment window. Not payable if you cancel, or if your trailer is rejected as non-compliant. Call or text
-  532.5  SRL before you leave.
-  544.5  Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Signed BOL, POD, and supporting
-  554.5  paperwork are due within 24 hours of delivery.
-    576  TEMPERATURE CONTROL
-  588.5  Set point and run mode are on page 1 under EQUIPMENT. Run continuous, not cycle-sentry, unless this Rate Confirmation says otherwise in writing. Pre-
-    599  cool the trailer before loading. If the BOL shows a different temperature than this Rate Confirmation, do not sign it and do not load. Call (269) 220-6760
-    609  and SRL will confirm the correct temperature with the shipper in writing. Download the reefer at delivery and send it with your paperwork.
-    754  Template v1.4
+   43.5  S I L K R O U T E LO G I S T I C S I N C . · R AT E C O N F I R M AT I O N · LOA D 1 2 1 4 8 8
+     44  Terms and conditions
+     70  AC C E S S O R I A L T E R M S
+     83  I T E M · R AT E ⟂ C O N D I T I O N
+  100.5  Detention ⟂ 2 hours free at each stop from arrival; free time does not carry over between stops. Then $40.00 per
+    111  $40.00 per hour
+    112  hour, capped at $200.00 per stop. Not payable if Carrier arrived outside the appointment window. Carrier
+    124  notifies SRL dispatch 30 minutes before detention begins and again on departure. Have the facility write
+  135.5  your in and out times on the BOL: no times on the BOL, no detention.
+    156  Layover ⟂ Where Carrier must stay overnight at SRL or shipper request through no fault of Carrier. Once detention
+  166.5  $200.00 per day
+    168  reaches its $200.00 cap the first layover day begins; detention and layover do not both run for the same
+  179.5  hours.
+    200  Truck order not used ⟂ Where SRL or the shipper cancels a confirmed load on the day of pickup or after Carrier has been
+  210.5  $200.00
+    212  dispatched. Not owed where cancellation results from Carrier's late arrival, non-compliant equipment,
+  223.5  insurance lapse, or other Carrier breach. Call or text SRL before you leave for the shipper.
+    244  Carrier release window ⟂ Carrier may release the load without penalty by notice not less than 24 hours before the scheduled
+  254.5  24 hours before pickup
+    256  pickup appointment.
+    279  Lumper ⟂ Reimbursed at cost against a legible original receipt submitted with the delivery paperwork. No markup
+  289.5  At cost
+    291  and no admin fee. SRL issues no money codes, so dispatch authorization is required before the driver
+  302.5  pays.
+  330.5  C O N D I T I O N S ⟂ BCA Art. 8, 24, 25
+    345  Silk Route Logistics Inc. is an FMCSA-licensed property broker (USDOT 4526880, MC# 1794414). SRL arranges transportation. SRL does
+    357  not transport freight. This Rate Confirmation is governed by the Broker-Carrier Agreement between Silk Route Logistics Inc. and Carrier
+  368.5  (the “BCA”). In the event of conflict, the BCA controls.
+    385  Accessorial charges not listed above must be approved in writing by SRL dispatch (operations@silkroutelogistics.ai) before they are
+    397  incurred; unapproved charges will not be honored. Carrier shall not re-broker, assign, or subcontract this load, and SRL pays only the
+  408.5  carrier named on page 1. Any change to rate, stops, or schedule is valid only when issued by SRL as a revised Rate Confirmation.
+    425  If Carrier will miss a pickup or delivery appointment for any reason, Carrier must notify SRL dispatch immediately and before contacting
+    437  the customer. Where Carrier's late pickup or delivery, missed appointment, or documentation failure directly causes a documented
+  448.5  customer chargeback, fine, or penalty, Carrier is liable for that amount, not to exceed the line-haul revenue of this load absent gross
+    460  negligence. Carrier communicates driver available hours at booking and again when empty; where hours prevent on-time service SRL will
+    472  adjust the schedule or release Carrier without penalty. The safe and legal operation of the vehicle supersedes any instruction from SRL
+  483.5  or its customer.
+    500  Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Bring every issue to
+    512  SRL, not to the shipper or receiver. Do not negotiate appointments, rates or accessorials with the facility.
+    534  R E Q U I R E M E N T S ⟂ BCA Art. 20 to 23
+  548.5  B E F O R E D I S PATC H ⟂ Driver calls SRL dispatch before heading to the shipper. Check in at every stop as Silk Route Logistics,
+    560  load 121488. The BOL must name SRL as broker; if it names another company or MC number, do not load
+    572  and call (269) 220-6760. Trailer must be food grade, clean, dry, odor free, fully empty, and used
+  583.5  exclusively for this load. No trailer that last hauled garbage, chemicals or hazmat. If it fails any of these, do
+    595  not load.
+    616  AT T H E S H I P P E R ⟂ Driver verifies load number, PO, and destination on the BOL before leaving. Seal is applied at origin and
+  627.5  the seal number recorded on the BOL. Freight secured with a minimum of two load locks or straps. Carrier
+    639  scales the load before departing and is responsible for legal weight. If the dock will not let you watch the
+    651  load or count it, note that on the BOL before you sign and call SRL.
+    754  Template v2.0
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 2 of 3
   763.5  Terms version unversioned
 
 ─────────── PAGE 3 ───────────
-     49  121488
-     51  SILK ROUTE LOGISTICS INC.
-     60  121488 · Rate Confirmation (continued)
-     95  INVOICING
-  107.5  Send to: accounting@silkroutelogistics.ai
-    119  Subject: Invoice · Load 121488 · MC 596655
-    131  Attach this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.
-  142.5  Put the SRL load number on the invoice. One invoice per load; do not batch loads onto one invoice.
-  154.5  Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather than billing a different number.
-  166.5  Payment terms run from the date SRL receives a complete packet. An incomplete packet does not start the clock.
-  187.5  SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, call SRL at
-  196.5  (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before you move the freight.
-    218  A G R E E M E N T T O B E B O U N D ⟂ BCA Art. 24
-  235.5  Carrier has read this entire Rate Confirmation. By accepting it electronically through SRL's signing link, or by picking up the shipment, Carrier agrees to be
-    246  bound by this Rate Confirmation, even without a signature on it, and to comply with every rate, term, condition, special instruction and other requirement it
-  256.5  contains. In addition to the terms of this Rate Confirmation, this shipment is governed by the Broker-Carrier Agreement between SRL and Carrier, which is
-  266.5  incorporated in this Rate Confirmation by reference. A carrier that does not agree to every term must decline the load and must not pick it up.
-    754  Template v1.4
+   43.5  S I L K R O U T E LO G I S T I C S I N C . · R AT E C O N F I R M AT I O N · LOA D 1 2 1 4 8 8
+     44  Terms and conditions
+   70.5  I N T R A N S I T ⟂ Maintain 34°F to 38°F continuous for the full transit; pre-cool the trailer before loading and download the
+     82  reefer at delivery. If the BOL shows a different temperature than this Rate Confirmation, do not sign it and
+     94  do not load; call SRL. Tracking for the duration of the load by any mutually agreed method: ELD
+  105.5  integration, third-party platform, the Caravan carrier portal, driver location sharing, or check calls at
+    117  pickup, in transit, and at delivery. Check calls by 8:00 AM Eastern daily in transit and on arrival at each
+    129  stop; running late, call before the appointment. Check-call requests are answered within 30 minutes
+  140.5  during business hours. Reseal after any stop where the doors open.
+    161  AT D E L I V E RY ⟂ A broken or missing seal must be reported to SRL dispatch before the doors open; the receiver removes
+    173  the seal, not the driver. Overage, shortage, damage, accident, theft or any delay that puts delivery at risk:
+  184.5  note it on the BOL and call SRL immediately, not at delivery. Signing a clean BOL says you received
+    196  everything on it in good order. Signed BOL, POD, and supporting paperwork are due within 24 hours of
+    208  delivery.
+  228.5  I N S U R A N C E ⟂ Carrier keeps its insurance in force for the full duration of this load at or above these minimums: Cargo:
+    240  $100,000 · Auto liability: $1,000,000 · General liability: $1,000,000, and notifies SRL at once of any
+    252  cancellation or lapse.
+  272.5  C A L I F O R N I A ⟂ Any equipment operating in California must comply with California Air Resources Board regulations,
+    284  including the Truck and Bus Rule and TRU requirements. Carrier is responsible for resulting fines.
+  312.5  S P E C I A L I N S T R U C T I O N S
+    327  Driver Assist is Needed
+    349  I N VO I C I N G A N D PAY M E N T
+  363.5  Send your invoice to accounting@silkroutelogistics.ai with the subject “Invoice · Load 121488 · MC 596655”. Attach this Rate
+    375  Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge. Put the SRL load number
+    387  on the invoice; one invoice per load, never batched.
+  403.5  Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather than billing a
+    415  different number. Payment terms run from the date SRL receives a complete packet; an incomplete packet does not start the clock.
+  436.5  SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks
+  446.5  wrong, call SRL at (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before
+  456.5  you move the freight.
+    495  Agreement to be bound
+  506.5  Broker-Carrier Agreement, BCA Art. 24
+  521.5  Carrier has read this entire Rate Confirmation. By accepting it electronically through SRL's signing link, or by picking up the
+  533.5  shipment, Carrier agrees to be bound by this Rate Confirmation, even without a signature on it, and to comply with every rate,
+  545.5  term, condition, special instruction and other requirement it contains. In addition to the terms of this Rate Confirmation, this
+    557  shipment is governed by the Broker-Carrier Agreement between SRL and Carrier, which is incorporated in this Rate
+    569  Confirmation by reference. A carrier that does not agree to every term must decline the load and must not pick it up.
+    754  Template v2.0
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 3 of 3
   763.5  Terms version unversioned
 
@@ -262,115 +358,165 @@ read as a page map and taught the wrong one for several sprints.
 ################ CASE: qp 7-day — 3 pages ################
 
 ─────────── PAGE 1 ───────────
-   46.5  REFERENCE
+     43  LOA D N U M B E R
      53  SILK ROUTE LOGISTICS INC.
-     61  121488
-   64.5  2317 S 35th St, Galesburg, MI 49053
-   76.5  +1 (269) 220-6760 | operations@silkroutelogistics.ai | silkroutelogistics.ai
-   88.5  MC# 1794414 · DOT# 4526880
-  101.5  Where Trust Travels.
-    152  Rate Confirmation
-    165  CARRIER DISPATCH · BINDING ON ACCEPTANCE
-    178  AE: Wasi Haider · (269) 220-6760
-  189.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
-  202.5  DATE ISSUED ⟂ LOAD REF ⟂ PICKUP ⟂ DELIVERY ⟂ PICKUP # ⟂ PO # ⟂ QUICK PAY ⟂ TERMS
-    218  Sep 28, 2026 ⟂ 121488 ⟂ Aug 13, 2026 ⟂ Aug 17, 2026 ⟂ — ⟂ PO1770 ⟂ 3% · 7-day ⟂ 7 days
-    237  PARTIES
-  258.5  SHIPPER · PICKUP FROM ⟂ CONSIGNEE · DELIVER TO
-    277  Virun ⟂ Mainfreight North Lake
-  290.5  1750 North 8th Street ⟂ 17801 Interstate 35 West Service Road
-  301.5  Colton, CA 92324 ⟂ Northlake, TX 76262
-  314.5  Window: Aug 13, 2026 ⟂ Window: Aug 17, 2026
-  359.5  MILES ⟂ TRANSIT ⟂ $/ MILE
-    374  Lane mileage ⟂ Standard pace ⟂ Carrier rate
-    378  1,350 ⟂ 24.5 hrs ⟂ $3.04
-  412.5  EQUIPMENT
-  415.5  Dry Van 53'
-    438  CARRIER · ASSIGNED
-    463  ZO Enterprises LLC
-  477.5  MC# 596655 ⟂ DOT# 1911857
-  492.5  Test Carrier · 555-555-5555
-    523  PCS ⟂ DESCRIPTION ⟂ WEIGHT ⟂ DIMS ⟂ HM
-    541  26 ⟂ Mixed ⟂ 16,500 lbs ⟂ — ⟂ N
-    552  CARRIER RATE
-    571  Linehaul ⟂ $4,100.00
-    598  Total Carrier Pay
-    599  $4,100.00
-    610  QUICK PAY · CARAVAN PARTNER PROGRAM
-    611  Fee applies to line haul, fuel and approved accessorials, less at-cost reimbursements.
-    630  SPEED ⟂ QUICK PAY FEE ⟂ FEE ON THIS RATE ⟂ NET ON THIS RATE
-    647  7 days ⟂ 3% ⟂ $123.00 ⟂ $3,977.00
-    672  OPERATIONAL TERMS
-  687.5  DETENTION ⟂ TONU
-    690  $40/hr after 2 hrs free, $200/stop cap · notify ⟂ $200 (truck-order-not-used)
-  700.5  LAYOVER ⟂ LUMPER
-    703  $200/day ⟂ Reimbursed with original receipt
-  713.5  CANCELLATION ⟂ QUICK PAY
-    716  24-hour notice without penalty ⟂ 3% at 7 days on this load
-    754  Template v1.4
+     63  121488
+     65  2317 S 35th St, Galesburg, MI 49053
+     76  +1 (269) 220-6760 · operations@silkroutelogistics.ai
+     79  R C N U M B E R ⟂ I S S U E D
+     87  MC# 1794414 · USDOT# 4526880
+   91.5  121488 ⟂ Sep 28, 2026 · 22:33 ET
+  100.5  Where Trust Travels.
+  133.5  C A R R I E R D I S PATC H · B I N D I N G O N AC C E P TA N C E
+    140  Rate Confirmation
+  151.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
+    169  C A R R I E R ⟂ S H I P M E N T
+    187  ZO Enterprises LLC ⟂ Dry Van 53'
+    200  Address on file with SRL ⟂ Mixed · Hazmat: No
+    212  Exclusive use
+    235  M C · U S D OT ⟂ W E I G H T
+    236  MC# 596655 · USDOT# 1911857 ⟂ 16,500 lb · 26 pcs
+    248  D I S PATC H ⟂ VA LU E
+    249  Test Carrier ⟂ Not declared
+    261  P H O N E ⟂ D I S TA N C E
+    262  555-555-5555 ⟂ 1,350 mi
+    274  S TO P S
+    275  2 · 1 pickup, 1 delivery
+    313  1 , 3 5 0 M I · 2 S TO P S
+  313.5  Colton, CA ⟂ Northlake, TX
+  338.5  PO PO1770
+  339.5  Aug 13, 2026
+    340  Virun
+  343.5  1
+  351.5  1750 North 8th Street, Colton, CA 92324
+  358.5  P I C K U P
+  385.5  Aug 17, 2026
+    386  Mainfreight North Lake
+  389.5  2
+  397.5  17801 Interstate 35 West Service Road,
+  404.5  D E L I V E RY
+    409  Northlake, TX 76262
+    437  C A R R I E R R AT E ⟂ TOTA L C A R R I E R PAY
+    450  D E S C R I P T I O N ⟂ A M O U N T
+    470  Line haul ⟂ $4,100.00
+    475  $4,100.00
+    480  1,350 mi · $3.04 per mi
+    494  Accessorials ⟂ $0.00
+  495.5  Payment ⟂ Silver · 7 days
+    504  None pre-approved · see terms
+  511.5  Quick Pay ⟂ 3% · 7-day
+  527.5  Quick Pay fee ⟂ $123.00
+  543.5  Net on this rate ⟂ $3,977.00
+    558  Fee applies to line haul, fuel and approved
+  567.5  accessorials, less at-cost reimbursements.
+  602.5  YO U R S R L D I S PATC H E R ⟂ A F T E R H O U R S · E M E R G E N CY ⟂ PA P E R WO R K · C L A I M S
+  618.5  operations@silkroutelogistics.ai
+    620  Wasi Haider ⟂ +1 (269) 220-6760
+    631  (269) 220-6760 ⟂ Business hours Mon–Fri 7am–7pm ET ⟂ BOL, POD, receipts within 24 hours
+    642  operations@silkroutelogistics.ai ⟂ After-hours emergency line for loads in ⟂ Invoices: accounting@silkroutelogistics.ai ·
+  651.5  transit: breakdowns, accidents, appointment ⟂ Claims: compliance@silkroutelogistics.ai
+    653  Call before heading to the shipper, at loading,
+  660.5  changes.
+  662.5  at delivery. Any delay: call us before the
+  671.5  customer.
+    691  This rate is inclusive of fuel and all accessorials unless listed above. Send the signed BOL, POD and lumper receipts to operations@silkroutelogistics.ai
+  701.5  within 24 hours of delivery, and your invoice to accounting@silkroutelogistics.ai as set out in the terms. Payment terms are tier-based under the
+    712  Caravan Partner Program: Silver Net-30, Gold Net-21, Platinum Net-14. Quick Pay is governed by the Caravan Quick Pay Agreement. Terms and
+  722.5  conditions follow.
+    754  Template v2.0
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 1 of 3
   763.5  Terms version unversioned
 
 ─────────── PAGE 2 ───────────
-     49  121488
-     51  SILK ROUTE LOGISTICS INC.
-     60  121488 · Rate Confirmation (continued)
-     95  D O C K & D I S PAT C H ⟂ BCA Art. 20 to 23
-  108.5  Before pickup: Driver ____________ Cell ____________ Truck # ________ Trailer # ________
-  120.5  Check in at both stops as Silk Route Logistics, load 121488. The BOL must name SRL as broker. If it names another company or MC number, do not load. Call
-  130.5  (269) 220-6760.
-  142.5  Seals: record the number on the BOL at pickup; the receiver removes it, not the driver. Broken or missing seal at delivery: call before the doors open.
-    154  Check calls: by 8:00 AM Eastern daily in transit and on arrival at each stop. Running late: call before the appointment.
-    166  Detention pay needs proof: have the facility write your in and out times on the BOL. No times on the BOL, no detention.
-  177.5  If the dock will not let you watch the load or count it, note that on the BOL before you sign and call SRL. Signing a clean BOL says you received everything
-    188  on it in good order.
-  199.5  Check the seal number on the trailer matches the number written on the BOL before you leave. Reseal after any stop where the doors open.
-  211.5  Overage, shortage, damage, accident, theft or any delay that puts delivery at risk: note it on the BOL and call SRL immediately, not at delivery.
-    223  Bring every issue to SRL, not to the shipper or receiver. Do not negotiate appointments, rates or accessorials with the facility.
-    235  Trailer must be clean, dry, odor-free and empty on arrival, and food-grade for food loads. No trailer that last hauled garbage, chemicals or hazmat. If it fails
-    245  any of these, do not load.
-  282.5  CARRIER REQUIREMENTS
-  298.5  • Cargo: $100,000 min
-  310.5  • Auto Liability: $1,000,000 min
-  322.5  • General Liability: $1,000,000 min
-  334.5  • Status updates through the SRL carrier portal, or by call or text to (269) 220-6760.
-  352.5  SPECIAL INSTRUCTIONS
-  378.5  Driver Assist is Needed
-    418  G O V E R N I N G T E R M S ⟂ BCA Art. 8, 24, 25
-    436  Silk Route Logistics Inc. is an FMCSA-licensed property broker (USDOT 4526880, MC# 1794414). SRL arranges transportation. SRL does not transport
-    446  freight.
-    458  This Rate Confirmation is governed by the Broker-Carrier Agreement between Silk Route Logistics Inc. and Carrier (the “BCA”). In the event of conflict, the
-    468  BCA controls.
-    480  Accessorial charges require SRL's prior written approval (operations@silkroutelogistics.ai). Detention free time starts when you arrive, and runs separately
-    490  at each stop. Detention is not payable if you arrive outside your appointment window. At the $200 per stop cap detention converts to layover at $200 per
-  500.5  day; the two do not stack for the same hours. Notify SRL by call or text at least 30 minutes before detention begins and again on departure.
-    512  TONU: payable only if SRL gave you the pickup number and shipper address and cleared you to head to pickup, and SRL or the shipper then cancels. If you
-  522.5  already arrived, you must have been inside your appointment window. Not payable if you cancel, or if your trailer is rejected as non-compliant. Call or text
-  532.5  SRL before you leave.
-  544.5  Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Signed BOL, POD, and supporting
-  554.5  paperwork are due within 24 hours of delivery.
-    576  INVOICING
-  588.5  Send to: accounting@silkroutelogistics.ai
-  600.5  Subject: Invoice · Load 121488 · MC 596655
-    612  Attach this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.
-    624  Put the SRL load number on the invoice. One invoice per load; do not batch loads onto one invoice.
-  635.5  Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather than billing a different number.
-  647.5  Payment terms run from the date SRL receives a complete packet. An incomplete packet does not start the clock.
-  668.5  SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, call SRL at
-  677.5  (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before you move the freight.
-    754  Template v1.4
+   43.5  S I L K R O U T E LO G I S T I C S I N C . · R AT E C O N F I R M AT I O N · LOA D 1 2 1 4 8 8
+     44  Terms and conditions
+     70  AC C E S S O R I A L T E R M S
+     83  I T E M · R AT E ⟂ C O N D I T I O N
+  100.5  Detention ⟂ 2 hours free at each stop from arrival; free time does not carry over between stops. Then $40.00 per
+    111  $40.00 per hour
+    112  hour, capped at $200.00 per stop. Not payable if Carrier arrived outside the appointment window. Carrier
+    124  notifies SRL dispatch 30 minutes before detention begins and again on departure. Have the facility write
+  135.5  your in and out times on the BOL: no times on the BOL, no detention.
+    156  Layover ⟂ Where Carrier must stay overnight at SRL or shipper request through no fault of Carrier. Once detention
+  166.5  $200.00 per day
+    168  reaches its $200.00 cap the first layover day begins; detention and layover do not both run for the same
+  179.5  hours.
+    200  Truck order not used ⟂ Where SRL or the shipper cancels a confirmed load on the day of pickup or after Carrier has been
+  210.5  $200.00
+    212  dispatched. Not owed where cancellation results from Carrier's late arrival, non-compliant equipment,
+  223.5  insurance lapse, or other Carrier breach. Call or text SRL before you leave for the shipper.
+    244  Carrier release window ⟂ Carrier may release the load without penalty by notice not less than 24 hours before the scheduled
+  254.5  24 hours before pickup
+    256  pickup appointment.
+    279  Lumper ⟂ Reimbursed at cost against a legible original receipt submitted with the delivery paperwork. No markup
+  289.5  At cost
+    291  and no admin fee. SRL issues no money codes, so dispatch authorization is required before the driver
+  302.5  pays.
+  330.5  C O N D I T I O N S ⟂ BCA Art. 8, 24, 25
+    345  Silk Route Logistics Inc. is an FMCSA-licensed property broker (USDOT 4526880, MC# 1794414). SRL arranges transportation. SRL does
+    357  not transport freight. This Rate Confirmation is governed by the Broker-Carrier Agreement between Silk Route Logistics Inc. and Carrier
+  368.5  (the “BCA”). In the event of conflict, the BCA controls.
+    385  Accessorial charges not listed above must be approved in writing by SRL dispatch (operations@silkroutelogistics.ai) before they are
+    397  incurred; unapproved charges will not be honored. Carrier shall not re-broker, assign, or subcontract this load, and SRL pays only the
+  408.5  carrier named on page 1. Any change to rate, stops, or schedule is valid only when issued by SRL as a revised Rate Confirmation.
+    425  If Carrier will miss a pickup or delivery appointment for any reason, Carrier must notify SRL dispatch immediately and before contacting
+    437  the customer. Where Carrier's late pickup or delivery, missed appointment, or documentation failure directly causes a documented
+  448.5  customer chargeback, fine, or penalty, Carrier is liable for that amount, not to exceed the line-haul revenue of this load absent gross
+    460  negligence. Carrier communicates driver available hours at booking and again when empty; where hours prevent on-time service SRL will
+    472  adjust the schedule or release Carrier without penalty. The safe and legal operation of the vehicle supersedes any instruction from SRL
+  483.5  or its customer.
+    500  Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Bring every issue to
+    512  SRL, not to the shipper or receiver. Do not negotiate appointments, rates or accessorials with the facility.
+    534  R E Q U I R E M E N T S ⟂ BCA Art. 20 to 23
+  548.5  B E F O R E D I S PATC H ⟂ Driver calls SRL dispatch before heading to the shipper. Check in at every stop as Silk Route Logistics,
+    560  load 121488. The BOL must name SRL as broker; if it names another company or MC number, do not load
+    572  and call (269) 220-6760. Trailer must be food grade, clean, dry, odor free, fully empty, and used
+  583.5  exclusively for this load. No trailer that last hauled garbage, chemicals or hazmat. If it fails any of these, do
+    595  not load.
+    616  AT T H E S H I P P E R ⟂ Driver verifies load number, PO, and destination on the BOL before leaving. Seal is applied at origin and
+  627.5  the seal number recorded on the BOL. Freight secured with a minimum of two load locks or straps. Carrier
+    639  scales the load before departing and is responsible for legal weight. If the dock will not let you watch the
+    651  load or count it, note that on the BOL before you sign and call SRL.
+  671.5  I N T R A N S I T ⟂ Tracking for the duration of the load by any mutually agreed method: ELD integration, third-party
+    683  platform, the Caravan carrier portal, driver location sharing, or check calls at pickup, in transit, and at
+    695  delivery. Check calls by 8:00 AM Eastern daily in transit and on arrival at each stop; running late, call
+  706.5  before the appointment. Check-call requests are answered within 30 minutes during business hours.
+    718  Reseal after any stop where the doors open.
+    754  Template v2.0
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 2 of 3
   763.5  Terms version unversioned
 
 ─────────── PAGE 3 ───────────
-     49  121488
-     51  SILK ROUTE LOGISTICS INC.
-     60  121488 · Rate Confirmation (continued)
-     95  A G R E E M E N T T O B E B O U N D ⟂ BCA Art. 24
-  112.5  Carrier has read this entire Rate Confirmation. By accepting it electronically through SRL's signing link, or by picking up the shipment, Carrier agrees to be
-    123  bound by this Rate Confirmation, even without a signature on it, and to comply with every rate, term, condition, special instruction and other requirement it
-    133  contains. In addition to the terms of this Rate Confirmation, this shipment is governed by the Broker-Carrier Agreement between SRL and Carrier, which is
-  143.5  incorporated in this Rate Confirmation by reference. A carrier that does not agree to every term must decline the load and must not pick it up.
-    754  Template v1.4
+   43.5  S I L K R O U T E LO G I S T I C S I N C . · R AT E C O N F I R M AT I O N · LOA D 1 2 1 4 8 8
+     44  Terms and conditions
+   70.5  AT D E L I V E RY ⟂ A broken or missing seal must be reported to SRL dispatch before the doors open; the receiver removes
+     82  the seal, not the driver. Overage, shortage, damage, accident, theft or any delay that puts delivery at risk:
+     94  note it on the BOL and call SRL immediately, not at delivery. Signing a clean BOL says you received
+  105.5  everything on it in good order. Signed BOL, POD, and supporting paperwork are due within 24 hours of
+    117  delivery.
+    138  I N S U R A N C E ⟂ Carrier keeps its insurance in force for the full duration of this load at or above these minimums: Cargo:
+  149.5  $100,000 · Auto liability: $1,000,000 · General liability: $1,000,000, and notifies SRL at once of any
+    161  cancellation or lapse.
+    182  C A L I F O R N I A ⟂ Any equipment operating in California must comply with California Air Resources Board regulations,
+  193.5  including the Truck and Bus Rule and TRU requirements. Carrier is responsible for resulting fines.
+  221.5  S P E C I A L I N S T R U C T I O N S
+    236  Driver Assist is Needed
+  258.5  I N VO I C I N G A N D PAY M E N T
+    273  Send your invoice to accounting@silkroutelogistics.ai with the subject “Invoice · Load 121488 · MC 596655”. Attach this Rate
+  284.5  Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge. Put the SRL load number
+    296  on the invoice; one invoice per load, never batched.
+    313  Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather than billing a
+  324.5  different number. Payment terms run from the date SRL receives a complete packet; an incomplete packet does not start the clock.
+    346  SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks
+    356  wrong, call SRL at (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before
+  365.5  you move the freight.
+  404.5  Agreement to be bound
+    416  Broker-Carrier Agreement, BCA Art. 24
+    431  Carrier has read this entire Rate Confirmation. By accepting it electronically through SRL's signing link, or by picking up the
+    443  shipment, Carrier agrees to be bound by this Rate Confirmation, even without a signature on it, and to comply with every rate,
+  454.5  term, condition, special instruction and other requirement it contains. In addition to the terms of this Rate Confirmation, this
+  466.5  shipment is governed by the Broker-Carrier Agreement between SRL and Carrier, which is incorporated in this Rate
+  478.5  Confirmation by reference. A carrier that does not agree to every term must decline the load and must not pick it up.
+    754  Template v2.0
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 3 of 3
   763.5  Terms version unversioned

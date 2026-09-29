@@ -197,9 +197,16 @@ export const RC_PDF_REQUIRED: string[] = [
   // which is a real control. If you are tempted to make this string read
   // better, measure it first. (Trailing " · notify" is appended after the cap,
   // so it does not affect this match.)
-  "$40/hr after 2 hrs free, $200/stop cap",
-  "$200 (truck-order-not-used)",
-  "$200/day",
+  // v3.8.boe — Design System 3 moved these figures from a single-line grid
+  // cell into the ACCESSORIAL TERMS table. Each rate is the table's
+  // right-hand value, drawn unwrapped, so it extracts whole. The conditions
+  // beside them are wrapped body text and are held by verify:rc instead.
+  // Figures unchanged: $40/hr detention with a $200/stop cap, $200/day
+  // layover, $200 TONU.
+  "$40.00 per hour",
+  "$200.00 per day",
+  "Truck order not used",
+  "24 hours before pickup",
   // Paperwork deadline, from the GOVERNING TERMS clause block: "Signed BOL,
   // POD, and supporting paperwork are due within 24 hours of delivery."
   // NOTE: that block IS wrapped (`width: CONTENT_W`), so if a future edit to
@@ -210,11 +217,12 @@ export const RC_PDF_REQUIRED: string[] = [
   "24 hours",
   // ── v3.8.asb — the Quick Pay position is stated on every rate confirmation ─
   //
-  // "QUICK PAY" is the meta-strip cell label, the panel label, and the
-  // OPERATIONAL TERMS grid label. It renders in BOTH states — elected and not
-  // elected — which is the point: a load with no election says so rather than
-  // leaving the carrier to infer it. Losing this string means the surface
-  // stopped rendering, which is how the fee went unstated in the first place.
+  // "Quick Pay" is the total card's row label (v3.8.boe; it was the all-caps
+  // meta-strip and grid label before the redesign). It renders in BOTH
+  // states — elected and not elected — which is the point: a load with no
+  // election says so rather than leaving the carrier to infer it. Losing this
+  // string means the surface stopped rendering, which is how the fee went
+  // unstated in the first place.
   //
   // The state-specific assertions deliberately live in
   // backend/scripts/verify-rc-matrix.ts instead of here. That gate renders
@@ -222,7 +230,7 @@ export const RC_PDF_REQUIRED: string[] = [
   // strings ("3% · 7-day", "$123.00", "Not elected on this load"). This e2e
   // path takes whatever election the live flow produced, so pinning either
   // state's copy here would fail on a correct PDF of the other state.
-  "QUICK PAY",
+  "Quick Pay",
 ];
 
 /**

@@ -19495,7 +19495,14 @@
 // v3.8.bod — owner ruling 2026-09-28: a carrier who holds the load downloads its rate
 // confirmation without first verifying a driver. The ARC 19 gate is lifted; an unverified
 // handset is still a DRIVER_PHONE_UNVERIFIED risk signal to the AE. Ownership still gates.
-export const SRL_VERSION = "3.8.bod";
+// v3.8.boe — the rate confirmation is the Design System 3 layout (docs/design/rc-final):
+// letterhead with load, RC number and issue time; carrier and shipment panels; the route
+// with every stop and its references; the rate table beside the total card with the Quick
+// Pay election and fee; a contacts ribbon; then the terms on page 2 onward — accessorial
+// terms, conditions, requirements, invoicing, and the Agreement to be bound citing BCA
+// Art. 24. Figures unchanged. Every render site reads one load include, and ISSUED prints
+// the countersign instant rather than the render time. Template 2.0, terms 2026-09-28-v4.
+export const SRL_VERSION = "3.8.boe";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

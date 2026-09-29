@@ -88,6 +88,13 @@ describe("design references cited from source exist in the tree", () => {
         .map((p) => p.replace(/^docs\/design\//, "")),
     );
     expect(tracked.size, "git ls-files returned nothing — the probe is broken").toBeGreaterThan(0);
+    // A citation may name a directory (docs/design/rc-final, v3.8.boe). It is
+    // tracked when git tracks a file inside it; an empty or untracked directory
+    // still fails, because it has no entry here.
+    for (const f of [...tracked]) {
+      const parts = f.split("/");
+      for (let i = 1; i < parts.length; i++) tracked.add(parts.slice(0, i).join("/"));
+    }
 
     const untracked = [...new Set(citations().map((c) => c.ref))]
       .filter((ref) => !tracked.has(ref));

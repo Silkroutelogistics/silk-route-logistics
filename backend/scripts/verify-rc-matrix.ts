@@ -223,12 +223,10 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
           "Not elected",
           "No Quick Pay elected on this load",
           "standard Silver terms at no fee",
-          // OPERATIONAL TERMS grid — the second site that printed the tier
-          // name in a QUICK PAY cell whose neighbours (DETENTION, TONU,
-          // LAYOVER) all state money.
-          "Not elected on this load",
+          // v3.8.boe: the design has no operational-terms grid, so the card is
+          // the one place the election is stated.
         ],
-        forbid: ["FEE ON THIS RATE", "NET ON THIS RATE", "QUICK PAY SILVER"],
+        forbid: ["Quick Pay fee", "Net on this rate", "QUICK PAY SILVER", "Silver 3%"],
       },
     ],
     // Elected, seven-day. The fee, the speed and the arithmetic all have to be
@@ -241,12 +239,11 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
       {
         expect: [
           "3% · 7-day",
-          "QUICK PAY FEE",
-          "FEE ON THIS RATE",
+          "Quick Pay fee",
+          "Net on this rate",
           "$123.00",
           "$3,977.00",
           "7 days",
-          "3% at 7 days on this load",
         ],
         forbid: ["No Quick Pay elected", "Not elected", "QUICK PAY SILVER"],
       },
@@ -259,7 +256,7 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
       makeLoad(),
       { carrierPaymentTier: "SILVER", quickPaySpeed: "SAME_DAY", quickPayFeePercent: 5, paymentTerms: "Same day" },
       {
-        expect: ["5% same day", "$205.00", "$3,895.00", "Same day", "5% same day on this load"],
+        expect: ["5% same day", "Quick Pay fee", "$205.00", "$3,895.00", "Same day"],
         forbid: ["No Quick Pay elected", "Not elected", "QUICK PAY SILVER"],
       },
     ],
@@ -272,7 +269,7 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
       "qp fee without speed",
       makeLoad(),
       { carrierPaymentTier: "GOLD", quickPayFeePercent: 2 },
-      { expect: ["2% · 7-day", "QUICK PAY FEE", "$82.00"], forbid: ["No Quick Pay elected", "Not elected"] },
+      { expect: ["2% · 7-day", "Quick Pay fee", "$82.00"], forbid: ["No Quick Pay elected", "Not elected"] },
     ],
     // Contradictory input: a STANDARD speed label sitting beside a non-zero
     // frozen percent. carrierPayments can write this pair, and the ledger
@@ -301,7 +298,7 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
         paymentTerms: "7 days",
         accessorials: [{ type: "Lumper", description: "Lumper reimbursed at cost", amount: 150 }],
       },
-      { expect: ["3% · 7-day", "QUICK PAY FEE"], forbid: ["FEE ON THIS RATE", "NET ON THIS RATE"] },
+      { expect: ["3% · 7-day", "at-cost reimbursements"], forbid: ["Quick Pay fee", "Net on this rate"] },
     ],
 
     // ISSUED. Every other fixture here is a draft, so before these two the
@@ -442,7 +439,10 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
       // CARRIES NO SIGNATURE FIELDS. Held on every case, because a page that
       // grows a pen line back is a page asking for a mark nothing collects.
       // Compared against the exported clause, not a copy of it.
-      if (!hasText(allText, "AGREEMENT TO BE BOUND")) problems.push("AGREEMENT TO BE BOUND heading MISSING");
+      // v3.8.boe: Design System 3 sets the heading in sentence case, with the
+      // Art. 24 citation beneath it.
+      if (!hasText(allText, "Agreement to be bound")) problems.push("Agreement to be bound heading MISSING");
+      if (!hasText(allText, "BCA Art. 24")) problems.push("BCA Art. 24 citation MISSING");
       if (!hasText(allText, RC_AGREEMENT_TO_BE_BOUND)) problems.push("Agreement to be Bound clause MISSING or altered");
       for (const pen of ["AUTHORIZED SIGNATORY", "Sign and return", "signature below"]) {
         if (hasText(allText, pen)) problems.push('SIGNATURE FIELD PRESENT: "' + pen + '"');
