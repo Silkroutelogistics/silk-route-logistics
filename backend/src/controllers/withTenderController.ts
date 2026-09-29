@@ -11,6 +11,7 @@ import { generateLoadNumber, formatDocumentNumber } from "../lib/documentNumber"
 import { log } from "../lib/logger";
 import { createTender } from "../services/tenderCreationService";
 import { issueRateConfirmationAtOffer } from "../services/offerRateConfirmationService";
+import { offerQuickPayIneligibility, recordOfferQuickPay } from "../services/offerQuickPayService";
 
 /**
  * Sprint 59 (v3.8.acj) Item 176 — POST /api/loads/with-tender
@@ -68,6 +69,13 @@ export async function createLoadWithTender(req: AuthRequest, res: Response) {
       blocked_reasons: compliance.blocked_reasons,
     });
     return;
+  }
+
+  // v3.8.boq (Item 342) — Quick Pay on the offer passes the carrier's own three
+  // gates before anything is written.
+  if (tender.quickPay) {
+    const no = await offerQuickPayIneligibility(tender.carrierId);
+    if (no) { res.status(422).json({ error: no.code, message: no.error }); return; }
   }
 
   // v3.8.alr §13.3 Item 8.1 — block new loads against an inactive customer
@@ -305,6 +313,15 @@ export async function createLoadWithTender(req: AuthRequest, res: Response) {
     // after commit (storage and the render do not belong inside a database
     // transaction), then the offer goes out. Awaited so the response says
     // whether the carrier can sign; never fatal.
+    // v3.8.boq — the AE's Quick Pay election, recorded before the document is
+    // issued so the RC prints it. The gates ran before the transaction.
+    if (tender.quickPay) {
+      const recorded = await recordOfferQuickPay({
+        tenderId: result.tender.id, loadId: result.load.id, carrierProfileId: tender.carrierId,
+        aeUserId: req.user!.id, quickPay: tender.quickPay,
+      });
+      if (!recorded.ok) log.error({ tenderId: result.tender.id, code: recorded.code }, "[with-tender] offer Quick Pay election refused after the gates passed");
+    }
     const offerRc = await issueRateConfirmationAtOffer(result.tender.id, req.user!.id).catch((err) => {
       log.error({ err, tenderId: result.tender.id }, "[with-tender] issue at offer threw");
       return { issued: false } as { issued: boolean };

@@ -25,10 +25,11 @@ import { stampCarrierAcceptance } from "../lib/acceptanceEvidence";
 import { createTender as createTenderRow } from "../services/tenderCreationService";
 import { autoIssueRateConfirmation } from "../services/rateConfirmationAutoIssue";
 import { issueRateConfirmationAtOffer } from "../services/offerRateConfirmationService";
+import { offerQuickPayIneligibility, recordOfferQuickPay } from "../services/offerQuickPayService";
 import { withdrawLiveTenders, settleTender, settleTenders } from "../services/tenderTransitionService";
 
 export async function createTender(req: AuthRequest, res: Response) {
-  const { carrierId, offeredRate, expiresAt } = createTenderSchema.parse(req.body);
+  const { carrierId, offeredRate, expiresAt, quickPay } = createTenderSchema.parse(req.body);
   const load = await prisma.load.findUnique({ where: { id: req.params.id } });
   if (!load) { res.status(404).json({ error: "Load not found" }); return; }
 
@@ -62,6 +63,14 @@ export async function createTender(req: AuthRequest, res: Response) {
       blocked_codes: compliance.blocked_codes,
     });
     return;
+  }
+
+  // v3.8.boq (Item 342) — Quick Pay on the offer passes the same three gates the
+  // carrier's own choice did, BEFORE anything is written, so a refused election
+  // leaves no tender behind to explain.
+  if (quickPay) {
+    const no = await offerQuickPayIneligibility(carrierId);
+    if (no) { res.status(422).json(no); return; }
   }
 
   // v3.8.axd — through createTender, the single writer of LoadTender.
@@ -127,6 +136,12 @@ export async function createTender(req: AuthRequest, res: Response) {
   // carrier's acceptance is their signature. Before the notice, so the Accept
   // button in it already has a document to open. Never fatal: without it the
   // offer is accepted and signed in two steps, as before.
+  // The election is recorded BEFORE the document is issued, so the RC prints it.
+  if (quickPay) {
+    const recorded = await recordOfferQuickPay({ tenderId: tender.id, loadId: load.id, carrierProfileId: carrierId, aeUserId: req.user!.id, quickPay });
+    if (!recorded.ok) log.error({ tenderId: tender.id, code: recorded.code }, "[Tender] offer Quick Pay election refused after the gates passed");
+  }
+
   const offerRc = await issueRateConfirmationAtOffer(tender.id, req.user!.id).catch((err) => {
     log.error({ err, tenderId: tender.id }, "[Tender] issue at offer threw");
     return { issued: false, reason: "threw" } as { issued: boolean; rateConfirmationId?: string; reason?: string };

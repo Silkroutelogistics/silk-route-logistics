@@ -19543,7 +19543,10 @@
 // v3.8.bop — both accept doors open review-and-sign for an offer issued with its rate
 // confirmation (Item 342): the tender email's Accept and the portal's Tenders Accept mint a link
 // that lives as long as the offer; neither books the load bare.
-export const SRL_VERSION = "3.8.bop";
+// v3.8.boq — Quick Pay on a direct offer is decided at offer (Item 342): the AE records it on
+// evidence, behind the carrier's own three gates (pilot, signed agreement, switched on), before
+// anything is written; the election lands before the RC is issued, so the document prints it.
+export const SRL_VERSION = "3.8.boq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

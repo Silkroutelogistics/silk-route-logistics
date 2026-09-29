@@ -1,9 +1,21 @@
 import { z } from "zod";
 
+/**
+ * Item 342 (v3.8.boq) — Quick Pay on a direct offer is the AE's call AT OFFER,
+ * recorded on the evidence of where the carrier asked for it. Only the paid
+ * speeds: standard terms are the default and need no election.
+ */
+export const offerQuickPaySchema = z.object({
+  speed: z.enum(["SEVEN_DAY", "SAME_DAY"]),
+  evidenceType: z.enum(["email_subject", "call_timestamp", "quo_message_id"]),
+  evidenceRef: z.string().trim().min(3).max(500),
+});
+
 export const createTenderSchema = z.object({
   carrierId: z.string(),
   offeredRate: z.number().positive(),
   expiresAt: z.string().transform((s) => new Date(s)),
+  quickPay: offerQuickPaySchema.optional(),
 });
 
 export const counterTenderSchema = z.object({

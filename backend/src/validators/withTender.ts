@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { offerQuickPaySchema } from "./tender";
 
 /**
  * Sprint 59 (v3.8.acj) Item 176 — Carrier Engagement Drawer Mode 1.
@@ -36,6 +37,8 @@ const tenderSchema = z.object({
   carrierId: z.string().min(1),
   offeredRate: z.number().positive(),
   expiresAt: z.string().transform((s) => new Date(s)),
+  // Item 342 (v3.8.boq) — Quick Pay decided with the offer.
+  quickPay: offerQuickPaySchema.optional(),
 });
 
 export const createLoadWithTenderSchema = z.object({
