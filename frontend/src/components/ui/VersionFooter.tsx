@@ -19511,7 +19511,12 @@
 // references, and both of its exits (the tender drawer and Waterfall / Load Board / DAT)
 // send every fact the rate confirmation prints. The load's weight, pieces and pallets are
 // the sum of its lines, not line 1, and it is hazmat when any line is.
-export const SRL_VERSION = "3.8.bog";
+// v3.8.boh — the carrier reads what they sign. The signing page links GET
+// /api/rc-sign/:token/document, which serves the issued, hashed rate confirmation — the
+// same bytes the AE and the carrier portal download and the email attached — under the
+// same token and locks, and never re-renders. The page shows the RC's total, not the line
+// haul alone, and prints the fingerprint of the document being signed.
+export const SRL_VERSION = "3.8.boh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -238,6 +238,10 @@ const KNOWN_UNGATED: readonly string[] = [
   // act. Same shape as tenderAction and driverPing directly above/below.
   "rcSign.ts GET /:token",
   "rcSign.ts POST /:token",
+  // v3.8.boh — the document that token signs, served read-only under the same
+  // token and the same locks (live token, live load). A carrier cannot be asked
+  // to sign what they cannot read, and the portal's Sign button sends no email.
+  "rcSign.ts GET /:token/document",
   "tenderAction.ts GET /:token",
   // Item 330: the GET above now only renders a confirm page; this POST from its
   // button is what acts. Same token, same authority: it moved, it did not widen.

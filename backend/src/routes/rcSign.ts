@@ -28,7 +28,7 @@ import { syncSettlementDocFlags } from "../services/integrationService";
 import { extractClientIp } from "../services/geoService";
 import { clientUserAgent } from "../lib/clientIp";
 import { generateSignatureCertificate } from "../services/signatureCertificateService";
-import { uploadFileToPath } from "../services/storageService";
+import { uploadFileToPath, getFileStream } from "../services/storageService";
 import { getAgreementState, type AgreementReader, type AgreementVerdict } from "../lib/agreementState";
 import { recordSecurityEvent } from "../lib/securityAudit";
 import { stampCarrierAcceptance } from "../lib/acceptanceEvidence";
@@ -234,8 +234,9 @@ router.get("/:token", async (req: Request, res: Response) => {
       <p>Load ${l.loadNumber ?? l.referenceNumber ?? ""} &middot; ${lane}</p>
       <div class="kv"><span>Equipment</span><span>${l.equipmentType ?? "—"}</span></div>
       <div class="kv"><span>Pickup</span><span>${l.pickupDate ? new Date(l.pickupDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</span></div>
-      <div class="kv"><span>Total carrier pay</span><span><strong>${money(rc.carrierRate ?? l.carrierRate)}</strong></span></div>
-      <p>Review the rate confirmation attached to the email that brought you here. Signing below accepts it as written.</p>
+      <div class="kv"><span>Total carrier pay</span><span><strong>${money(rc.totalCharges ?? rc.carrierRate ?? l.carrierRate)}</strong></span></div>
+      <p><a class="cta" href="/api/rc-sign/${encodeURIComponent(String(req.params.token))}/document" target="_blank" rel="noopener">Read the rate confirmation (PDF)</a></p>
+      <p>Read it before you sign. It is the document SRL issued, the same one your dispatcher and your carrier portal hold, and signing below accepts it as written.</p>
       <form method="POST" action="/api/rc-sign/${encodeURIComponent(String(req.params.token))}">
         <label class="field" for="signerName">Type your full name to sign</label>
         <input type="text" id="signerName" name="signerName" required minlength="2" maxlength="120" autocomplete="name" placeholder="First and last name">
@@ -245,8 +246,68 @@ router.get("/:token", async (req: Request, res: Response) => {
         </div>
         <button type="submit">Sign rate confirmation</button>
       </form>
-      <p class="foot">This link signs this rate confirmation once and then stops working.</p>`,
+      <p class="foot">This link signs this rate confirmation once and then stops working.<br>Document fingerprint <span class="ref">${rc.contentHash ?? "not recorded"}</span></p>`,
   }));
+});
+
+/**
+ * The document being signed (v3.8.boh).
+ *
+ * The form used to say "review the rate confirmation attached to the email that
+ * brought you here". A carrier who arrives from the portal's Sign button never
+ * received that email, so they were asked to sign a document they had not been
+ * shown. This serves the ISSUED artifact itself: the stored bytes whose hash is
+ * recorded on the row, the same bytes the AE downloads, the carrier portal
+ * downloads, and the email attached. One document, whatever door.
+ *
+ * Same locks as the form: a live token and a live load. Deliberately NO
+ * re-render fallback, unlike the download routes: a fresh render would be a
+ * different document from the one this link signs (PDFKit output is not
+ * reproducible, v3.8.awj), and a signing page must never show one document and
+ * record a signature against another. If the stored copy cannot be read, the
+ * carrier is told to call.
+ */
+router.get("/:token/document", async (req: Request, res: Response) => {
+  const rc = await resolve(String(req.params.token));
+  if (!rc) {
+    const r = refusal("NOT_FOUND");
+    res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
+    return;
+  }
+  const v = checkSignToken(rc);
+  if (!v.ok) {
+    const r = refusal(v.reason);
+    res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
+    return;
+  }
+  if (loadIsDead(rc.load)) {
+    const r = refusal("LOAD_NOT_LIVE");
+    res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
+    return;
+  }
+  const unavailable = () =>
+    res.status(503).type("html").send(page({
+      title: "Document unavailable",
+      body: `<h1>We cannot open this rate confirmation right now</h1>
+        <p>Do not sign until you have read it. Call SRL at (269) 220-6760 or email operations@silkroutelogistics.ai and we will send it to you. <strong>The link is still good.</strong></p>`,
+    }));
+  if (!rc.pdfUrl || !rc.contentHash) {
+    log.error({ rcId: rc.id }, "[rc-sign] signing link on an RC with no stored artifact");
+    unavailable();
+    return;
+  }
+  try {
+    const stream = await getFileStream(rc.pdfUrl);
+    const name = (rc.rateConNumber || rc.load.loadNumber || rc.load.referenceNumber || "rate-confirmation").replace(/[^A-Za-z0-9._-]/g, "");
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${name}.pdf"`);
+    res.setHeader("X-SRL-Content-Hash", rc.contentHash);
+    res.setHeader("Cache-Control", "no-store");
+    stream.pipe(res);
+  } catch (err) {
+    log.error({ err, rcId: rc.id }, "[rc-sign] stored rate confirmation unreadable");
+    unavailable();
+  }
 });
 
 /** The signature. */
