@@ -27,6 +27,7 @@ import { log } from "../lib/logger";
 import { getFileStream } from "../services/storageService";
 import { RC_TERMS_VERSION } from "../lib/agreementVersions";
 import { buildRcCountersign } from "../lib/rcCountersign";
+import { freezeIssuedRateConfirmationOntoLoad } from "../services/rateConfirmationFreezeService";
 
 /**
  * formData for the renderer, with this RC's own document number folded in.
@@ -606,13 +607,13 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
   // this codebase (RateConfirmationModal, ShipmentDetailDrawer, the carrier
   // activation page, lib/download.ts). Existing rows are converted by migration
   // 20260901000000_rc_pdf_url_api_relative.
-  await prisma.load.update({
-    where: { id: rc.loadId },
-    data: {
-      rateConfirmationPdfUrl: `/rate-confirmations/${rc.id}/pdf`,
-      quickPayFeePercent: election.feePercent,
-      quickPaySpeed: election.speed,
-    },
+  // v3.8.bom — one writer, shared with the carrier signing an offer-time rate
+  // confirmation (Item 342), which freezes the same three columns.
+  await freezeIssuedRateConfirmationOntoLoad({
+    loadId: rc.loadId,
+    rateConfirmationId: rc.id,
+    quickPayFeePercent: election.feePercent,
+    quickPaySpeed: election.speed,
   });
 
   log.info(

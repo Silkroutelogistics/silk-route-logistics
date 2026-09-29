@@ -23,6 +23,7 @@ import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { assignCarrier } from "../services/carrierAssignmentService";
 import { stampCarrierAcceptance } from "../lib/acceptanceEvidence";
 import { createTender as createTenderRow } from "../services/tenderCreationService";
+import { autoIssueRateConfirmation } from "../services/rateConfirmationAutoIssue";
 import { withdrawLiveTenders, settleTender, settleTenders } from "../services/tenderTransitionService";
 
 export async function createTender(req: AuthRequest, res: Response) {
@@ -137,10 +138,36 @@ export async function acceptTender(req: AuthRequest, res: Response) {
       evidence: { type: "EMAIL_SUBJECT" | "CALL_TIMESTAMP" | "QUO_MESSAGE_ID"; ref: string };
     };
   }).onBehalf;
+  // v3.8.bom (Item 342) — set only by the rate-confirmation signing page, which
+  // delegates here when a carrier signs the RC issued with the offer. The
+  // signature IS the acceptance, so that page is the one door a carrier takes
+  // a direct offer through.
+  const viaSignature = (req as unknown as { viaSignature?: { rateConfirmationId: string } }).viaSignature;
 
   const tender = await prisma.loadTender.findUnique({ where: { id: req.params.id }, include: { carrier: true } });
   if (!tender) { res.status(404).json({ error: "Tender not found" }); return; }
   if (tender.carrier.userId !== req.user!.id) { res.status(403).json({ error: "Not authorized" }); return; }
+
+  // v3.8.bom (Item 342) — an offer that went out WITH its rate confirmation is
+  // accepted by signing it. A bare accept here would book the load with the
+  // carrier's name on nothing, which is the two-acts-two-links flow the ruling
+  // retired. Refused, pointing at the signing page; an AE's accept on the
+  // carrier's behalf still passes (they re-issue the RC for the carrier to sign).
+  const offerRc = await prisma.rateConfirmation.findFirst({
+    where: { tenderId: tender.id, status: "SENT" },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  if (offerRc && !onBehalf && !viaSignature) {
+    res.status(409).json({
+      error:
+        "Accepting this load is signing its rate confirmation. Open Review and sign from the " +
+        "tender email or your Tenders page.",
+      code: "SIGN_TO_ACCEPT",
+      rateConfirmationId: offerRc.id,
+    });
+    return;
+  }
 
   // Block action on expired tenders
   if (tender.expiresAt && new Date() > tender.expiresAt) {
@@ -316,8 +343,8 @@ export async function acceptTender(req: AuthRequest, res: Response) {
   // still create RC manually via POST /api/rate-confirmations/). Fires
   // BEFORE notifyTenderAction so the AE's in-app notification can
   // deep-link to the auto-draft RC for review.
-  let autoRcId: string | undefined;
-  try {
+  let autoRcId: string | undefined = offerRc?.id;
+  if (!offerRc) try {
     const rc = await autoGenerateRateConfirmation(load.id, tender.id, load.posterId);
     autoRcId = rc?.id;
     // v3.8.asb — the Quick Pay election window opens HERE and closes when the
@@ -455,6 +482,13 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
   // The synthetic actor is the CARRIER, because that is whose acceptance this
   // records. acceptTender's ownership gate then passes for the right reason
   // rather than being bypassed. Same shim the magic-link route uses.
+  // Item 342 — read BEFORE the accept, because it decides what happens after it.
+  const wasCounter = tender.status === "COUNTERED";
+  const issuedAtOffer = await prisma.rateConfirmation.findFirst({
+    where: { tenderId: tender.id, status: "SENT" },
+    select: { id: true },
+  });
+
   const syntheticReq = {
     params: { id: tender.id },
     user: { id: tender.carrier.userId, email: "", role: "CARRIER" },
@@ -476,7 +510,12 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
   // free, so an absent speed means the carrier chose nothing rather than that
   // the AE forgot.
   const obSpeed = String(req.body?.quickPaySpeed ?? "").toUpperCase();
-  if (["STANDARD", "SEVEN_DAY", "SAME_DAY"].includes(obSpeed)) {
+  // An election cannot change a rate confirmation that is already out: its
+  // bytes are frozen and a re-send reuses them, so the fee printed and the fee
+  // charged would part company. Quick Pay on an offer is decided AT the offer.
+  if (issuedAtOffer && ["STANDARD", "SEVEN_DAY", "SAME_DAY"].includes(obSpeed)) {
+    log.warn({ tenderId: tender.id }, "[Tender] on-behalf Quick Pay election ignored: the rate confirmation was issued with the offer");
+  } else if (["STANDARD", "SEVEN_DAY", "SAME_DAY"].includes(obSpeed)) {
     const prof = await prisma.carrierProfile.findUnique({
       where: { id: tender.carrierId },
       select: { tier: true, quickPayVersion: true },
@@ -523,7 +562,32 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
     },
   }).catch((err) => log.error({ err, tenderId: tender.id }, "[Tender] auditLog on-behalf failed"));
 
-  res.status(captured.state.statusCode || 200).json({ ...(captured.state.body as object), onBehalf: true });
+  // v3.8.bom (Item 342, ruling 3) — an AE accepting on the carrier's behalf is
+  // not the carrier's signature, so the rate confirmation goes to the carrier to
+  // sign through their own link. A counter's RC is ISSUED here, at the agreed
+  // counter rate, rather than left as a draft; an RC already issued with the
+  // offer is re-sent, which reuses its frozen bytes and mints a fresh link.
+  // After the election above, so a freshly issued document prints it. Awaited
+  // but never fatal: the accept has committed, and an AE can still send.
+  let rateConfirmationIssued = false;
+  if (wasCounter || issuedAtOffer) {
+    const rc = await prisma.rateConfirmation.findFirst({
+      where: { tenderId: tender.id, status: { in: ["DRAFT", "SENT"] } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+    if (rc) {
+      try {
+        const issued = await autoIssueRateConfirmation(tender.loadId, rc.id, req.user!.id);
+        rateConfirmationIssued = issued.issued;
+        if (!issued.issued) log.warn({ tenderId: tender.id, reason: issued.reason }, "[Tender] on-behalf RC issue did not go out");
+      } catch (err) {
+        log.error({ err, tenderId: tender.id }, "[Tender] on-behalf RC issue failed");
+      }
+    }
+  }
+
+  res.status(captured.state.statusCode || 200).json({ ...(captured.state.body as object), onBehalf: true, rateConfirmationIssued });
 }
 
 export async function counterTender(req: AuthRequest, res: Response) {

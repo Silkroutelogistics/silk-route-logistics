@@ -19531,7 +19531,10 @@
 // v3.8.bol — a declined, expired or withdrawn offer takes its rate confirmation with it
 // (Item 342). Voided and its signing link killed in the same transaction as the tender
 // move, keyed on the tenders that actually moved; the number stays cancelled, never reused.
-export const SRL_VERSION = "3.8.bol";
+// v3.8.bom — a direct offer issued with its rate confirmation is accepted by signing it
+// (Item 342): a bare carrier accept is refused 409 SIGN_TO_ACCEPT, and an AE accept on the
+// carrier's behalf sends the RC for the carrier to sign (issued at accept for a counter).
+export const SRL_VERSION = "3.8.bom";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
