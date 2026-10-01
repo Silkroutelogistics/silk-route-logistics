@@ -127,6 +127,8 @@ const OWN_CLIENT_INVENTORY: Record<string, Reason> = {
   "repair-load-121495-cancel-residue.ts": "PRODUCTION_WRITE",
   // Items 320-322: dry-run as srl_readonly; --commit only to an operator-named URL.
   "cleanup-notification-dupes.ts": "PRODUCTION_WRITE",
+  // carrier-unsuspend arc: dry run READ ONLY by default; --execute writes production from .env.production.local.
+  "reinstate-erroneous-suspensions.ts": "PRODUCTION_WRITE",
   "_arc-a2-counter-proof.ts": "PROOF",
   // v3.8.blr — the bare client IS the instrument: it reads the stored EIN
   // bytes without the encryption extension, to prove they are ciphertext.

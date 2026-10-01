@@ -154,6 +154,10 @@ describe("only the production scripts load the production file", () => {
       klass: "NAMED_COMMAND",
       why: "npm run prisma:status:production — read-only status, same guard",
     },
+    "scripts/reinstate-erroneous-suspensions.ts": {
+      klass: "NAMED_COMMAND",
+      why: "carrier-unsuspend arc one-off: the default dry run reads as srl_readonly via _census-credential; only --execute loads this file (owner credential), and refuses unless its endpoint matches; scope proven per row, all-or-nothing in one transaction",
+    },
     "scripts/prisma-target-guard.ts": {
       klass: "RAIL_ENFORCEMENT",
       why: "reads the file to COMPARE hostnames and refuses; never puts a credential into the environment and never connects. Allow-listing the breach detector as a breach was the first version's error",
