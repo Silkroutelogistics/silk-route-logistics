@@ -34,7 +34,7 @@ const SCHEMA = path.resolve(__dirname, "../../../prisma/schema.prisma");
 
 /** Frozen inventory: file -> number of literal SUSPENDED payloads. */
 const EXPECTED: Record<string, number> = {
-  "services/complianceMonitorService.ts": 6,
+  "services/complianceMonitorService.ts": 5, // was 6; the monthly re-vet no longer suspends
   "services/ofacScreeningService.ts": 1,
   "controllers/complianceController.ts": 1,
 };
@@ -44,6 +44,13 @@ const EXCLUDED_BY_DESIGN: Record<string, string> = {
   "controllers/carrierController.ts":
     "updateCarrier hoists a request-supplied onboardingStatus into a payload; " +
     "generic field-edit path, banked at section 13.3 Sprint A0",
+};
+
+/** Enum members that deliberately have no writer, each with the reason. */
+const RETIRED_CAUSES: Record<string, string> = {
+  VETTING_CRITICAL:
+    "monthly re-vet raises an AE alert and never suspends (carrier-unsuspend arc, 2026-10-01); " +
+    "the member stays because suspended and lifted rows already carry it",
 };
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -182,7 +189,17 @@ describe("autoSuspendCause coverage: every suspension write carries a structured
         }
       }
     }
-    for (const m of members) expect(written.has(m), `enum member ${m} has no writer`).toBe(true);
+    for (const m of members) {
+      if (RETIRED_CAUSES[m]) {
+        expect(written.has(m), `${m} is retired but has a writer again; drop it from RETIRED_CAUSES`).toBe(false);
+        continue;
+      }
+      expect(written.has(m), `enum member ${m} has no writer`).toBe(true);
+    }
+    for (const [m, why] of Object.entries(RETIRED_CAUSES)) {
+      expect(members, `${m} is retired but no longer an enum member`).toContain(m);
+      expect(why.length, m).toBeGreaterThan(20);
+    }
     for (const w of written) expect(members.includes(w), `written value ${w} is not an enum member`).toBe(true);
   });
 });

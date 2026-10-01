@@ -1200,8 +1200,8 @@ export async function runFmcsaScan(carrierId: string) {
 //
 // RESOLVED v3.8.ank (audit D2 / §13.3 Item 187) — the suspension-reason
 // convention is now unified on autoSuspendReason / autoSuspendedAt (the pair
-// loadComplianceService + waterfallScoring already READ). All five auto-suspend
-// writers — insurance-expiry, monthly re-vetting, FMCSA authority-change, FMCSA
+// loadComplianceService + waterfallScoring already READ). All auto-suspend
+// writers — insurance-expiry, FMCSA authority-change, FMCSA
 // safety-rating (this service) + OFAC (ofacScreeningService) — write the canonical
 // pair; the legacy suspensionReason / suspendedAt columns have NO remaining writer
 // or reader and were backfilled by migration 20260618170000_backfill_suspension_
@@ -2054,7 +2054,7 @@ export async function processInsuranceExpiryEnforcement() {
 // ────────────────────────────────────────────────────────────
 // ENTERPRISE CRON: Monthly Full Re-Vetting (Compass)
 // Re-runs full 33-check vetting for all APPROVED carriers.
-// Auto-suspends CRITICAL risk carriers.
+// Raises an AE alert for CRITICAL risk carriers; never suspends.
 // ────────────────────────────────────────────────────────────
 
 export async function monthlyCarrierReVetting() {
@@ -2071,7 +2071,6 @@ export async function monthlyCarrierReVetting() {
 
   let revetted = 0;
   let critical = 0;
-  let suspended = 0;
   let errors = 0;
 
   for (const carrier of carriers) {
@@ -2081,32 +2080,28 @@ export async function monthlyCarrierReVetting() {
       const report = await vetAndStoreReport(carrier.dotNumber, carrier.id, carrier.mcNumber || undefined, "CRON");
       revetted++;
 
-      // Auto-suspend carriers that dropped to CRITICAL
+      // CRITICAL is an AE alert, never a suspension (carrier-unsuspend arc,
+      // 2026-10-01). On 2026-10-01 this branch suspended 6 AUTHORIZED,
+      // insured carriers that AEs had approved at the same CRITICAL grade.
+      // About 46 points of every score are checks that never ran
+      // (OFAC=ERROR, SOS, TIN, biometric, ELD). Hard facts keep their own
+      // sweeps (authority, OOS, insurance, OFAC match), which still suspend.
+      // The carrier's status and portal are untouched here, and nothing is
+      // sent to the carrier.
       if (report.riskLevel === "CRITICAL") {
         critical++;
 
-        await prisma.carrierProfile.update({
-          where: { id: carrier.id },
+        await prisma.complianceAlert.create({
           data: {
-            onboardingStatus: "SUSPENDED",
-            status: "SUSPENDED", // B2 — paired; see lib/carrierOperational
-            autoSuspendReason: `Auto-suspended by monthly re-vetting: score ${report.score}/100 (CRITICAL). Flags: ${report.flags.slice(0, 3).join(", ")}`,
-            autoSuspendedAt: new Date(),
-            autoSuspendCause: "VETTING_CRITICAL",
+            type: "VETTING_DECLINE",
+            entityType: "CARRIER",
+            entityId: carrier.id,
+            entityName: `${carrier.companyName || "Unknown"} — monthly re-vet ${report.score}/100 (CRITICAL)`,
+            severity: "CRITICAL",
+            status: "ACTIVE",
+            expiryDate: new Date(Date.now() + 30 * 86_400_000),
           },
         });
-
-        await prisma.notification.create({
-          data: {
-            userId: carrier.userId,
-            type: "COMPLIANCE",
-            title: "Account Suspended — Compliance Review Failed",
-            message: `Your carrier account has been suspended following a routine compliance review (score: ${report.score}/100). Please contact support.`,
-            actionUrl: "/carrier/dashboard",
-          },
-        });
-
-        suspended++;
       }
 
       // Notify admins of HIGH risk carriers (not suspended, but flagged)
@@ -2129,8 +2124,8 @@ export async function monthlyCarrierReVetting() {
     }
   }
 
-  log.info(`[MonthlyReVet] Complete: ${revetted}/${carriers.length} revetted, ${critical} CRITICAL, ${suspended} suspended, ${errors} errors`);
-  return { total: carriers.length, revetted, critical, suspended, errors };
+  log.info(`[MonthlyReVet] Complete: ${revetted}/${carriers.length} revetted, ${critical} CRITICAL alerted, ${errors} errors`);
+  return { total: carriers.length, revetted, critical, errors };
 }
 
 // ────────────────────────────────────────────────────────────

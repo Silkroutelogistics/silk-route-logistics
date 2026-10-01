@@ -730,7 +730,7 @@ export function startSchedulers() {
     log.info("[Scheduler] Running monthly carrier re-vetting...");
     await withLock("monthly-carrier-revet", 120 * 60 * 1000, async () => {
       const result = await monthlyCarrierReVetting();
-      log.info(`[Scheduler] Monthly re-vet: ${result.revetted}/${result.total} revetted, ${result.critical} CRITICAL, ${result.suspended} suspended`);
+      log.info(`[Scheduler] Monthly re-vet: ${result.revetted}/${result.total} revetted, ${result.critical} CRITICAL alerted`);
     });
   });
 

@@ -19552,7 +19552,10 @@
 // v3.8.bos — the carrier no longer chooses Quick Pay after accept (Item 342): the portal PUT
 // refuses QP_DECIDED_AT_OFFER, My Loads shows the terms read-only, and the "Quick Pay is open"
 // notice sent at accept is removed.
-export const SRL_VERSION = "3.8.bos";
+// v3.8.bot — the monthly re-vet raises an AE alert for a CRITICAL score and never suspends
+// (carrier-unsuspend arc): its 2026-10-01 run suspended six authorized, insured carriers whose
+// scores were CRITICAL at approval. No carrier status write and no carrier notice remain.
+export const SRL_VERSION = "3.8.bot";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

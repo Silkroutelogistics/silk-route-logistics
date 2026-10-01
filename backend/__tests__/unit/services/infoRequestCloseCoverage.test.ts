@@ -98,7 +98,7 @@ const DISPOSITION: Record<string, { wired: boolean; writes: number; closes: numb
   },
   "services/complianceMonitorService.ts": {
     closes: 0,
-    writes: 7,
+    writes: 6, // was 7; the monthly re-vet no longer suspends (carrier-unsuspend arc)
     wired: false,
     why: "AUTOMATIC suspensions only. checkAutoReversal reinstates FMCSA-suspended carriers on the next compliance scan and the suspension email tells the carrier so, which makes the state transient. Closing their requests would tell a carrier to stop, reinstate them hours later, and leave the AE to re-raise everything. The APPROVED write in this file is that reversal, arriving from SUSPENDED — the requests are already closed by then",
   },
