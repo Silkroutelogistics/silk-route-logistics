@@ -19574,7 +19574,9 @@
 // load-tracking uses the shared ownership gate (lib/loadOwnershipGate).
 // v3.8.bqr — carrier portal: carriers and shippers message the SRL team only; the recipient search no longer
 // lists every account on the platform (carrier-portal-upgrade G8).
-export const SRL_VERSION = "3.8.bqr";
+// v3.8.bqs — notifications: a user can mark only their own notification read, a carrier's bell shows only
+// allowlisted carrier types, and a carrier's dispute notice opens Payments (carrier-portal-upgrade M2/G38/G39).
+export const SRL_VERSION = "3.8.bqs";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

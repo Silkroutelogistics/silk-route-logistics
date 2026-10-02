@@ -698,6 +698,11 @@ export async function notifyDisputeEvent(
   const carrierId = dispute.carrierId ?? dispute.carrierPayment.carrierId;
   const posterId = dispute.carrierPayment.load.posterId;
 
+  // carrier-portal-upgrade G39 — the carrier copy pointed at /accounting/disputes,
+  // an AE-only page, so the bell rendered it as a row with nowhere to go. A
+  // carrier's disputes are about pay, so theirs opens Payments.
+  const CARRIER_DISPUTE_URL = "/carrier/dashboard/payments";
+
   if (event === "FILED") {
     // Notify the poster that a dispute has been filed against their load
     await createNotification(
@@ -715,7 +720,7 @@ export async function notifyDisputeEvent(
         "DISPUTE_FILED",
         "Dispute Filed",
         `Dispute ${disputeLabel} has been filed regarding load ${ref}.`,
-        { actionUrl: "/accounting/disputes" }
+        { actionUrl: CARRIER_DISPUTE_URL }
       );
     }
   }
@@ -734,7 +739,7 @@ export async function notifyDisputeEvent(
           "DISPUTE_RESOLVED",
           "Dispute Resolved",
           `Dispute ${disputeLabel} for load ${ref} has been resolved (${dispute.status}).${resolutionMsg}`,
-          { actionUrl: "/accounting/disputes" }
+          { actionUrl: userId === carrierId ? CARRIER_DISPUTE_URL : "/accounting/disputes" }
         )
       )
     );
