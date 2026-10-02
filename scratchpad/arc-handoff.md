@@ -5,6 +5,222 @@ Nothing below is a regression introduced by the arc it sits under.
 
 ---
 
+## carrier-portal-upgrade arc — FINAL (2026-10-02). 28 commits on `carrier-portal-upgrade`, UNPUSHED, not merged.
+
+```
+HALT carrier-portal-upgrade @ 93310585 | pushed n | merged n | worktree ../srl-portal
+COMMITS: 28 (bou..bpu + 1 test-only); full list below
+SKIPPED: none at close. S7 was reverted once (backend gate crashed, no result) and re-applied after diagnosis
+GATES@tip: btsc 0 | btest 3791P/0F (--maxWorkers=1) | ftsc 0 | ftest 569P/0F | build ok | e2e 34/34 fresh build
+INJECTIONS: 28 slices, every one red before its fix (2 needed a second, deeper injection; recorded)
+A7: 12 fixed (G1-G8, G10 part, G11, G37, G38) | open 2 (G10 central gate, G41 session revoke) | G9 premise wrong
+GAPS: 48 open before -> 31 closed/locked/corrected, 4 partial, 13 OPEN
+A11: pages 20 WORKS/3 PARTIAL/0 BROKEN/0 STUB; controls 2 BROKEN + 2 STUB -> 3 locked (M1), avatar fixed
+M1 locked: header search, contact phone edit, notification prefs | M2 done | M3 done
+M4: 15/15 carrier pages pass 380 + 1280 (E2E, both checks: no sideways scroll, bell on top)
+A14: 11 WORKS / 8 GAP / 2 RISK; built 5, OPEN 6 | top RISK: password reset keeps old sessions (G41)
+DEFAULTS: 1 order, 2 one mapper, 3 tokens+copy, 4 superseded by M1, 5 report-only (8 items)
+OPEN: 13 numbered below | DETAIL: this file + session scratchpad a1-a14 audit files
+```
+
+### Commits (oldest first)
+
+| SHA | Ver | What |
+|---|---|---|
+| 2a3aecdb | bou | Remove unscoped `POST /carrier-loads/:id/decline` (G1) + orphan `carrier-api.js` |
+| eb9ed269 | bov | `/load-tracking/:loadId` owner gate (G2, G7) |
+| e56be0b3 | bow | Strip customer rate, margin, shipper contact from carrier load + tender responses (G3, G4) |
+| 6984256f | box | Owner gate on load accessorials + stops (G5, G6) |
+| a66d3040 | boy | Load board stops sending `Load.rate` (G37); load-tracking on the shared gate |
+| 2673e218 | boz | Carriers/shippers message SRL staff only (G8) |
+| 0192fbe7 | bpa | M1 flag file + LockedFeature; header search locked; header icon buttons named + 44px |
+| 0c9c1cb6 | bpb | Phone header no longer hidden under the menu bar (M4); responsive E2E spec |
+| 84d0f3ff | bpc | Settings: phone edit + notification prefs locked (M1); button hierarchy |
+| 0b59fb71 | (test) | Responsive spec reads `E2E_API_URL` (fixed a CI guard bpb/bpc left red) |
+| 45563003 | bpd | Notification mark-read IDOR (G38); carrier type allowlist; dispute links (G39) |
+| 20b2b071 | bpe | Notification center (M2): sheet on phone, mark read/all, focus refetch, no polling |
+| 528c6319 | bpf | Welcome tour as a bottom sheet on a phone (M3) |
+| fdb5735f | bpg | One status mapper from the DB enums (G18-G20); tender history tz + cards (G16) |
+| 870df010 | bph | Rep phone/email back on load detail, staff posters only (G40, corrects bow) |
+| 5fa31dc3 | bpi | Keyboard-selectable load cards (G28); copy/RPM/maps/rep utilities |
+| 2b13943f | bpj | My Loads on a phone (M4/M5) |
+| ec01ecd4 | bpk | Available Loads on a phone (M4/M5) |
+| 5dd179b5 | bpl | Dashboard on a phone; all 15 pages pass 380/1280 |
+| 5a0bf998 | bpm | Suspended carrier refused post-capacity + GPS (G10 part); 2FA copy (G11) |
+| eb637861 | bpn | Tenders on a phone; RPM; decline confirm under test |
+| 348c765d | bpo | Driver roster cards; named 44px row actions (G30) |
+| bff714c4 | bpp | Payments cards; DISPUTED/REJECTED/ON_HOLD chips (G11-A3) |
+| 3678ca40 | bpq | Compliance expiry dates right day west of UTC (G32) |
+| c6e25599 | bpr | Revenue: load count + YTD period (G14, G15); cards |
+| c3ae5633 | bps | Installable carrier portal manifest (G42); Terms/Privacy links (G44) |
+| 6a1ac16a | bpt | Copy sweep (activation, application status) + copy census test (G35) |
+| 93310585 | bpu | Available Loads facility lookups deduped (G33, N+1) |
+
+### Gap matrix after (G1-G48)
+
+- **Closed (27):** G1 G2 G3 G4 G5 G6 G7 G8 G11 G14 G15 G16 G18 G19 G20 G22 G28 G30 G31 G32 G33 G37 G38 G39 G40 G42 G44.
+- **Locked by M1 (3):** G12 G13 G21.
+- **Premise corrected, not built (1):** G9. `/carrier/revenue` and `/carrier/onboarding-status` serve AE pages by design and self-scope.
+- **Partial (4):**
+  - G10: two writes gated; the GETs are OPEN.
+  - G29: contrast fixed on swept pages only.
+  - G34: loading and error states added on swept pages.
+  - G35: 12 files on the copy census; My Loads, Drivers, Compliance, Documents, Training, Security and the auth pages are not.
+- **OPEN (13):** listed below.
+
+### OPEN decisions (numbered)
+
+1. **G36/A8 remit and bank change flow.** None exists today. Proposed: step-up TOTP, a 72h hold before any CarrierPay uses new details, email to the old and new address, an AE and accounting alert, an AuditTrail row, and accounting re-confirms pending pay. Needs schema and a money flow.
+2. **G12 phone edit.** Proposed: `PUT /carrier-auth/profile {phone}`, step-up gated, AuditTrail, with notice to the account email. Unlock flag `contactPhoneEdit`.
+3. **G13 notification preferences.** Needs a column or table. Unlock flag `notificationPreferences`.
+4. **G41 session revocation.** Password reset or change leaves other sessions alive. Proposed: revokeAllSessionsForUser plus a passwordChangedAt-vs-iat check in auth. Auth-model change.
+5. **G10 rest.** A suspended carrier's token still answers GETs. Proposed: a central CARRIER suspension check in tryAuthenticateToken (one indexed read). Auth-model change.
+6. **G17 Quick Pay fee preview.** It computes on gross; the backend nets at-cost reimbursements first. Needs the reimbursement figure in the payments response (money).
+7. **G23/G24 orphan pages** (loadboard, revenue): link from the nav or delete. Loadboard duplicates Available Loads with bidding.
+8. **G45 accessorial request UI.** Detention, lumper and TONU with receipts. The backend accepts CARRIER (now owner-gated). This is a money claim, so it was not built.
+9. **G46 multi-user carriers.** `CarrierProfile.userId @unique`. Schema.
+10. **G26/G27 notifications.** Message send notifies nobody; a password change sends no confirmation email.
+11. **G43 + G47 unbuilt UI.**
+    - G43: upload `capture="environment"` and a client-side size check.
+    - G47: messaging single-pane at 380. E2E shows no overflow; it is unverified by eye.
+    - Also unbuilt: M5 on Documents, Training, Scorecard, Messaging, Security, and the Activation table to cards.
+12. **G48 gate defect, outside this arc.** `e2e/run-local.mjs` reuses `frontend/out` whenever the API URL is baked in, so a frontend edit is not re-tested until `out/` is deleted (`run-local.mjs:378-390`). Key the reuse on a source hash, or always rebuild.
+13. **Process and housekeeping.**
+    - Version letters bou..bpu were claimed against origin at commit time; re-letter if origin moved before merge.
+    - `detentionWarnings` has no consumer in the repo (keep or remove).
+    - The shared Toast is dark-themed and fails contrast on cream, so carrier pages use inline status and alert messages.
+    - Signup consent text lives outside the portal.
+    - Load 5003 numbering (data fix) was not touched (default 5).
+
+### Exceptions and notes, logged
+
+- **Cap exceptions under the census-test rule:**
+  - S3 (bow): the census test pushed it over 100 LOC.
+  - M2b (bpe): 5 files, because two guard tests had to follow the code they watch.
+  - bpt: over 100 LOC, the copy census.
+- **Version footer** is counted as bookkeeping outside the 4-file cap, one letter per slice per §3.1.
+- **Backend gate at `--maxWorkers=1` from bpm on.**
+  - At 2 workers the forks pool died with ERR_IPC_CHANNEL_CLOSED twice, both times after invoicePoLine.test.ts, and the clean tip crashed the same way.
+  - At 1 worker the clean tip was 3785/0.
+  - One later 1-worker crash (bpp) was rerun once and passed.
+- **Frontend slices before the port fix:** bpb and bpc ran only the frontend suites, and the backend guard e2ePortParity went red. Fixed forward in 0b59fb71. From then on, both suites ran on every slice.
+- **E2E ran on this arc's own container** (srl-e2e-portal, pg 55462, ports 3111/4101), always on a fresh build (`rm -rf frontend/out`, see G48). The container was removed at close.
+- **Not touched:** the foreign ts-node-dev on :3110 and the other sessions' containers and processes.
+- A stray empty file created by a mistaken path (`C:\WASIHA~1\placeholder.txt`) was deleted within the same minute; it held one byte and nothing else.
+
+### Owner walkthrough checklist (desktop 1280 + phone 380; light and dark where the OS offers both)
+
+Sign in as a carrier.
+- [ ] **Login.** OTP and TOTP still work.
+- [ ] **First load.** The tour opens as a bottom sheet on the phone and a card on desktop. Next is tappable (not covered by the assistant button). Skip works, and Replay works from Settings.
+- [ ] **Header on the phone.** The bell and logout show below the navy bar. Search shows a lock, "Available soon", and its reason on tap.
+- [ ] **Bell.** The unread count shows; on the phone the list opens as a sheet. Mark one read, then mark all read. An item opens its page; a dispute notice opens Payments.
+- [ ] **Locked items.**
+  - Settings: Edit phone shows a lock and its reason, and the phone is a tel: link.
+  - Settings: Choose notices shows a lock, and the notices list is read-only.
+- [ ] **Dashboard.** KPIs show two across on the phone. Active load rows open the load on My Loads; RPM shows beside rates.
+- [ ] **Available Loads.** Pick a card with Tab and Enter, and see the selected state. The detail comes first on the phone. Copy the load number, open a stop in maps, call the rep. Accept fires once.
+- [ ] **Tenders.** RPM beside the offer; actions stack on the phone. Decline needs a reason and a confirm.
+- [ ] **Tender History.** Cards on the phone; the pickup date is correct.
+- [ ] **My Loads.**
+  - Chips read in words. The detail comes first on the phone.
+  - Copy the number and addresses, open maps, and call or email the rep (fallback: the SRL main line).
+  - A TONU load shows a gold TONU badge.
+- [ ] **Drivers** (add one first). Cards on the phone; row icons are named 44px buttons; deactivate asks first.
+- [ ] **Payments.** Cards on the phone. On hold, Disputed and Rejected chips; Disputed and Rejected badges are red.
+- [ ] **Compliance.** Expiry dates match the certificate day (check from a US-west timezone if possible).
+- [ ] **Revenue** (`/carrier/dashboard/revenue`). Total Loads is non-zero, and YTD changes the data.
+- [ ] **Sidebar.** Terms and Privacy links are present; the drawer on the phone is 44px.
+- [ ] **Install.** "Add to Home Screen" on a phone opens straight to the carrier dashboard, standalone.
+- [ ] **Not swept** (expect old styling): Documents, Training, Scorecard, Messaging, Security, Loadboard.
+
+---
+
+---
+
+## carrier-portal-upgrade arc — Phase A (read-only audit, 2026-10-01). NO edits.
+
+```
+HALT carrier-portal-upgrade/PhaseA @ 33f36e06 | pushed n
+COMMITS: none (read-only)
+GATES (baseline, worktree ../srl-portal): btsc 0 | test 3749P/0F/4skip | ftsc 0 | ftest 494P/0F
+INJECTIONS: n/a in Phase A
+FINDINGS: 5 P0 security verified by hand (IDOR decline, confirm-loaded/delivered, 2 margin+PII leaks)
+FINDINGS: 2 Settings Save buttons 404 by construction; 3 un-unified status mappers, 13 enum values unlabelled
+FINDINGS: A8 no bank/remit surface exists for carriers; A10 suspended token still answers GETs
+OPEN: see gap matrix + OPEN list in the Phase B card
+DETAIL: session scratchpad a1-a3.md, a4-a5-a9.md, a7-security.md, a8-a10.md
+```
+
+**Assumption logged:** no prior carrier-portal Phase A existed and the A1-A6 directive text was not in the
+repo. A1-A6 were reconstructed from the directive's own references: A1 inventory, A2 defects, A3 data
+correctness (status labels), A4 shell/nav, A5 brand, A6 gap matrix (below).
+
+**Baseline note:** in this fresh worktree the 14-test foreign baseline does not exist (those files are
+untracked in the main checkout only), so the baseline is 0 failures and "red" means any failure.
+
+**P0s verified by hand, not just reported by an agent:** G1 (`carrierLoads.ts:412-452`), G2
+(`loadTracking.ts:344,455`), G3 (`carrierLoads.ts:240-271`, every Load scalar plus `customer` contact),
+G4 (`tenderController.ts:830-849`). Found during verification: G7 (`loadTracking.ts:103` GET events has no
+role or ownership gate).
+
+### A6 gap matrix (before = Phase A)
+
+| G | Sev | Area | Gap | Disposition plan |
+|---|---|---|---|---|
+| G1 | P0 | A7 | `POST /carrier-loads/:id/decline` settles another carrier's tender | fix |
+| G2 | P0 | A7 | `confirm-loaded` / `confirm-delivered` no ownership | fix |
+| G3 | P0 | A7 | `GET /carrier-loads/:id` returns margin, customer rate, customer contact | fix |
+| G4 | P0 | A7 | `GET /carrier/tenders` returns full load incl. margin | fix |
+| G5 | P1 | A7 | `load-accessorials` GET/POST unscoped | fix |
+| G6 | P1 | A7 | `load-stops` PUT/PATCH unscoped for CARRIER | fix |
+| G7 | P1 | A7 | `load-tracking` GET events/detention no role/ownership | fix |
+| G8 | P1 | A7 | `messages/users` enumerates every user; send to anyone | fix (staff + existing partners) |
+| G9 | P2 | A7 | 5 `/carrier` GETs lack `authorize("CARRIER")` | fix |
+| G10 | P2 | A7 | SUSPENDED carrier token answers GETs, post-capacity, gps-update | partial fix; central gate OPEN (auth model) |
+| G11 | P1 | A2 | 2FA wall error claims SRL holds bank details | fix |
+| G12 | P0 | A2 | Settings phone Save PUTs a route that does not exist | remove control; endpoint OPEN |
+| G13 | P0 | A2 | Settings notification prefs Save 404, no column, never read | remove control; OPEN |
+| G14 | P1 | A2 | revenue reads `totalLoads`, API returns `loadCount` | fix |
+| G15 | P1 | A2 | revenue YTD tab sends `monthly` | fix |
+| G16 | P1 | A9 | tender-history pickup date unzoned (SRL-121497 class) | fix |
+| G17 | P1 | A2 | Quick Pay fee preview on gross, backend nets reimbursements | OPEN (needs new response data, money) |
+| G18 | P1 | A3 | CarrierPayStatus: 6/11 unlabelled incl. DISPUTED, REJECTED | fix |
+| G19 | P2 | A3 | LoadStatus: 7/18 unlabelled incl. TONU, TENDERED, INVOICED | fix |
+| G20 | P1 | A3 | 3 independent status mappers, one keyed across 3 enums | fix (one shared mapper) |
+| G21 | P2 | A4 | header search box filters nothing | remove |
+| G22 | P2 | A4 | avatar shows pointer, no handler | fix |
+| G23 | P2 | A4 | orphan `loadboard` page duplicates Available Loads | OPEN (link or delete) |
+| G24 | P2 | A4 | orphan `revenue` page | OPEN (link or delete) |
+| G25 | P1 | A4 | second carrier nav in `components/layout/Sidebar.tsx` disagrees | verify, fix or OPEN |
+| G26 | P2 | A10 | carrier message send notifies nobody | OPEN |
+| G27 | P2 | A8 | password change sends no confirmation email | OPEN |
+| G28 | P0 | A9 | `CarrierCard` click target not keyboard reachable | fix |
+| G29 | P1 | A9 | `text-gray-400` on cream 2.38:1 at 44 sites | fix (portal pages) |
+| G30 | P1 | A9 | drivers icon buttons ~26px, title only | fix |
+| G31 | P1 | A9 | shell bell/logout/close buttons unnamed | fix |
+| G32 | P1 | A9 | compliance expiry dates unzoned x4 | fix |
+| G33 | P1 | A9 | N+1 in `GET /carrier-loads/available` | fix if within cap |
+| G34 | P2 | A9 | no loading state: dashboard, revenue, documents, messaging, settings | fix |
+| G35 | P2 | A5 | contractions 19 sites, em dashes in UI copy | fix |
+| G36 | P1 | A8 | no remit/bank change flow exists; future flow needs design | OPEN (report only) |
+
+### Addenda 1+2 read-only pass (A11-A14), run after S4
+
+| Audit | Result |
+|---|---|
+| A11 journey | 23 pages: 20 WORKS, 3 PARTIAL (layout chrome, Settings), 0 BROKEN/STUB pages. ~75 controls: 2 BROKEN (Settings phone Save, notification prefs Save: routes absent), 2 STUB (header search `layout.tsx:259`, avatar `layout.tsx:336`). Messaging and Training WORK. Orphans: loadboard, revenue (no link anywhere); scorecard linked from Dashboard only |
+| A12 notifications | `Notification.type` is free text. ~94 writers: 31 carrier-facing, ~45 internal; recipient selection holds, no internal-to-carrier leak found. G38: `PATCH /notifications/:id/read` unscoped (`notificationController.ts:14-20`). G39: DISPUTE_* rows point carriers at `/accounting/disputes` (`notificationService.ts:713,732`) |
+| A13 responsive | 380/768/1280: 9 pages + chrome pass all three; 8 fail at 380 or 768 (messaging `grid-cols-[300px_1fr]` :93, my-loads :143, available-loads :99, compliance :437, KPI rows on dashboard/payments/revenue/documents). Sidebar drawer is correct below lg. Playwright has no viewport projects (`playwright.config.ts`, default 1280x720) |
+| A14 blind spots | 11 WORKS, 8 GAP, 2 RISK. RISK: reset/change password leaves other sessions alive (auth change, OPEN). RISK: no rep contact on load detail (G40, and S3 removed the AE phone/email: corrected in a later slice) |
+
+New gaps: G38 notification read IDOR (fix in M2) · G39 dispute actionUrl dead end · G40 AE contact on load detail · G41 session revoke on password reset (OPEN, auth) · G42 manifest `display: browser` · G43 upload `capture` + client size check · G44 no terms/privacy links in carrier chrome · G45 no accessorial request UI (OPEN, money) · G46 multi-user carriers (OPEN, schema: `CarrierProfile.userId @unique`) · G47 messaging single-pane at 380.
+
+M1 lock list (from A11): header search, Settings contact-phone edit, Settings notification preferences. Avatar is decoration, not a feature: made non-interactive. Messaging is NOT locked (A11: WORKS).
+M3 storage: `portalTourCompletedAt` already exists on the activation-status payload (v3.8.bei), so no localStorage.
+
+---
+
 ## Tender email + magic link arc (Items 329, 330) — Phase B pushed to main (2026-09-27), a fast-forward of `fix/tender-link`
 
 **Phase B, 2026-09-27: built, gated, and pushed to main as a fast-forward.** Four commits, taken in the order of the rulings.
