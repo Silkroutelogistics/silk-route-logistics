@@ -129,6 +129,9 @@ const OWN_CLIENT_INVENTORY: Record<string, Reason> = {
   "cleanup-notification-dupes.ts": "PRODUCTION_WRITE",
   // carrier-unsuspend arc: dry run READ ONLY by default; --execute writes production from .env.production.local.
   "reinstate-erroneous-suspensions.ts": "PRODUCTION_WRITE",
+  // health-digest arc B6: dry run as srl_readonly in a READ ONLY txn; --execute deletes two
+  // orphan cron_registry rows with the owner URL, endpoint-matched, all-or-nothing.
+  "delete-orphan-cron-rows.ts": "PRODUCTION_WRITE",
   "_arc-a2-counter-proof.ts": "PROOF",
   // v3.8.blr — the bare client IS the instrument: it reads the stored EIN
   // bytes without the encryption extension, to prove they are ciphertext.
