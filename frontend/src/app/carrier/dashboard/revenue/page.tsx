@@ -6,17 +6,16 @@ import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { api } from "@/lib/api";
 import { CarrierCard } from "@/components/carrier";
-import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 
 type Period = "weekly" | "monthly" | "ytd";
 
 export default function CarrierRevenuePage() {
   const [period, setPeriod] = useState<Period>("monthly");
-  const { user } = useCarrierAuth();
 
   const { data: rev } = useQuery({
     queryKey: ["carrier-revenue", period],
-    queryFn: () => api.get(`/carrier/revenue?period=${period === "ytd" ? "monthly" : period}`).then((r) => r.data),
+    // carrier-portal-upgrade G15: the YTD tab used to send `monthly` and show trailing-12-month data under a YTD label.
+    queryFn: () => api.get(`/carrier/revenue?period=${period}`).then((r) => r.data),
   });
 
   const { data: paySum } = useQuery({
@@ -58,7 +57,7 @@ export default function CarrierRevenuePage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Revenue &amp; Earnings</h1>
-          <p className="text-[13px] text-gray-500">Track revenue performance across your loads</p>
+          <p className="text-[13px] text-[#5B6B7D]">Track revenue performance across your loads</p>
         </div>
         <div className="flex bg-[#F5EEE0] rounded-lg p-0.5">
           {(["weekly", "monthly", "ytd"] as Period[]).map((p) => (
@@ -66,7 +65,7 @@ export default function CarrierRevenuePage() {
               key={p}
               onClick={() => setPeriod(p)}
               className={`px-4 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-wider transition-all ${
-                p === period ? "bg-white text-[#0A2540] shadow-sm" : "text-gray-500 hover:text-gray-700"
+                p === period ? "bg-white text-[#0A2540] shadow-sm" : "text-[#5B6B7D] hover:text-[#3A4A5F]"
               }`}
             >{p === "ytd" ? "YTD" : p.charAt(0).toUpperCase() + p.slice(1)}</button>
           ))}
@@ -74,19 +73,19 @@ export default function CarrierRevenuePage() {
       </div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
         {[
           { icon: DollarSign, color: "text-[#BA7517]", label: "Total Revenue", value: fmt(rev?.totalRevenue) },
-          { icon: Truck, color: "text-[#2A5B8B]", label: "Total Loads", value: String(rev?.totalLoads || 0) },
+          { icon: Truck, color: "text-[#2A5B8B]", label: "Total Loads", value: String(rev?.loadCount ?? 0) }, // G14: was rev.totalLoads, which the API never sends
           { icon: TrendingUp, color: "text-[#2F7A4F]", label: "Avg Per Load", value: fmt(rev?.avgPerLoad) },
           { icon: CreditCard, color: "text-[#2A5B8B]", label: "YTD Earnings", value: fmt(paySum?.ytdEarnings?.amount) },
         ].map((kpi) => (
           <CarrierCard key={kpi.label} padding="p-5">
             <div className="flex items-center gap-2 mb-2">
               <kpi.icon size={16} className={kpi.color} />
-              <span className="text-[11px] text-gray-700 uppercase tracking-wide">{kpi.label}</span>
+              <span className="text-[11px] text-[#3A4A5F] uppercase tracking-wide">{kpi.label}</span>
             </div>
-            <div className="text-[28px] font-bold text-[#0A2540]">{kpi.value}</div>
+            <div className="text-xl lg:text-[28px] font-bold text-[#0A2540] break-words">{kpi.value}</div>
           </CarrierCard>
         ))}
       </div>
@@ -95,7 +94,7 @@ export default function CarrierRevenuePage() {
       <CarrierCard className="mb-6" padding="p-5">
         <h2 className="text-sm font-semibold text-[#0A2540] mb-4">Revenue Over Time</h2>
         {chartData.length === 0 ? (
-          <p className="text-sm text-gray-700 text-center py-12">No revenue data for this period</p>
+          <p className="text-sm text-[#3A4A5F] text-center py-12">No revenue data for this period</p>
         ) : (
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={chartData}>
@@ -109,7 +108,7 @@ export default function CarrierRevenuePage() {
         )}
       </CarrierCard>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         {/* Revenue Breakdown Table */}
         <div className="col-span-2">
           <CarrierCard padding="p-0">
@@ -117,30 +116,30 @@ export default function CarrierRevenuePage() {
               <h2 className="text-sm font-semibold text-[#0A2540]">Revenue Breakdown</h2>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="bg-gray-50">
+              <table className="w-full text-[13px] block md:table">
+                <thead className="hidden md:table-header-group">
+                  <tr className="bg-[#FBF7F0]">
                     {["Load Ref#", "Route", "Amount", "Status", "Date"].map((h) => (
-                      <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold text-gray-500 tracking-wide uppercase">{h}</th>
+                      <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold text-[#5B6B7D] tracking-wide uppercase">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="block md:table-row-group">
                   {invoices.length === 0 ? (
-                    <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-700">No invoices found</td></tr>
+                    <tr className="block md:table-row"><td colSpan={5} className="block md:table-cell px-4 py-10 text-center text-sm text-[#3A4A5F]">No invoices in this period</td></tr>
                   ) : invoices.slice(0, 15).map((inv: any, i: number) => (
-                    <tr key={i} className="border-b border-[#F5EEE0] hover:bg-gray-50">
-                      <td className="px-4 py-2.5 font-mono text-[11px] font-semibold text-[#0A2540]">{inv.load?.referenceNumber || "—"}</td>
-                      <td className="px-4 py-2.5 text-xs text-gray-600">
-                        {inv.load ? `${inv.load.originCity}, ${inv.load.originState} → ${inv.load.destCity}, ${inv.load.destState}` : "—"}
+                    <tr key={i} className="block md:table-row p-3 md:p-0 border-b border-[#F5EEE0] hover:bg-[#FBF7F0]">
+                      <td data-label="Load" className="block md:table-cell px-0 py-1 md:px-4 md:py-2.5 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none font-mono text-[11px] font-semibold text-[#0A2540]">{inv.load?.referenceNumber || "Not set"}</td>
+                      <td data-label="Route" className="block md:table-cell px-0 py-1 md:px-4 md:py-2.5 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none text-xs text-[#3A4A5F]">
+                        {inv.load ? `${inv.load.originCity}, ${inv.load.originState} → ${inv.load.destCity}, ${inv.load.destState}` : "Not set"}
                       </td>
-                      <td className="px-4 py-2.5 font-bold text-[#0A2540]">${(inv.amount || 0).toLocaleString()}</td>
-                      <td className="px-4 py-2.5">
+                      <td data-label="Amount" className="block md:table-cell px-0 py-1 md:px-4 md:py-2.5 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none font-bold text-[#0A2540]">${(inv.amount || 0).toLocaleString()}</td>
+                      <td data-label="Status" className="block md:table-cell px-0 py-1 md:px-4 md:py-2.5 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                           inv.status === "PAID" ? "bg-[#E6F0E9] text-[#2F7A4F]" : "bg-[#FBEFD4] text-[#B07A1A]"
                         }`}>{inv.status}</span>
                       </td>
-                      <td className="px-4 py-2.5 text-xs text-gray-500">{new Date(inv.createdAt).toLocaleDateString()}</td>
+                      <td data-label="Date" className="block md:table-cell px-0 py-1 md:px-4 md:py-2.5 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none text-xs text-[#5B6B7D]">{new Date(inv.createdAt).toLocaleDateString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -158,12 +157,12 @@ export default function CarrierRevenuePage() {
               <h2 className="text-sm font-semibold text-[#0A2540]">Top Lanes</h2>
             </div>
             {topLanes.length === 0 ? (
-              <p className="text-xs text-gray-700 text-center py-4">No lane data yet</p>
+              <p className="text-xs text-[#3A4A5F] text-center py-4">No lane data yet</p>
             ) : topLanes.map((lane, i) => (
               <div key={i} className="flex justify-between items-center py-2 border-b border-[#F5EEE0] last:border-0">
                 <div>
                   <div className="text-[12px] font-semibold text-[#0A2540]">{lane.lane}</div>
-                  <div className="text-[10px] text-gray-700">{lane.count} loads</div>
+                  <div className="text-[10px] text-[#3A4A5F]">{lane.count} loads</div>
                 </div>
                 <div className="text-[13px] font-bold text-[#BA7517]">{fmt(lane.revenue)}</div>
               </div>
@@ -179,10 +178,10 @@ export default function CarrierRevenuePage() {
             {[
               { label: "Pending Pay", value: fmt(paySum?.totalPending?.amount), color: "text-[#B07A1A]" },
               { label: "Paid This Month", value: fmt(paySum?.totalPaid?.amount), color: "text-[#2F7A4F]" },
-              { label: "QuickPay Savings", value: fmt(paySum?.quickPaySavings || paySum?.quickPayUsed?.discount), color: "text-[#BA7517]" },
+              { label: "QuickPay Savings", value: fmt(paySum?.quickPayUsed?.discount), color: "text-[#BA7517]" },
             ].map((item) => (
               <div key={item.label} className="flex justify-between items-center py-2 border-b border-[#F5EEE0] last:border-0">
-                <span className="text-[12px] text-gray-500">{item.label}</span>
+                <span className="text-[12px] text-[#5B6B7D]">{item.label}</span>
                 <span className={`text-[13px] font-bold ${item.color}`}>{item.value}</span>
               </div>
             ))}

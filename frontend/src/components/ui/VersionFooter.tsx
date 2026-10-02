@@ -19638,7 +19638,9 @@
 // pay, names each status in words, and carries no contraction (carrier-portal-upgrade G11/M4/M5).
 // v3.8.brt — carrier portal: insurance and expiry dates on Compliance show their own day west of UTC, and its
 // badges name tier and insurance status in words (carrier-portal-upgrade G32).
-export const SRL_VERSION = "3.8.brt";
+// v3.8.bru — carrier portal: Revenue counts the carrier's loads, its YTD tab asks for year-to-date, and its
+// invoices read as cards on a phone (carrier-portal-upgrade G14/G15/M4).
+export const SRL_VERSION = "3.8.bru";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
