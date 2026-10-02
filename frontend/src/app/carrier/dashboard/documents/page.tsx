@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { File, Download, Search, Shield, FileText, CheckCircle, Upload, X, Loader2 } from "lucide-react";
+import { File, Download, Search, Shield, FileText, CheckCircle, Upload, X, Loader2, Camera } from "lucide-react";
+import { BTN } from "@/lib/carrierUi";
+
+// carrier-portal-upgrade F2/G43 — the server refuses a file over 10MB
+// (config/upload.ts), so the page says so before a driver on a weak signal waits
+// for an upload that cannot succeed.
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { PAPERWORK_DOC_TYPES, PAPERWORK_DOC_LABELS } from "@shared/constants/paperwork";
@@ -45,6 +51,19 @@ const COMPLIANCE_TYPES = ["W9", "COI", "AUTHORITY", "OTHER"];
 export default function CarrierDocumentsPage() {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const [sizeError, setSizeError] = useState<string | null>(null);
+  // One gate for every way a file arrives (picker, camera, drop).
+  const choose = (file: File | null | undefined) => {
+    if (!file) return;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setSelectedFile(null);
+      setSizeError(`${file.name} is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 10 MB; take a smaller photo or scan at a lower resolution.`);
+      return;
+    }
+    setSizeError(null);
+    setSelectedFile(file);
+  };
   const [showUpload, setShowUpload] = useState(false);
   const [uploadDocType, setUploadDocType] = useState("POD");
   const [uploadLoadId, setUploadLoadId] = useState("");
@@ -171,22 +190,23 @@ export default function CarrierDocumentsPage() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) setSelectedFile(file);
+    choose(e.dataTransfer.files?.[0]);
   };
 
   return (
     <div>
-      <div className="flex justify-between items-start mb-6">
+      <div className="flex flex-wrap justify-between items-start gap-3 mb-6">
         <div>
           <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Documents</h1>
-          <p className="text-[13px] text-gray-500">All your compliance documents, rate confirmations, BOLs, and PODs</p>
+          <p className="text-[13px] text-[#5B6B7D]">All your compliance documents, rate confirmations, BOLs, and PODs</p>
         </div>
         <button
+          type="button"
           onClick={() => setShowUpload(!showUpload)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-[#BA7517] text-[#FBF7F0] text-xs font-semibold rounded-md hover:shadow-lg transition-shadow"
+          aria-expanded={showUpload}
+          className={BTN.primary}
         >
-          <Upload size={14} /> Upload Document
+          <Upload size={14} aria-hidden="true" /> Upload Document
         </button>
       </div>
 
@@ -197,18 +217,19 @@ export default function CarrierDocumentsPage() {
             <h3 className="text-sm font-bold text-[#0A2540] flex items-center gap-2">
               <Upload size={16} className="text-[#BA7517]" /> Upload Document
             </h3>
-            <button onClick={() => { setShowUpload(false); setSelectedFile(null); }} className="text-gray-700 hover:text-gray-600">
-              <X size={16} />
+            <button type="button" onClick={() => { setShowUpload(false); setSelectedFile(null); setSizeError(null); }} aria-label="Close upload" className={`inline-flex h-11 w-11 items-center justify-center rounded text-[#5B6B7D] hover:bg-[#F5EEE0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]`}>
+              <X size={16} aria-hidden="true" />
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
             <div>
-              <label className="text-xs text-gray-700 block mb-1">Document Type</label>
+              <label htmlFor="doc-type" className="text-xs text-[#3A4A5F] block mb-1">Document Type</label>
               <select
+                id="doc-type"
                 value={uploadDocType}
                 onChange={(e) => { setUploadDocType(e.target.value); setUploadLoadId(""); }}
-                className="w-full px-3 py-2 border border-[#EFE6D3] rounded text-xs focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none bg-white"
+                className="w-full min-h-[44px] px-3 py-2 border border-[#EFE6D3] rounded text-sm bg-white transition-colors duration-150 motion-reduce:transition-none focus:border-[#BA7517] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]/40"
               >
                 {DOC_TYPE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -217,15 +238,16 @@ export default function CarrierDocumentsPage() {
             </div>
             {isLoadDocType && (
               <div>
-                <label className="text-xs text-gray-700 block mb-1">Load Reference</label>
+                <label htmlFor="doc-load" className="text-xs text-[#3A4A5F] block mb-1">Load Reference</label>
                 <select
+                  id="doc-load"
                   value={uploadLoadId}
                   onChange={(e) => setUploadLoadId(e.target.value)}
-                  className="w-full px-3 py-2 border border-[#EFE6D3] rounded text-xs focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none bg-white"
+                  className="w-full min-h-[44px] px-3 py-2 border border-[#EFE6D3] rounded text-sm bg-white transition-colors duration-150 motion-reduce:transition-none focus:border-[#BA7517] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]/40"
                 >
                   <option value="">Select a load...</option>
                   {loads.map((load: LoadWithDocs) => (
-                    <option key={load.id} value={load.id}>{load.referenceNumber} — {load.originCity} → {load.destCity}</option>
+                    <option key={load.id} value={load.id}>{load.referenceNumber}: {load.originCity} → {load.destCity}</option>
                   ))}
                 </select>
               </div>
@@ -238,7 +260,11 @@ export default function CarrierDocumentsPage() {
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
             onClick={() => fileRef.current?.click()}
-            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+            role="button"
+            tabIndex={0}
+            aria-label={selectedFile ? `Selected file ${selectedFile.name}. Choose a different file` : "Choose a file to upload"}
+            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); fileRef.current?.click(); } }}
+            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] ${
               dragOver ? "border-[#C5A572] bg-[#BA7517]/5" : "border-[#EFE6D3] hover:border-[#C5A572]/50"
             }`}
           >
@@ -247,44 +273,55 @@ export default function CarrierDocumentsPage() {
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
               className="hidden"
-              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+              onChange={(e) => choose(e.target.files?.[0])}
             />
             {selectedFile ? (
               <div className="flex items-center justify-center gap-2">
                 <FileText size={18} className="text-[#BA7517]" />
                 <span className="text-sm font-medium text-[#0A2540]">{selectedFile.name}</span>
-                <span className="text-[11px] text-gray-700">({(selectedFile.size / 1024).toFixed(0)} KB)</span>
-                <button onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }} className="text-gray-700 hover:text-[#9B2C2C] ml-1">
-                  <X size={14} />
+                <span className="text-[11px] text-[#3A4A5F]">({(selectedFile.size / 1024).toFixed(0)} KB)</span>
+                <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }} aria-label="Remove the selected file" className={`inline-flex h-11 w-11 items-center justify-center rounded text-[#5B6B7D] hover:text-[#9B2C2C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]`}>
+                  <X size={14} aria-hidden="true" />
                 </button>
               </div>
             ) : (
               <>
-                <Upload size={24} className="mx-auto mb-2 text-gray-500" />
-                <p className="text-xs text-gray-500">Drag & drop or click to select</p>
-                <p className="text-[10px] text-gray-700 mt-1">PDF, JPEG, PNG up to 10MB</p>
+                <Upload size={24} className="mx-auto mb-2 text-[#5B6B7D]" />
+                <p className="text-xs text-[#5B6B7D]">Drag and drop, or tap to choose a file</p>
+                <p className="text-[11px] text-[#3A4A5F] mt-1">PDF, JPEG, PNG up to 10 MB</p>
               </>
             )}
           </div>
 
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => choose(e.target.files?.[0])} />
+            <button type="button" onClick={() => cameraRef.current?.click()} className={BTN.secondary}>
+              <Camera size={14} aria-hidden="true" /> Take a photo
+            </button>
+            <span className="text-[11px] text-[#5B6B7D]">Opens the camera on a phone.</span>
+          </div>
+          {sizeError && <p role="alert" className="text-xs text-[#9B2C2C] mt-2">{sizeError}</p>}
+
           {uploadMutation.isError && (
-            <p className="text-xs text-[#9B2C2C] mt-2">{(uploadMutation.error as Error & { response?: { data?: { error?: string } } })?.response?.data?.error || (uploadMutation.error as Error)?.message || "Upload failed"}</p>
+            <p role="alert" className="text-xs text-[#9B2C2C] mt-2">{(uploadMutation.error as Error & { response?: { data?: { error?: string } } })?.response?.data?.error || (uploadMutation.error as Error)?.message || "Upload failed"}</p>
           )}
 
           <div className="flex justify-end mt-4">
             <button
-              onClick={() => uploadMutation.mutate()}
+              type="button"
+              onClick={() => { if (!uploadMutation.isPending) uploadMutation.mutate(); }}
               disabled={!selectedFile || (isLoadDocType && !uploadLoadId) || uploadMutation.isPending}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#BA7517] text-[#FBF7F0] text-xs font-semibold rounded-md disabled:opacity-40"
+              title={!selectedFile ? "Choose a file first" : isLoadDocType && !uploadLoadId ? "Choose the load this document belongs to" : undefined}
+              className={BTN.primary}
             >
-              {uploadMutation.isPending ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : "Upload"}
+              {uploadMutation.isPending ? <><Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> Uploading...</> : "Upload"}
             </button>
           </div>
         </CarrierCard>
       )}
 
       {/* Type counts */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {[...typeCounts.entries()].slice(0, 4).map(([type, count]) => (
           <CarrierCard key={type} padding="p-4">
             <div className="flex items-center gap-3">
@@ -293,7 +330,7 @@ export default function CarrierDocumentsPage() {
               </div>
               <div>
                 <div className="text-lg font-bold text-[#0A2540]">{count}</div>
-                <div className="text-[11px] text-gray-700">{typeLabels[type] || type}</div>
+                <div className="text-[11px] text-[#3A4A5F]">{typeLabels[type] || type}</div>
               </div>
             </div>
           </CarrierCard>
@@ -309,14 +346,14 @@ export default function CarrierDocumentsPage() {
             </h3>
           </div>
           {complianceDocs.map((doc: DocItem, i: number) => (
-            <div key={doc.id || i} className="px-5 py-3.5 border-b border-[#F5EEE0] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-md bg-[#2A5B8B]/10 flex items-center justify-center">
+            <div key={doc.id || i} className="px-4 sm:px-5 py-3.5 border-b border-[#F5EEE0] flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 shrink-0 rounded-md bg-[#2A5B8B]/10 flex items-center justify-center">
                   <Shield size={16} className="text-[#2A5B8B]" />
                 </div>
                 <div>
-                  <div className="text-[13px] font-semibold text-[#0A2540]">{doc.fileName || doc.type}</div>
-                  <div className="text-[11px] text-gray-700">{doc.docType || doc.type}</div>
+                  <div className="text-[13px] font-semibold text-[#0A2540] break-all">{doc.fileName || doc.type}</div>
+                  <div className="text-[11px] text-[#3A4A5F]">{doc.docType || doc.type}</div>
                 </div>
               </div>
               {doc.uploaded || doc.fileUrl ? (
@@ -340,17 +377,17 @@ export default function CarrierDocumentsPage() {
           </div>
         )}
         {loadDocs.length === 0 ? (
-          <div className="px-5 py-12 text-center text-sm text-gray-700">No load documents yet</div>
+          <div className="px-5 py-12 text-center text-sm text-[#3A4A5F]">No load documents yet. Rate confirmations, bills of lading and proofs of delivery appear here once a load is booked.</div>
         ) : (
           loadDocs.slice(0, 20).map((doc: DocItem) => (
-            <div key={doc.id} className="px-5 py-3.5 border-b border-[#F5EEE0] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-md bg-[#9B2C2C]/10 flex items-center justify-center">
+            <div key={doc.id} className="px-4 sm:px-5 py-3.5 border-b border-[#F5EEE0] flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 shrink-0 rounded-md bg-[#9B2C2C]/10 flex items-center justify-center">
                   <File size={16} className="text-[#9B2C2C]" />
                 </div>
                 <div>
-                  <div className="text-[13px] font-semibold text-[#0A2540]">{doc.fileName}</div>
-                  <div className="text-[11px] text-gray-700">{doc.docType || "DOC"} &middot; {doc.loadRef}</div>
+                  <div className="text-[13px] font-semibold text-[#0A2540] break-all">{doc.fileName}</div>
+                  <div className="text-[11px] text-[#3A4A5F]">{doc.docType || "DOC"} &middot; {doc.loadRef}</div>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -370,21 +407,22 @@ export default function CarrierDocumentsPage() {
                       try {
                         await openPdfFromApi(doc.pdfPath!);
                       } catch (err) {
-                        setDocError(await extractApiError(err, "Couldn't open this document."));
+                        setDocError(await extractApiError(err, "Could not open this document."));
                       }
                     }}
-                    className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]"
+                    aria-label={`View ${doc.fileName}`}
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded px-2 text-[#3A4A5F] text-[11px] font-semibold uppercase tracking-wider transition-colors duration-150 motion-reduce:transition-none hover:text-[#854F0B] hover:bg-[#F5EEE0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]"
                   >
-                    <Search size={14} /> View
+                    <Search size={14} aria-hidden="true" /> View
                   </button>
                 )}
                 {!doc.pdfPath && !doc.id.startsWith("rc-") && (
                   <>
-                    <a href={apiHref(`/documents/${doc.id}/download`)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
-                      <Search size={14} /> View
+                    <a href={apiHref(`/documents/${doc.id}/download`)} target="_blank" rel="noopener noreferrer" aria-label={`View ${doc.fileName}`} className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded px-2 text-[#3A4A5F] text-[11px] font-semibold uppercase tracking-wider transition-colors duration-150 motion-reduce:transition-none hover:text-[#854F0B] hover:bg-[#F5EEE0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]">
+                      <Search size={14} aria-hidden="true" /> View
                     </a>
-                    <a href={apiHref(`/documents/${doc.id}/download`)} className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
-                      <Download size={14} />
+                    <a href={apiHref(`/documents/${doc.id}/download`)} aria-label={`Download ${doc.fileName}`} title="Download" className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded px-2 text-[#3A4A5F] text-[11px] font-semibold uppercase tracking-wider transition-colors duration-150 motion-reduce:transition-none hover:text-[#854F0B] hover:bg-[#F5EEE0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]">
+                      <Download size={14} aria-hidden="true" />
                     </a>
                   </>
                 )}

@@ -19650,7 +19650,9 @@
 // and shows why a bid failed, and rates show per mile (carrier-portal-upgrade F2/M4/M5).
 // v3.8.brz — carrier portal: Messages is locked by owner ruling; its sidebar entry shows a lock and the reason,
 // and the route sends the carrier to the Dashboard (carrier-portal-upgrade F2/M1).
-export const SRL_VERSION = "3.8.brz";
+// v3.8.bsa — carrier portal: Documents gets a camera button and a 10 MB check before upload, a keyboard-operable
+// drop zone, named view and download links, and a one-column form on a phone (carrier-portal-upgrade F2/G43/M4/M5).
+export const SRL_VERSION = "3.8.bsa";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

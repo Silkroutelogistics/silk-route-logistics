@@ -170,3 +170,41 @@ describe("E4 — the picker speaks the paperwork vocabulary", () => {
     expect(body.get("file")).toBeInstanceOf(File);
   });
 });
+
+// carrier-portal-upgrade F2/G43 — Documents on a phone: a camera control, a size
+// check before upload, and controls a keyboard and a screen reader can use.
+describe("F2: uploading from a phone", () => {
+  it("refuses a file over 10 MB before any request, and says why", async () => {
+    const user = userEvent.setup();
+    mount();
+    await user.click(screen.getByRole("button", { name: /Upload Document/ }));
+    const big = new File([new Uint8Array(11 * 1024 * 1024)], "huge-photo.jpg", { type: "image/jpeg" });
+    await user.upload(document.querySelector('input[type="file"]') as HTMLInputElement, big);
+    expect((await screen.findByRole("alert")).textContent).toMatch(/limit is 10 MB/);
+    expect((screen.getByRole("button", { name: "Upload" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it("offers a camera that opens the rear camera, and keeps the main picker able to choose a PDF", async () => {
+    const user = userEvent.setup();
+    mount();
+    await user.click(screen.getByRole("button", { name: /Upload Document/ }));
+    const inputs = Array.from(document.querySelectorAll('input[type="file"]')) as HTMLInputElement[];
+    expect(inputs[0].getAttribute("capture")).toBeNull();
+    expect(inputs[0].accept).toContain(".pdf");
+    expect(inputs[1].getAttribute("capture")).toBe("environment");
+    expect(screen.getByRole("button", { name: /Take a photo/ })).toBeTruthy();
+  });
+
+  it("lets a keyboard open the file chooser from the drop zone", async () => {
+    const user = userEvent.setup();
+    mount();
+    await user.click(screen.getByRole("button", { name: /Upload Document/ }));
+    const zone = screen.getByRole("button", { name: "Choose a file to upload" });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const click = vi.spyOn(input, "click");
+    zone.focus();
+    await user.keyboard("{Enter}");
+    expect(click).toHaveBeenCalled();
+  });
+});
