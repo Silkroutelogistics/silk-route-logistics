@@ -19591,7 +19591,9 @@
 // v3.8.bqy — the health digest judges each cron job against its own expression (1.5x its longest
 // gap) instead of a flat 25 hours, counts cron failures apart from web-request errors, and
 // monthly-carrier-revet is registered with its next run, 2026-11-01 07:00 UTC.
-export const SRL_VERSION = "3.8.bqy";
+// v3.8.bqz — the cron "run now" endpoint is removed (health-digest arc B5): its handler map was
+// only ever filled by registerCronJob, which had no callers, so every request failed. No UI used it.
+export const SRL_VERSION = "3.8.bqz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

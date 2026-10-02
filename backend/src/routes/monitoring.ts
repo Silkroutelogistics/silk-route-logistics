@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import * as Sentry from "@sentry/node";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
-import { enhancedHealth, listCronJobs, manualRunCron, toggleCron, getErrorLogs, getErrorStats } from "../controllers/monitoringController";
+import { enhancedHealth, listCronJobs, toggleCron, getErrorLogs, getErrorStats } from "../controllers/monitoringController";
 import { sendHealthDigest } from "../services/healthDigestService";
 import { getSentryStatus } from "../services/sentryAlertService";
 
@@ -12,7 +12,6 @@ router.get("/health", authenticate, authorize("ADMIN"), enhancedHealth as any);
 
 // Cron management (admin only)
 router.get("/crons", authenticate, authorize("ADMIN"), listCronJobs as any);
-router.post("/crons/:name/run", authenticate, authorize("ADMIN"), manualRunCron as any);
 router.post("/crons/:name/toggle", authenticate, authorize("ADMIN"), toggleCron as any);
 
 // Document-chain self-test (admin only) — the seven links, end to end.

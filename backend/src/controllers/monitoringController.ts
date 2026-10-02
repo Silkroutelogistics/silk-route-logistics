@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
-import { getAllCronJobs, runRegisteredJob, toggleCronJob } from "../services/cronRegistryService";
+import { getAllCronJobs, toggleCronJob } from "../services/cronRegistryService";
 import { getRequestCount } from "../middleware/requestLogger";
 import { getSentryStatus } from "../services/sentryAlertService";
 
@@ -90,29 +90,6 @@ export async function enhancedHealth(_req: AuthRequest, res: Response) {
 export async function listCronJobs(_req: AuthRequest, res: Response) {
   const jobs = await getAllCronJobs();
   res.json({ jobs, total: jobs.length });
-}
-
-export async function manualRunCron(req: AuthRequest, res: Response) {
-  const { name } = req.params;
-  const result = await runRegisteredJob(name);
-
-  // Log the manual trigger in audit trail
-  await prisma.auditTrail.create({
-    data: {
-      entityType: "CronJob",
-      entityId: name,
-      action: "UPDATE",
-      changedFields: { action: "manual_trigger", result: result.success ? "SUCCESS" : "FAILED" },
-      performedById: req.user!.id,
-      ipAddress: req.ip || "unknown",
-    },
-  }).catch(() => {});
-
-  if (result.success) {
-    res.json({ message: `Job ${name} completed successfully`, duration: result.duration });
-  } else {
-    res.status(result.error === "Job is disabled" ? 400 : 500).json({ error: result.error, duration: result.duration });
-  }
 }
 
 export async function toggleCron(req: AuthRequest, res: Response) {

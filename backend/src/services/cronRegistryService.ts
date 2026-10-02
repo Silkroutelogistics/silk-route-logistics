@@ -1,5 +1,4 @@
 import { prisma } from "../config/database";
-import cron from "node-cron";
 import { log } from "../lib/logger";
 import { nextFire } from "../lib/cronSchedule";
 import { AR_REMINDER_SWITCH, AR_REMINDER_SCHEDULE, AR_REMINDER_DESCRIPTION } from "../lib/arReminderSwitch";
@@ -7,108 +6,12 @@ import { AR_REMINDER_SWITCH, AR_REMINDER_SCHEDULE, AR_REMINDER_DESCRIPTION } fro
 /**
  * Cron Registry Service
  * Tracks all cron jobs, their schedules, last run times, and status.
- * Supports manual triggering and enable/disable toggling.
+ * Supports enable/disable toggling. Runs are recorded by lib/cronRun.ts.
+ *
+ * health-digest arc B5: registerCronJob / runRegisteredJob and the POST
+ * /monitoring/crons/:name/run endpoint are removed. registerCronJob had no
+ * callers, so the handler map was always empty and run-now always failed.
  */
-
-interface CronJobDef {
-  jobName: string;
-  schedule: string;
-  description: string;
-  handler: () => Promise<void>;
-}
-
-const registeredHandlers = new Map<string, () => Promise<void>>();
-
-/** Register a cron job in the database registry and schedule it */
-export async function registerCronJob(def: CronJobDef) {
-  registeredHandlers.set(def.jobName, def.handler);
-
-  // Upsert registry entry
-  await prisma.cronRegistry.upsert({
-    where: { jobName: def.jobName },
-    update: { schedule: def.schedule, description: def.description },
-    create: {
-      jobName: def.jobName,
-      schedule: def.schedule,
-      description: def.description,
-      enabled: true,
-      nextRun: getNextRunTime(def.schedule),
-    },
-  }).catch((e) => log.error({ err: e }, `[CronRegistry] Failed to register ${def.jobName}:`));
-
-  // Schedule the job
-  cron.schedule(def.schedule, async () => {
-    await runRegisteredJob(def.jobName);
-  });
-}
-
-/** Run a registered job (used by scheduler and manual trigger) */
-export async function runRegisteredJob(jobName: string): Promise<{ success: boolean; duration?: number; error?: string }> {
-  const handler = registeredHandlers.get(jobName);
-  if (!handler) {
-    return { success: false, error: `No handler registered for job: ${jobName}` };
-  }
-
-  // Check if enabled
-  const entry = await prisma.cronRegistry.findUnique({ where: { jobName } });
-  if (entry && !entry.enabled) {
-    log.info(`[CronRegistry] Skipping disabled job: ${jobName}`);
-    return { success: false, error: "Job is disabled" };
-  }
-
-  // Mark as running
-  await prisma.cronRegistry.upsert({
-    where: { jobName },
-    update: { lastStatus: "RUNNING", lastRun: new Date() },
-    create: { jobName, schedule: "manual", lastStatus: "RUNNING", lastRun: new Date() },
-  }).catch(err => log.error({ err: err }, '[CronRegistry] Error:'));
-
-  const start = Date.now();
-  try {
-    await handler();
-    const duration = Date.now() - start;
-
-    await prisma.cronRegistry.update({
-      where: { jobName },
-      data: {
-        lastStatus: "SUCCESS",
-        lastDuration: duration,
-        lastError: null,
-        runCount: { increment: 1 },
-        nextRun: entry?.schedule ? getNextRunTime(entry.schedule) : null,
-      },
-    }).catch(err => log.error({ err: err }, '[CronRegistry] Error:'));
-
-    log.info(`[CronRegistry] ${jobName} completed in ${duration}ms`);
-    return { success: true, duration };
-  } catch (e: any) {
-    const duration = Date.now() - start;
-
-    await prisma.cronRegistry.update({
-      where: { jobName },
-      data: {
-        lastStatus: "FAILED",
-        lastDuration: duration,
-        lastError: e.message?.slice(0, 500),
-        failCount: { increment: 1 },
-        runCount: { increment: 1 },
-      },
-    }).catch(err => log.error({ err: err }, '[CronRegistry] Error:'));
-
-    // Log to error_logs table
-    await prisma.errorLog.create({
-      data: {
-        errorType: "CRON",
-        message: `Cron job ${jobName} failed: ${e.message}`,
-        stackTrace: e.stack?.slice(0, 2000),
-        endpoint: `cron:${jobName}`,
-      },
-    }).catch(err => log.error({ err: err }, '[CronRegistry] Error:'));
-
-    log.error({ err: e }, `[CronRegistry] ${jobName} FAILED in ${duration}ms:`);
-    return { success: false, duration, error: e.message };
-  }
-}
 
 /** Toggle a cron job on/off */
 export async function toggleCronJob(jobName: string): Promise<{ enabled: boolean }> {
