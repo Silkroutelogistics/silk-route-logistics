@@ -19562,7 +19562,9 @@
 // carrier portal (coi-verify-email-fix C1b). Agent email: registration, expiry cron, AE Send verification.
 // v3.8.bql — the AE carriers page gets Send verification (coi-verify-email-fix C1c): the only on-demand
 // agent email, behind the same hold and 14-day cooldown. A refusal shows its reason and clear date.
-export const SRL_VERSION = "3.8.bql";
+// v3.8.bqm — carrier portal: the unscoped POST /carrier-loads/:id/decline is removed (carrier-portal-upgrade
+// G1). It could decline another carrier's tender; the portal declines through /tenders/:id/decline.
+export const SRL_VERSION = "3.8.bqm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

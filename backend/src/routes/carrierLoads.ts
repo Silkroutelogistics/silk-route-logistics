@@ -408,48 +408,11 @@ router.post("/:id/accept", validateBody(acceptSchema), async (req: AuthRequest, 
   res.json(updated);
 });
 
-// POST /api/carrier-loads/:id/decline — Decline a load tender
-router.post("/:id/decline", async (req: AuthRequest, res: Response) => {
-  const load = await prisma.load.findUnique({ where: { id: req.params.id } });
-  if (!load) {
-    res.status(404).json({ error: "Load not found" });
-    return;
-  }
-
-  // Log the decline as a tender event if tender exists
-  const tender = await prisma.loadTender.findFirst({
-    where: { loadId: load.id, carrierId: { not: undefined } },
-    orderBy: { createdAt: "desc" },
-  });
-
-  if (tender) {
-    await settleTender({
-      tenderId: tender.id, to: "DECLINED", from: ["OFFERED", "COUNTERED"],
-      respondedAt: new Date(),
-      actor: { id: req.user!.id, type: "CARRIER" },
-    });
-  }
-
-  // AI Learning Loop: record carrier decline
-  onCarrierResponse(req.user!.id, load.id, "DECLINED", 0).catch((e) =>
-    log.error({ err: e }, "[AI Feedback]")
-  );
-
-  // Notify broker
-  if (load.posterId) {
-    await prisma.notification.create({
-      data: {
-        userId: load.posterId,
-        type: "LOAD",
-        title: "Load Declined",
-        message: `A carrier declined load ${load.referenceNumber}.`,
-        actionUrl: "/dashboard/loads",
-      },
-    });
-  }
-
-  res.json({ success: true });
-});
+// POST /api/carrier-loads/:id/decline was removed (carrier-portal-upgrade, G1).
+// It settled the newest tender on ANY load, whoever it belonged to, because its
+// lookup filtered on `carrierId: { not: undefined }`. Nothing in the portal called
+// it; the portal declines through POST /tenders/:id/decline, which checks that the
+// tender is the caller's own (tenderController.declineTender).
 
 const updateDriverSchema = z.object({
   driverName: z.string().optional(),
