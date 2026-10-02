@@ -122,8 +122,14 @@ describe("Item 321: the notification badge counts readAt", () => {
   it("neither portal layout reads the deprecated `read` flag", () => {
     const fs = require("fs") as typeof import("fs");
     const path = require("path") as typeof import("path");
-    for (const portal of ["carrier", "shipper"]) {
-      const src = fs.readFileSync(path.join(__dirname, "..", "..", portal, "dashboard", "layout.tsx"), "utf8");
+    // carrier-portal-upgrade M2 moved the carrier bell into its own component, so
+    // the carrier check reads the file that now holds the bell. Same property.
+    const files: Record<string, string> = {
+      carrier: path.join(__dirname, "..", "..", "..", "components", "carrier", "NotificationCenter.tsx"),
+      shipper: path.join(__dirname, "..", "..", "shipper", "dashboard", "layout.tsx"),
+    };
+    for (const [portal, file] of Object.entries(files)) {
+      const src = fs.readFileSync(file, "utf8");
       expect(src, portal).not.toMatch(/\bn\.read\b/);
       expect(src, portal).toMatch(/\bn\.readAt\b/);
     }

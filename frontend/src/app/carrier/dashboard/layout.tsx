@@ -2,20 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api, isLoginRedirectInFlight } from "@/lib/api";
-import { backgroundPoll } from "@/lib/backgroundPoll";
 import { CarrierSidebar } from "@/components/carrier";
 import { CarrierWelcomeTour } from "@/components/carrier/CarrierWelcomeTour";
-import { Search, Bell, X, LogOut, Clock } from "lucide-react";
+import { Search, LogOut, Clock } from "lucide-react";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { SessionWarningModal } from "@/components/auth/SessionWarningModal";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { Logo } from "@/components/ui/Logo";
 import { AuthRefreshBanner } from "@/components/ui/AuthRefreshBanner";
 import { MarcoPolo } from "@/components/MarcoPolo";
-import type { Notification } from "@/types/entities";
-import { resolveNotificationHref } from "@/lib/notificationTarget";
+import { NotificationCenter } from "@/components/carrier/NotificationCenter";
 import { isFeatureEnabled, featureReason, lockedFeatureForPath } from "@/lib/carrierPortalFeatures";
 import { LockedFeature } from "@/components/carrier/LockedFeature";
 
@@ -39,18 +37,7 @@ const SECURITY_PAGE = "/carrier/dashboard/security";
 const ICON_BTN =
   "relative inline-flex h-11 w-11 items-center justify-center rounded-md transition-colors duration-150 motion-reduce:transition-none hover:bg-[#F5EEE0] active:bg-[#EFE6D3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]";
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
-
 export default function CarrierDashboardLayout({ children }: { children: React.ReactNode }) {
-  const [notifOpen, setNotifOpen] = useState(false);
   // v3.8.bei — the welcome tour, once. Session-local dismissal covers the
   // render between Finish and the activation query refetching; the durable
   // answer is the stamp the tour writes.
@@ -58,7 +45,6 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   const { user, loadUser, logout } = useCarrierAuth();
   const [checking, setChecking] = useState(true);
   const router = useRouter();
-  const queryClient = useQueryClient();
   const pathname = usePathname();
   const { showWarning, countdown, extendSession } = useSessionTimeout({
     // SUPERSEDED 2026-08-26. This read "unified to 60 min (was an undocumented
@@ -70,29 +56,9 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
     onLogout: logout,
   });
 
-  // v3.8.ajd Sprint 1 — Only poll notifications when carrier is APPROVED.
-  // Non-APPROVED carriers see a single status page; no notifications
-  // surface, no polling. Saves a 2-minute interval network call.
-  const { data: notifData } = useQuery({
-    queryKey: ["carrier-notifications"],
-    // v3.8.asb — GET /notifications returns a BARE ARRAY
-    // (notificationController.getNotifications -> res.json(notifications)).
-    // This asked for `{ notifications: [...] }`, so `notifData.notifications`
-    // was undefined, the `|| []` below swallowed it, and the carrier bell has
-    // never displayed a single notification. The shipper portal had the
-    // identical mismatch. The AE console reads the array directly and has
-    // always worked, which is why nobody noticed.
-    //
-    // Fixed on the consumer rather than the endpoint: the endpoint's shape is
-    // already correct for its longest-standing caller, and changing it would
-    // have broken the one bell that works.
-    // Arc final — marked a BACKGROUND POLL. This layout is mounted on every
-    // page of the portal, so without the header its two-minute refetch reset
-    // the idle clock forever and an abandoned desk never timed out.
-    queryFn: () => api.get<Notification[]>("/notifications", backgroundPoll).then((r) => r.data),
-    enabled: !!user && user.carrierProfile?.onboardingStatus === "APPROVED",
-    refetchInterval: 120000,
-  });
+  // carrier-portal-upgrade M2 — the bell, its list and its fetch live in
+  // components/carrier/NotificationCenter: fetched on load and on window focus,
+  // no polling loop, server-scoped to the caller and the carrier type allowlist.
 
   // Track 1.1b — Activation gate. APPROVED carriers who haven't signed the
   // Broker-Carrier Agreement get a persistent banner driving them to the
@@ -123,8 +89,6 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   // which wall a carrier hits.
   const mustEnroll = !!activationData?.requiresTotpEnrollment;
 
-  const notifications = Array.isArray(notifData) ? notifData : [];
-  const unreadCount = notifications.filter((n) => !n.readAt).length; // Item 321: readAt is canonical; `read` is never written
 
   useEffect(() => {
     if (!user) {
@@ -296,67 +260,8 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
             {companyName && (
               <span className="text-xs text-gray-400 font-medium hidden sm:inline">{companyName}</span>
             )}
-            {/* Notifications — activated (BCA-signed) carriers only. */}
-            {showOperationalChrome && (
-              <div className="relative">
-                <button onClick={() => setNotifOpen(!notifOpen)} aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"} aria-expanded={notifOpen} className={ICON_BTN}>
-                  <Bell size={19} className="text-[#5B6B7D]" aria-hidden="true" />
-                  {unreadCount > 0 && (
-                    <span data-testid="notif-badge" className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#9B2C2C] text-[#FBF7F0] text-[9px] font-bold flex items-center justify-center">
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </span>
-                  )}
-                </button>
-                {notifOpen && (
-                  <div className="absolute top-8 right-0 w-[calc(100vw-2rem)] sm:w-80 bg-white rounded-lg shadow-[0_12px_40px_rgba(10,37,64,0.15)] border border-[#EFE6D3] z-[100]">
-                    <div className="flex justify-between items-center px-3 py-2 border-b border-[#EFE6D3]">
-                      <span className="text-[13px] font-bold text-[#0A2540]">Notifications</span>
-                      <button onClick={() => setNotifOpen(false)} aria-label="Close notifications" className={ICON_BTN}><X size={16} className="text-[#5B6B7D]" aria-hidden="true" /></button>
-                    </div>
-                    {notifications.length === 0 ? (
-                      <div className="px-3 py-6 text-center text-xs text-gray-400">No notifications</div>
-                    ) : (
-                      notifications.slice(0, 10).map((n) => {
-                        // Only a row with somewhere safe to go is rendered
-                        // clickable. Previously EVERY row carried cursor-pointer
-                        // and a hover highlight with no handler at all, so it
-                        // invited a click and did nothing — which reads as a
-                        // broken app rather than as an item with no target.
-                        const href = resolveNotificationHref(n.actionUrl, "/carrier");
-                        const seen = () => {
-                          if (n.readAt) return;
-                          api
-                            .patch(`/notifications/${n.id}/read`)
-                            .then(() => queryClient.invalidateQueries({ queryKey: ["carrier-notifications"] }))
-                            .catch(() => {}); // never block navigation on the read receipt
-                        };
-                        const body = (
-                          <>
-                            <div className="text-xs text-gray-700 leading-snug">{n.message || n.title}</div>
-                            <div className="text-[10px] text-gray-400 mt-1">{timeAgo(n.createdAt)}</div>
-                          </>
-                        );
-                        const base = `px-3 py-2.5 border-b border-[#F5EEE0] ${!n.readAt ? "bg-[#E2EAF2]/60" : ""}`;
-                        return href ? (
-                          <button
-                            key={n.id}
-                            type="button"
-                            onClick={() => { seen(); setNotifOpen(false); router.push(href); }}
-                            className={`${base} w-full text-left cursor-pointer hover:bg-[#FBF7F0]`}
-                          >
-                            {body}
-                          </button>
-                        ) : (
-                          <div key={n.id} className={base} onClick={seen}>
-                            {body}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Notifications: activated (BCA-signed) carriers only. */}
+            <NotificationCenter enabled={showOperationalChrome} />
             {/* Avatar + Logout */}
             <div className="hidden sm:flex w-[34px] h-[34px] rounded-full bg-[#C5A572] items-center justify-center text-xs font-bold text-[#0A2540] border-2 border-[#C5A572]/40" role="img" aria-label={companyName ? `Signed in to ${companyName}` : "Signed in"}>
               {initials}
@@ -373,7 +278,8 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
         {/* Content — v3.8.aqi hard activation gate. Until the BCA is signed, only
             the activation page renders; every other route is redirected there by
             the effect above, so operational surfaces never show pre-signature. */}
-        <main className="flex-1 overflow-auto p-4 sm:p-6">
+        {/* M4 — bottom padding under lg so the floating assistant button never sits on the last line. */}
+        <main className="flex-1 overflow-auto p-4 pb-24 sm:p-6 sm:pb-24 lg:pb-6">
           {mustActivate && !onActivationPage ? (
             <div className="min-h-[50vh] flex items-center justify-center">
               <div className="text-center">

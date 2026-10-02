@@ -19616,7 +19616,9 @@
 // logout are reachable under 1024px; locked nav items render locked (carrier-portal-upgrade M4/M1).
 // v3.8.bri — carrier portal: Settings no longer offers the two saves that always failed; phone edit and
 // notification choices are locked and explained, and the page stacks on a phone (carrier-portal-upgrade M1/M4/M5).
-export const SRL_VERSION = "3.8.bri";
+// v3.8.brj — carrier portal: a notification center: unread count, a list that opens as a bottom sheet on a phone,
+// mark read and mark all read, items linked to their page, fetched on load and focus with no polling (M2).
+export const SRL_VERSION = "3.8.brj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

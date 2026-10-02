@@ -27,10 +27,14 @@ const REPO = path.resolve(__dirname, "../../../..");
 const BE_MIDDLEWARE = path.join(REPO, "backend/src/middleware/auth.ts");
 const FE_HELPER = path.join(REPO, "frontend/src/lib/backgroundPoll.ts");
 
+// The carrier layout left this list in carrier-portal-upgrade M2: its bell moved
+// to components/carrier/NotificationCenter and, by owner ruling, stopped
+// polling. It refetches on load and on window focus only. Its own case below
+// holds both halves: no interval, and the read still marked background.
 const ALWAYS_MOUNTED_LAYOUTS = [
-  "frontend/src/app/carrier/dashboard/layout.tsx",
   "frontend/src/app/shipper/dashboard/layout.tsx",
 ];
+const CARRIER_NOTIFICATION_CENTER = "frontend/src/components/carrier/NotificationCenter.tsx";
 
 /** CRLF-safe: this repo checks out with autocrlf, and \r breaks anchored matches. */
 function read(p: string): string {
@@ -76,4 +80,14 @@ describe("background-poll marking", () => {
       ).toBe(true);
     });
   }
+
+  it(`${CARRIER_NOTIFICATION_CENTER} never polls, and marks its read as background`, () => {
+    const src = read(path.join(REPO, CARRIER_NOTIFICATION_CENTER));
+    expect(/useQuery\(/.test(src), "the carrier notification center no longer queries; update this guard").toBe(true);
+    expect(
+      /refetchInterval/.test(src),
+      "M2: the carrier bell fetches on load and window focus only. An interval brings back the polling loop the owner ruled out.",
+    ).toBe(false);
+    expect(/backgroundPoll/.test(src), "the notification read must not count as carrier activity").toBe(true);
+  });
 });
