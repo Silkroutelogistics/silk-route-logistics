@@ -19628,7 +19628,9 @@
 // copies the load number and addresses, opens stops in maps, and puts a callable SRL rep on every load (M4/M5/G40).
 // v3.8.bro — carrier portal: Available Loads fits a phone, cards are chosen from the keyboard, rates show per
 // mile, Accept fires once, and the rep is a tap away (carrier-portal-upgrade M4/M5).
-export const SRL_VERSION = "3.8.bro";
+// v3.8.brp — carrier portal: the Dashboard fits a phone; every active load opens on My Loads with its rate per
+// mile and status in words. All 15 carrier pages now pass at 380 and 1280 (carrier-portal-upgrade M4/M5).
+export const SRL_VERSION = "3.8.brp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

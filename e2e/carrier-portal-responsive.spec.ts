@@ -24,6 +24,7 @@ const CARRIER_EMAIL = "test-carrier@srl.invalid";
 
 /** Pages whose layout a slice in this arc made responsive. */
 const COVERED = [
+  "carrier/dashboard",
   "carrier/dashboard/tenders",
   "carrier/dashboard/tender-history",
   "carrier/dashboard/drivers",

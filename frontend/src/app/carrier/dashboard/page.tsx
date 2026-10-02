@@ -6,8 +6,9 @@ import { Package, Truck, Shield, DollarSign, AlertCircle, Award, Zap, Clock, Che
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
+import { RateWithRpm } from "@/components/carrier/LoadUtils";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
-import { money, perMile, carrierPay } from "@/lib/rateDisplay";
+import { carrierPay } from "@/lib/rateDisplay";
 import { mcDigits } from "@/lib/mcNumber";
 
 // ─── Caravan Partner Program — Tier Mapping & Config (v3.7.a) ─────────────────
@@ -177,7 +178,7 @@ export default function CarrierOverviewPage() {
         <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">
           Welcome back{user?.firstName ? `, ${user.firstName}` : ""}
         </h1>
-        <p className="text-[13px] text-gray-500">
+        <p className="text-[13px] text-[#5B6B7D]">
           {profile?.companyName || user?.company || "Carrier Portal"} &middot; MC-{mcDigits(profile?.mcNumber) || "\u2014"}
         </p>
       </div>
@@ -198,8 +199,8 @@ export default function CarrierOverviewPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs text-gray-500">{milestoneLabel(currentMilestone)}</span>
-            <span className="text-[10px] text-gray-700 ml-auto">{milestoneLoads}/{milestoneTarget} loads toward {milestoneLabel(nextMilestone)}</span>
+            <span className="text-xs text-[#5B6B7D]">{milestoneLabel(currentMilestone)}</span>
+            <span className="text-[10px] text-[#3A4A5F] ml-auto">{milestoneLoads}/{milestoneTarget} loads toward {milestoneLabel(nextMilestone)}</span>
           </div>
           <div className="h-1.5 bg-[#F5EEE0] rounded-full mt-2 overflow-hidden">
             <div className="h-full bg-[#BA7517] rounded-full transition-all duration-500" style={{ width: `${milestoneProgress}%` }} />
@@ -216,21 +217,21 @@ export default function CarrierOverviewPage() {
               <Zap size={20} className="text-[#2F7A4F]" />
             </div>
             <div>
-              <div className="text-[11px] text-gray-700 font-medium">Quick Pay</div>
+              <div className="text-[11px] text-[#3A4A5F] font-medium">Quick Pay</div>
               <div className="text-[22px] font-bold text-[#0A2540]">${qpBalance.toLocaleString()}</div>
             </div>
           </div>
           <div className="space-y-1.5 text-xs">
             <div className="flex justify-between">
-              <span className="text-gray-700">Fee Rate</span>
+              <span className="text-[#3A4A5F]">Fee Rate</span>
               <span className="font-semibold text-[#0A2540]">{benefits.qpFee}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-700">Speed</span>
+              <span className="text-[#3A4A5F]">Speed</span>
               <span className="font-semibold text-[#0A2540]">{benefits.qpSpeed}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-700">Monthly Usage</span>
+              <span className="text-[#3A4A5F]">Monthly Usage</span>
               <span className="font-semibold text-[#0A2540]">{qpMonthlyLimit ? `${qpUsedThisMonth.toLocaleString()} / ${qpMonthlyLimit.toLocaleString()}` : `${qpUsedThisMonth.toLocaleString()} used`}</span>
             </div>
             <div className="h-1.5 bg-[#F5EEE0] rounded-full overflow-hidden" hidden={!qpMonthlyLimit}>
@@ -247,19 +248,19 @@ export default function CarrierOverviewPage() {
           </div>
           <div className="space-y-2 text-xs">
             <div className="flex justify-between">
-              <span className="text-gray-700">Payment Terms</span>
+              <span className="text-[#3A4A5F]">Payment Terms</span>
               <span className="font-semibold text-[#0A2540]">{benefits.paymentTerms}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-700">Quick Pay Speed</span>
+              <span className="text-[#3A4A5F]">Quick Pay Speed</span>
               <span className="font-semibold text-[#0A2540]">{benefits.qpSpeed}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-700">Quick Pay Fee</span>
+              <span className="text-[#3A4A5F]">Quick Pay Fee</span>
               <span className="font-semibold text-[#0A2540]">{benefits.qpFee}</span>
             </div>
           </div>
-          <p className="text-[11px] text-gray-500 mt-3 leading-relaxed">
+          <p className="text-[11px] text-[#5B6B7D] mt-3 leading-relaxed">
             For carriers in the Quick Pay pilot, same-day is available on any load at every tier, at your tier fee plus 2%.
           </p>
         </CarrierCard>
@@ -271,7 +272,7 @@ export default function CarrierOverviewPage() {
           <Clock size={16} className="text-[#BA7517]" />
           <span className="text-[13px] font-bold text-[#0A2540]">Accessorial Terms</span>
         </div>
-        <p className="text-[11px] text-gray-500 mb-4">
+        <p className="text-[11px] text-[#5B6B7D] mb-4">
           The same at every tier and on every equipment type.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -281,7 +282,7 @@ export default function CarrierOverviewPage() {
                 <span className="text-xs font-bold text-[#0A2540]">{t.label}</span>
                 <span className="text-xs font-semibold text-[#BA7517] text-right">{t.value}</span>
               </div>
-              <p className="text-[11px] text-gray-600 leading-relaxed">{t.detail}</p>
+              <p className="text-[11px] text-[#3A4A5F] leading-relaxed">{t.detail}</p>
             </div>
           ))}
         </div>
@@ -294,9 +295,9 @@ export default function CarrierOverviewPage() {
           <span className="text-[13px] font-bold text-[#0A2540]">Quick Pay Savings Calculator</span>
         </div>
         <div className="mb-3">
-          <label className="text-[11px] text-gray-700 font-medium block mb-1">Average Monthly Invoice Amount</label>
+          <label className="text-[11px] text-[#3A4A5F] font-medium block mb-1">Average Monthly Invoice Amount</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-700 text-sm">$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3A4A5F] text-sm">$</span>
             <input
               type="number"
               value={calcAmount}
@@ -321,51 +322,51 @@ export default function CarrierOverviewPage() {
         </div>
       </CarrierCard>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      {/* KPI Cards. carrier-portal-upgrade M4: two across on a phone, four at lg. */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
         <CarrierCard padding="p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#E2EAF2] flex items-center justify-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 shrink-0 rounded-lg bg-[#E2EAF2] flex items-center justify-center">
               <Truck size={20} className="text-[#2A5B8B]" />
             </div>
             <div>
-              <div className="text-[11px] text-gray-700 font-medium">Active Loads</div>
-              <div className="text-[28px] font-bold text-[#0A2540]">{activeLoads.length}</div>
+              <div className="text-[11px] text-[#3A4A5F] font-medium">Active Loads</div>
+              <div className="text-xl lg:text-[28px] font-bold text-[#0A2540] break-words">{activeLoads.length}</div>
             </div>
           </div>
         </CarrierCard>
         <CarrierCard padding="p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#E6F0E9] flex items-center justify-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 shrink-0 rounded-lg bg-[#E6F0E9] flex items-center justify-center">
               <Package size={20} className="text-[#2F7A4F]" />
             </div>
             <div>
-              <div className="text-[11px] text-gray-700 font-medium">Available Loads</div>
-              <div className="text-[28px] font-bold text-[#0A2540]">{available?.total || 0}</div>
+              <div className="text-[11px] text-[#3A4A5F] font-medium">Available Loads</div>
+              <div className="text-xl lg:text-[28px] font-bold text-[#0A2540] break-words">{available?.total || 0}</div>
             </div>
           </div>
         </CarrierCard>
         <CarrierCard padding="p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#FBEFD4] flex items-center justify-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 shrink-0 rounded-lg bg-[#FBEFD4] flex items-center justify-center">
               <DollarSign size={20} className="text-[#B07A1A]" />
             </div>
             <div>
-              <div className="text-[11px] text-gray-700 font-medium">Pending Pay</div>
-              <div className="text-[28px] font-bold text-[#0A2540]">
+              <div className="text-[11px] text-[#3A4A5F] font-medium">Pending Pay</div>
+              <div className="text-xl lg:text-[28px] font-bold text-[#0A2540] break-words">
                 ${(paymentSummary?.totalPending?.amount || 0).toLocaleString()}
               </div>
             </div>
           </div>
         </CarrierCard>
         <CarrierCard padding="p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#E2EAF2] flex items-center justify-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 shrink-0 rounded-lg bg-[#E2EAF2] flex items-center justify-center">
               <Shield size={20} className="text-[#2A5B8B]" />
             </div>
             <div>
-              <div className="text-[11px] text-gray-700 font-medium">Compliance</div>
-              <div className="text-[28px] font-bold text-[#0A2540]">
+              <div className="text-[11px] text-[#3A4A5F] font-medium">Compliance</div>
+              <div className="text-xl lg:text-[28px] font-bold text-[#0A2540] break-words">
                 {criticalAlerts > 0 ? (
                   <span className="text-[#9B2C2C]">{criticalAlerts} Alert{criticalAlerts > 1 ? "s" : ""}</span>
                 ) : (
@@ -378,18 +379,18 @@ export default function CarrierOverviewPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
           { icon: Package, label: "Find Loads", href: "/carrier/dashboard/available-loads" },
           { icon: Truck, label: "My Loads", href: "/carrier/dashboard/my-loads" },
           { icon: Shield, label: "Compliance", href: "/carrier/dashboard/compliance" },
           { icon: DollarSign, label: "Payments", href: "/carrier/dashboard/payments" },
         ].map((a, i) => (
-          <Link key={i} href={a.href}>
+          <Link key={i} href={a.href} className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]">
             <CarrierCard hover padding="p-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-lg bg-[#FAEEDA] flex items-center justify-center">
-                  <a.icon size={18} className="text-[#BA7517]" />
+                  <a.icon size={18} className="text-[#854F0B]" aria-hidden="true" />
                 </div>
                 <span className="text-[13px] font-semibold text-[#0A2540]">{a.label}</span>
               </div>
@@ -398,31 +399,35 @@ export default function CarrierOverviewPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         {/* My Active Loads */}
         <CarrierCard padding="p-0">
           <div className="px-5 py-4 flex justify-between items-center border-b border-[#F5EEE0]">
             <h3 className="text-[15px] font-bold text-[#0A2540]">My Active Loads</h3>
-            <Link href="/carrier/dashboard/my-loads" className="text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
+            <Link href="/carrier/dashboard/my-loads" className="inline-flex min-h-[44px] items-center rounded px-2 text-[#5B6B7D] text-[11px] font-semibold uppercase tracking-wider transition-colors duration-150 motion-reduce:transition-none hover:text-[#854F0B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]">
               View All
             </Link>
           </div>
           {recentLoads.length === 0 ? (
-            <div className="px-5 py-8 text-center text-xs text-gray-700">No loads assigned yet</div>
+            <div className="px-5 py-8 text-center text-xs text-[#3A4A5F]">No loads assigned yet. Accept a tender or an available load to see it here.</div>
           ) : (
             recentLoads.slice(0, 5).map((load: Record<string, any>) => (
-              <div key={load.id} className="px-5 py-3 border-b border-[#F5EEE0] flex justify-between items-center hover:bg-gray-50">
-                <div>
+              <Link
+                key={load.id}
+                href={`/carrier/dashboard/my-loads?load=${load.id}`}
+                className="px-5 py-3 min-h-[44px] border-b border-[#F5EEE0] flex flex-wrap justify-between items-center gap-2 transition-colors duration-150 motion-reduce:transition-none hover:bg-[#FBF7F0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#BA7517]"
+              >
+                <div className="min-w-0">
                   <div className="text-xs font-mono font-semibold text-[#0A2540]">{load.referenceNumber}</div>
-                  <div className="text-[11px] text-gray-700">
+                  <div className="text-[11px] text-[#3A4A5F]">
                     {load.originCity}, {load.originState} &rarr; {load.destCity}, {load.destState}
                   </div>
                 </div>
                 <div className="text-right flex items-center gap-3">
-                  <span className="text-xs font-bold text-[#0A2540]">{money(carrierPay(load))}</span>
-                  <CarrierBadge status={load.status} />
+                  <RateWithRpm amount={carrierPay(load)} miles={load.distance} className="text-xs font-bold text-[#0A2540]" />
+                  <CarrierBadge kind="load" status={load.status} />
                 </div>
-              </div>
+              </Link>
             ))
           )}
         </CarrierCard>
@@ -431,24 +436,28 @@ export default function CarrierOverviewPage() {
         <CarrierCard padding="p-0">
           <div className="px-5 py-4 flex justify-between items-center border-b border-[#F5EEE0]">
             <h3 className="text-[15px] font-bold text-[#0A2540]">Available Loads</h3>
-            <Link href="/carrier/dashboard/available-loads" className="text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
+            <Link href="/carrier/dashboard/available-loads" className="inline-flex min-h-[44px] items-center rounded px-2 text-[#5B6B7D] text-[11px] font-semibold uppercase tracking-wider transition-colors duration-150 motion-reduce:transition-none hover:text-[#854F0B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]">
               View All
             </Link>
           </div>
           {availableLoads.length === 0 ? (
-            <div className="px-5 py-8 text-center text-xs text-gray-700">No available loads right now</div>
+            <div className="px-5 py-8 text-center text-xs text-[#3A4A5F]">No available loads right now. New loads appear here as SRL posts them.</div>
           ) : (
             availableLoads.slice(0, 5).map((load: Record<string, any>) => (
-              <div key={load.id} className="px-5 py-3 border-b border-[#F5EEE0] flex justify-between items-center hover:bg-gray-50">
-                <div>
+              <Link
+                key={load.id}
+                href="/carrier/dashboard/available-loads"
+                className="px-5 py-3 min-h-[44px] border-b border-[#F5EEE0] flex flex-wrap justify-between items-center gap-2 transition-colors duration-150 motion-reduce:transition-none hover:bg-[#FBF7F0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#BA7517]"
+              >
+                <div className="min-w-0">
                   <div className="text-xs font-mono font-semibold text-[#0A2540]">{load.referenceNumber}</div>
-                  <div className="text-[11px] text-gray-700">
+                  <div className="text-[11px] text-[#3A4A5F]">
                     {load.originCity}, {load.originState} &rarr; {load.destCity}, {load.destState}
                   </div>
-                  <div className="text-[10px] text-gray-700 mt-0.5">{load.equipmentType} &middot; {load.weight ? `${Number(load.weight).toLocaleString()} lbs` : "\u2014"}</div>
+                  <div className="text-[11px] text-[#3A4A5F] mt-0.5">{load.equipmentType}{load.weight ? ` \u00b7 ${Number(load.weight).toLocaleString()} lbs` : ""}</div>
                 </div>
-                <span className="text-xs font-bold text-[#BA7517]">{money(carrierPay(load))}</span>
-              </div>
+                <RateWithRpm amount={carrierPay(load)} miles={load.distance} className="text-xs font-bold text-[#854F0B]" />
+              </Link>
             ))
           )}
         </CarrierCard>
@@ -462,7 +471,7 @@ export default function CarrierOverviewPage() {
             <span className="text-xs font-bold text-[#B07A1A]">Compliance Alerts</span>
           </div>
           {alerts.slice(0, 3).map((a: any, i: number) => (
-            <div key={i} className="text-xs text-gray-600 leading-relaxed mb-1">{a.message || a.type}</div>
+            <div key={i} className="text-xs text-[#3A4A5F] leading-relaxed mb-1">{a.message || a.type}</div>
           ))}
           <Link href="/carrier/dashboard/compliance" className="text-[11px] text-[#BA7517] font-semibold mt-2 inline-block">
             View All &rarr;
