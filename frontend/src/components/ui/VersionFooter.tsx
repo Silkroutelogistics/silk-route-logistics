@@ -19630,7 +19630,9 @@
 // mile, Accept fires once, and the rep is a tap away (carrier-portal-upgrade M4/M5).
 // v3.8.brp — carrier portal: the Dashboard fits a phone; every active load opens on My Loads with its rate per
 // mile and status in words. All 15 carrier pages now pass at 380 and 1280 (carrier-portal-upgrade M4/M5).
-export const SRL_VERSION = "3.8.brp";
+// v3.8.brq — carrier portal: tender cards show rate per mile, copy the load number, stack their actions on a
+// phone with 44px targets, and decline reasons carry no contractions (carrier-portal-upgrade M4/M5/G35).
+export const SRL_VERSION = "3.8.brq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

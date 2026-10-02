@@ -15,13 +15,14 @@ import { api } from "@/lib/api";
 import { apiHref } from "@/lib/download";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { Clock, MapPin, AlertTriangle, CheckCircle2, Repeat2, ArrowRight } from "lucide-react";
+import { CopyButton, ratePerMile } from "@/components/carrier/LoadUtils";
 
 const DECLINE_REASONS = [
   "No capacity / all trucks committed",
   "Rate too low",
-  "Lane doesn't work for us",
+  "Lane does not work for us",
   "Equipment not available",
-  "Dates don't work",
+  "Dates do not work",
   "Already committed to another load",
   "Other",
 ];
@@ -174,7 +175,7 @@ export default function CarrierTendersPage() {
               <div className="mt-0.5">
                 SRL will email the rate confirmation{email ? <> to <strong>{email}</strong></> : null}. Sign it to unlock the bill of lading.
               </div>
-              <a href={`/carrier/dashboard/my-loads?load=${encodeURIComponent(booked.loadId)}`} className="inline-flex items-center gap-1 mt-2 font-semibold text-[#BA7517] hover:underline">
+              <a href={`/carrier/dashboard/my-loads?load=${encodeURIComponent(booked.loadId)}`} className="inline-flex min-h-[44px] items-center gap-1 mt-1 font-semibold text-[#854F0B] hover:underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] focus-visible:ring-offset-1">
                 View this load <ArrowRight className="w-3.5 h-3.5" />
               </a>
             </div>
@@ -183,8 +184,8 @@ export default function CarrierTendersPage() {
       )}
 
       {tenders.length === 0 && !tendersQuery.isLoading && (
-        <div className="p-12 text-center text-slate-500 bg-[#F5EEE0] border border-[#EFE6D3] rounded-xl">
-          No tenders pending — we&apos;ll surface a tender here as soon as one matches your equipment and lanes.
+        <div className="p-8 sm:p-12 text-center text-[#3A4A5F] bg-[#F5EEE0] border border-[#EFE6D3] rounded-xl">
+          No tenders pending. A tender appears here as soon as one matches your equipment and lanes.
         </div>
       )}
 
@@ -195,12 +196,13 @@ export default function CarrierTendersPage() {
         const counterNum = parseFloat(counterRate);
         const counterValid = !isNaN(counterNum) && counterNum > 0;
         return (
-          <div key={t.id} className="bg-white border border-[#EFE6D3] rounded-xl p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
+          <div key={t.id} className="bg-white border border-[#EFE6D3] rounded-xl p-4 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-xl font-semibold text-[#0A2540]">
+                  <h2 className="flex items-center text-xl font-semibold text-[#0A2540]">
                     Load {t.load.referenceNumber}
+                    {t.load.referenceNumber && <CopyButton value={t.load.referenceNumber} label="load number" />}
                   </h2>
                   {isCascade && (
                     <span className="px-2 py-0.5 text-xs rounded bg-[#FAEEDA] text-[#854F0B] font-medium">
@@ -208,8 +210,8 @@ export default function CarrierTendersPage() {
                     </span>
                   )}
                 </div>
-                <div className="mt-2 text-sm text-slate-500 flex items-center gap-1">
-                  <MapPin className="w-4 h-4 text-[#BA7517]" />
+                <div className="mt-2 text-sm text-[#3A4A5F] flex flex-wrap items-center gap-1">
+                  <MapPin className="w-4 h-4 text-[#854F0B]" aria-hidden="true" />
                   {t.load.originCity}, {t.load.originState} → {t.load.destCity}, {t.load.destState}
                   {t.load.distance && ` · ${Math.round(t.load.distance).toLocaleString()} mi`}
                 </div>
@@ -221,13 +223,16 @@ export default function CarrierTendersPage() {
               </div>
               <div className="text-right">
                 <div className="text-[10px] text-slate-500 uppercase">Offered Rate</div>
-                <div className="text-2xl font-semibold text-[#BA7517]">
+                <div className="text-2xl font-semibold text-[#854F0B]">
                   ${Number(t.offeredRate).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </div>
+                {ratePerMile(Number(t.offeredRate), t.load.distance) !== null && (
+                  <div className="text-xs font-medium text-[#5B6B7D]">${ratePerMile(Number(t.offeredRate), t.load.distance)!.toFixed(2)}/mi</div>
+                )}
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
               <div>
                 <div className="text-slate-500 uppercase text-[10px]">Pickup</div>
                 <div className="text-slate-700">{formatStopDate(t.load.pickupDate)}</div>
@@ -243,14 +248,14 @@ export default function CarrierTendersPage() {
             </div>
 
             {!isDeclining && !isCountering && (
-              <div className="mt-5 flex gap-2">
+              <div className="mt-5 flex flex-col sm:flex-row gap-2">
                 {t.signable ? (
                   // Accepting is signing: a form POST, so the browser follows the
                   // redirect to the review-and-sign page the API serves.
                   <form method="POST" action={apiHref(`/carrier-tenders/${t.id}/sign-link`)} className="flex-1 flex" data-testid="tender-sign-form">
                     <button
                       type="submit"
-                      className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#2F7A4F] hover:bg-[#276641] text-[#FBF7F0] font-semibold rounded"
+                      className="flex-1 flex min-h-[44px] items-center justify-center gap-2 py-3 transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] focus-visible:ring-offset-1 bg-[#2F7A4F] hover:bg-[#276641] text-[#FBF7F0] font-semibold rounded"
                     >
                       <CheckCircle2 className="w-4 h-4" /> Review and sign
                     </button>
@@ -259,20 +264,20 @@ export default function CarrierTendersPage() {
                 <button
                   onClick={() => accept.mutate(t)}
                   disabled={accept.isPending}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#2F7A4F] hover:bg-[#276641] text-[#FBF7F0] font-semibold rounded disabled:opacity-40"
+                  className="flex-1 flex min-h-[44px] items-center justify-center gap-2 py-3 transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] focus-visible:ring-offset-1 bg-[#2F7A4F] hover:bg-[#276641] text-[#FBF7F0] font-semibold rounded disabled:opacity-40"
                 >
                   <CheckCircle2 className="w-4 h-4" /> Accept
                 </button>
                 )}
                 <button
                   onClick={() => { setCountering(t.id); setCounterRate(String(Math.round(Number(t.offeredRate)))); }}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#FAEEDA] hover:bg-[#f3e3c4] text-[#854F0B] font-semibold rounded border border-[#BA7517]/40"
+                  className="flex-1 flex min-h-[44px] items-center justify-center gap-2 py-3 transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] focus-visible:ring-offset-1 bg-[#FAEEDA] hover:bg-[#f3e3c4] text-[#854F0B] font-semibold rounded border border-[#BA7517]/40"
                 >
                   <Repeat2 className="w-4 h-4" /> Counter
                 </button>
                 <button
                   onClick={() => setDeclining(t.id)}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#F5EEE0] hover:bg-[#EFE6D3] text-slate-700 font-semibold rounded border border-[#EFE6D3]"
+                  className="flex-1 flex min-h-[44px] items-center justify-center gap-2 py-3 transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] focus-visible:ring-offset-1 bg-[#F5EEE0] hover:bg-[#EFE6D3] text-slate-700 font-semibold rounded border border-[#EFE6D3]"
                 >
                   <AlertTriangle className="w-4 h-4" /> Decline
                 </button>
@@ -281,18 +286,19 @@ export default function CarrierTendersPage() {
 
             {isCountering && (
               <div className="mt-5 space-y-2">
-                <label className="block text-xs text-slate-700">
+                <label htmlFor={`counter-${t.id}`} className="block text-xs text-slate-700">
                   Your counter rate (offered: ${Number(t.offeredRate).toLocaleString("en-US", { maximumFractionDigits: 0 })})
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">$</span>
                   <input
+                    id={`counter-${t.id}`}
                     type="number"
                     min="1"
                     step="1"
                     value={counterRate}
                     onChange={(e) => setCounterRate(e.target.value)}
-                    className="w-full pl-7 pr-3 py-2 bg-white border border-[#EFE6D3] rounded text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
+                    className="w-full min-h-[44px] pl-7 pr-3 py-2 bg-white border border-[#EFE6D3] rounded text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
                     placeholder="Enter your rate"
                   />
                 </div>
@@ -300,13 +306,13 @@ export default function CarrierTendersPage() {
                   <button
                     onClick={() => counter.mutate({ tenderId: t.id, counterRate: counterNum })}
                     disabled={!counterValid || counter.isPending}
-                    className="flex-1 py-2 bg-[#BA7517] hover:bg-[#854F0B] text-[#FBF7F0] text-sm font-medium rounded disabled:opacity-40"
+                    className="flex-1 min-h-[44px] py-2 transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] focus-visible:ring-offset-1 bg-[#BA7517] hover:bg-[#854F0B] text-[#FBF7F0] text-sm font-medium rounded disabled:opacity-40"
                   >
                     {counter.isPending ? "Sending…" : "Send counter offer"}
                   </button>
                   <button
                     onClick={() => { setCountering(null); setCounterRate(""); }}
-                    className="flex-1 py-2 bg-[#F5EEE0] text-slate-700 text-sm font-medium rounded border border-[#EFE6D3]"
+                    className="flex-1 min-h-[44px] py-2 transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] focus-visible:ring-offset-1 bg-[#F5EEE0] text-slate-700 text-sm font-medium rounded border border-[#EFE6D3]"
                   >
                     Back
                   </button>
@@ -316,11 +322,12 @@ export default function CarrierTendersPage() {
 
             {isDeclining && (
               <div className="mt-5 space-y-2">
-                <label className="block text-xs text-slate-700">Decline reason (required)</label>
+                <label htmlFor={`decline-${t.id}`} className="block text-xs text-slate-700">Decline reason (required)</label>
                 <select
+                  id={`decline-${t.id}`}
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
+                  className="w-full min-h-[44px] px-3 py-2 bg-white border border-[#EFE6D3] rounded text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
                 >
                   <option value="">Select a reason…</option>
                   {DECLINE_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
@@ -329,13 +336,13 @@ export default function CarrierTendersPage() {
                   <button
                     onClick={() => decline.mutate({ tenderId: t.id, reason })}
                     disabled={!reason || decline.isPending}
-                    className="flex-1 py-2 bg-[#9B2C2C] hover:bg-[#7d2323] text-[#FBF7F0] text-sm font-medium rounded disabled:opacity-40"
+                    className="flex-1 min-h-[44px] py-2 transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] focus-visible:ring-offset-1 bg-[#9B2C2C] hover:bg-[#7d2323] text-[#FBF7F0] text-sm font-medium rounded disabled:opacity-40"
                   >
                     {decline.isPending ? "Declining…" : "Confirm decline"}
                   </button>
                   <button
                     onClick={() => { setDeclining(null); setReason(""); }}
-                    className="flex-1 py-2 bg-[#F5EEE0] text-slate-700 text-sm font-medium rounded border border-[#EFE6D3]"
+                    className="flex-1 min-h-[44px] py-2 transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] focus-visible:ring-offset-1 bg-[#F5EEE0] text-slate-700 text-sm font-medium rounded border border-[#EFE6D3]"
                   >
                     Back
                   </button>

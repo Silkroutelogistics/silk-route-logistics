@@ -109,3 +109,33 @@ describe("an offer issued with its rate confirmation is accepted by signing (v3.
     expect(screen.getByRole("button", { name: /Accept/ })).toBeTruthy();
   });
 });
+
+// carrier-portal-upgrade M4/M5/G35 — the tender card on a phone.
+describe("M5: the tender card", () => {
+  it("shows the offered rate per mile", () => {
+    render(<CarrierTendersPage />);
+    expect(screen.getByText("$2.16/mi")).toBeTruthy(); // 4100 / 1900
+  });
+
+  it("declines only after a reason and a second, explicit confirm", async () => {
+    const { api } = await import("@/lib/api");
+    render(<CarrierTendersPage />);
+    fireEvent.click(screen.getByRole("button", { name: /Decline/ }));
+    expect(api.post).not.toHaveBeenCalled();
+    const confirm = screen.getByRole("button", { name: "Confirm decline" }) as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("Decline reason (required)"), { target: { value: "Rate too low" } });
+    fireEvent.click(confirm);
+    expect(api.post).toHaveBeenCalledWith("/tenders/t1/decline", { reason: "Rate too low" });
+  });
+
+  it("offers decline reasons without contractions, and an empty state without an em dash", () => {
+    render(<CarrierTendersPage />);
+    fireEvent.click(screen.getByRole("button", { name: /Decline/ }));
+    const options = Array.from(document.querySelectorAll("option")).map((o) => o.textContent ?? "");
+    expect(options.filter((o) => /n't|'re|'ll/.test(o))).toEqual([]);
+    state.tenders = [];
+    render(<CarrierTendersPage />);
+    expect(screen.getByText(/No tenders pending\./).textContent).not.toContain("\u2014");
+  });
+});
