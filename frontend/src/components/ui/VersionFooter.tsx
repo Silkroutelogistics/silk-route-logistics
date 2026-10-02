@@ -19614,7 +19614,9 @@
 // search shows a lock and why; locked pages go to the Dashboard; header icon buttons are named and 44px.
 // v3.8.brh — carrier portal: the phone-width header is no longer hidden under the menu bar, so the bell and
 // logout are reachable under 1024px; locked nav items render locked (carrier-portal-upgrade M4/M1).
-export const SRL_VERSION = "3.8.brh";
+// v3.8.bri — carrier portal: Settings no longer offers the two saves that always failed; phone edit and
+// notification choices are locked and explained, and the page stacks on a phone (carrier-portal-upgrade M1/M4/M5).
+export const SRL_VERSION = "3.8.bri";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
