@@ -242,7 +242,8 @@ router.get("/:id", async (req: AuthRequest, res: Response) => {
   const load = await prisma.load.findUnique({
     where: { id: req.params.id },
     include: {
-      poster: { select: { firstName: true, lastName: true, company: true } },
+      // G40 — the rep's contact, kept only for staff posters (lib/carrierLoadView).
+      poster: { select: { firstName: true, lastName: true, company: true, phone: true, email: true, role: true } },
       carrier: { select: { firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { companyName: true, mcNumber: true, dotNumber: true } } } },
       // E4 (ruling 6) — the paperwork panel reads every settlement type, so the
       // carrier sees each slot's state; the original BOL and the RC ride along

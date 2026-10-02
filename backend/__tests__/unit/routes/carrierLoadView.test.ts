@@ -94,13 +94,14 @@ describe("GET /carrier-loads/:id", () => {
       id: "l1", status: "POSTED", carrierId: null, referenceNumber: "SRL-1", carrierRate: 4500,
       ...LEAKY,
       customer: { name: "Shipper Co", contactName: "Pat", email: "pat@shipper.invalid", phone: "555" },
-      poster: { firstName: "Ann", lastName: "AE", company: "SRL", phone: "269", email: "ae@srl.invalid" },
+      poster: { firstName: "Ann", lastName: "AE", company: "SRL", phone: "269", email: "ae@srl.invalid", role: "BROKER" },
       documents: [], tenders: [], rateConfirmations: [],
     });
     const res = await request(theApp).get("/api/carrier-loads/l1");
     expect(res.status).toBe(200);
     for (const k of HIDDEN_KEYS) expect(res.body).not.toHaveProperty(k);
-    expect(res.body.poster).toEqual({ firstName: "Ann", lastName: "AE", company: "SRL" });
+    // G40 — an SRL rep's contact goes to the carrier; the role does not.
+    expect(res.body.poster).toEqual({ firstName: "Ann", lastName: "AE", company: "SRL", phone: "269", email: "ae@srl.invalid" });
     expect(res.body.carrierRate).toBe(4500);
     const args = mockPrisma.load.findUnique.mock.calls[0][0];
     expect(args.include.customer).toBeUndefined();
@@ -122,5 +123,13 @@ describe("GET /carrier/tenders (getCarrierTenders)", () => {
     for (const k of HIDDEN_KEYS) expect(body[0].load).not.toHaveProperty(k);
     expect(body[0].offeredRate).toBe(4500);
     expect(body[0].load.referenceNumber).toBe("SRL-1");
+  });
+});
+
+describe("G40: the poster's contact", () => {
+  it("is withheld when the poster is not SRL staff", async () => {
+    const { toCarrierLoadView } = await import("../../../src/lib/carrierLoadView");
+    const view = toCarrierLoadView({ id: "l1", poster: { firstName: "Sam", lastName: "Shipper", company: "Acme", phone: "555", email: "sam@acme.invalid", role: "SHIPPER" } }) as any;
+    expect(view.poster).toEqual({ firstName: "Sam", lastName: "Shipper", company: "Acme", phone: null, email: null });
   });
 });

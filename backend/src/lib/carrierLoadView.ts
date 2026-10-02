@@ -17,6 +17,8 @@
  * must appear here or in its reviewed allowlist, so a new one fails CI until
  * somebody decides which side it is on.
  */
+import { isSrlStaffRole } from "./documentTypes";
+
 export const CARRIER_HIDDEN_LOAD_FIELDS = [
   "rate",
   "customerRate",
@@ -34,12 +36,20 @@ export const CARRIER_HIDDEN_LOAD_FIELDS = [
   "customer",
 ] as const;
 
-type Poster = { firstName?: string | null; lastName?: string | null; company?: string | null } | null | undefined;
+type Poster = {
+  firstName?: string | null; lastName?: string | null; company?: string | null;
+  phone?: string | null; email?: string | null; role?: string | null;
+} | null | undefined;
 
 type CarrierLoadView<T> = Omit<T, (typeof CARRIER_HIDDEN_LOAD_FIELDS)[number]>;
 
 /**
- * The load with the customer side removed, and the poster reduced to a name.
+ * The load with the customer side removed, and the poster reduced to a contact.
+ *
+ * G40 (correcting v3.8.bow): the poster is the carrier's rep, and a carrier on
+ * the road needs a number to call. Phone and email are kept when the poster is
+ * SRL staff, and dropped otherwise, so a load some other role posted can never
+ * hand a carrier that person's details. The role itself is not sent.
  * An absent load passes through as absent rather than becoming `{}`.
  */
 export function toCarrierLoadView<T extends Record<string, unknown>>(load: T): CarrierLoadView<T>;
@@ -50,7 +60,11 @@ export function toCarrierLoadView<T extends Record<string, unknown>>(load: T | n
   for (const k of CARRIER_HIDDEN_LOAD_FIELDS) delete out[k];
   if (out.poster && typeof out.poster === "object") {
     const p = out.poster as NonNullable<Poster>;
-    out.poster = { firstName: p.firstName ?? null, lastName: p.lastName ?? null, company: p.company ?? null };
+    const staff = isSrlStaffRole(p.role);
+    out.poster = {
+      firstName: p.firstName ?? null, lastName: p.lastName ?? null, company: p.company ?? null,
+      phone: staff ? p.phone ?? null : null, email: staff ? p.email ?? null : null,
+    };
   }
   return out as CarrierLoadView<T>;
 }
