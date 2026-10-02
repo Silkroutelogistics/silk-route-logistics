@@ -2,6 +2,41 @@
 
 Each section is one arc's findings that were deliberately NOT built in it.
 Nothing below is a regression introduced by the arc it sits under.
+## carrier-portal-upgrade FINISH (F1-F5, 2026-10-02). Branch carrier-portal-upgrade, UNPUSHED, not merged.
+
+```
+HALT carrier-portal-upgrade/FINISH @ (this docs commit) | pushed n | merged n
+F1 DONE 25c759b9: run-local rebuilds on any frontend source change (content hash; stamp after build)
+   proof: old runner reused stale build, 4/4 PASS; new runner rebuilt, 2 FAIL; reverted, rebuilt, 4/4
+F2: Loadboard bpv e4a29faf | Messaging locked bpw 0eb4e051 | Documents bpx 05a3ae94 | Scorecard bpy 25735dc0
+    Training bpz 0ac67fec (+ cert IDOR test 050a790a) | Security SKIPPED: guard blocked (see F5); patch held
+F3: reproduced 1/3 at 2 workers on clean origin/main. Suspect: voidTestInvoices.test.ts:74 spawns npx tsx (shell:true)
+    x2 beside PDF tests. Fix (proposed): own single-fork vitest project for spawn tests. Not conclusive
+F4: SECURITY 9 (bou bov bow box boy boz bpd bph bpm) apply to origin/main; footer conflicts only (bpd bph bpm)
+    gates on that base: btsc 0 | btest 3788/0 | ftsc 0 | ftest 494/0 | build ok | e2e 2/2
+F5: origin/main still v3.8.bot, no origin collision. bpz collides with peer worktree health-digest (bpz..bqb)
+GATES@tip: btsc 0 | btest 3799/0 (1 worker) | ftsc 0 | ftest 587/0 | e2e 36/36 fresh build
+FINDINGS: 1 guard exit code lost to `| tail -1` let bpz commit; now gated on the code, and that gate held Security
+          2 globals.css:487 `table{display:block;overflow-x:auto}` under md: the table is the scroller
+          3 the IPC crash also hit 1-worker runs twice (bpp, bpx); 1 worker reduces it, does not cure it
+OPEN: 1 bpz: allow re-letter of 0ac67fec (unpushed) or leave it to merge, then `git apply` held Security patch
+      2 approve the F3 vitest fix | 3 ship the 9 SECURITY commits first? | 4 scope the globals.css table rule
+      5 when does Messaging unlock (one line in lib/carrierPortalFeatures)
+```
+
+- Held Security patch: `scratchpad/security-slice-held.patch.txt` (4 files, all gates passed before revert: ftest 590, btest 3799, E2E 38/38). Apply: `git apply scratchpad/security-slice-held.patch.txt`, then bump to the agreed letter.
+- F3 detail: forks pool (tinypool ProcessWorker, Windows); `backend/vitest.config.ts` sets no pool options. 16 test files call pdfjs `getDocument` and none destroy the document (sustained memory in the PDF worker).
+- F4 detail: a throwaway detached worktree off origin/main, with container srl-e2e-sec on ports 3112/4102. Both were removed and no branch was kept. Verified independently: neither worktree remains, and the container is gone.
+- Walkthrough additions (380 + 1280):
+  - Load Board: bid sheet, error on a refused bid.
+  - Messages: locked in the sidebar, the route sends you to the Dashboard.
+  - Documents: the Take a photo button on a phone, an 11 MB file refused before upload.
+  - Scorecard.
+  - Training: matrix scroll under the Driver column on a phone.
+  - The 380 drawer screenshot looked clipped at its left edge mid-slide; check by eye.
+
+---
+
 
 ---
 
