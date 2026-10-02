@@ -51,7 +51,9 @@ const PAGES: string[] = (process.env.CARRIER_PORTAL_PAGES || COVERED.join(","))
 
 // Mobile first and ascending (owner ruling, FINISH-2 G3): each page's fresh load
 // is at WIDTHS[0], the phone width carriers use, and it then resizes up.
-const WIDTHS = [380, 1280] as const;
+// 768 (FINISH-2 G4) is the tablet edge: md layouts switch on, the lg sidebar
+// does not, so the menu is still a drawer there.
+const WIDTHS = [380, 768, 1280] as const;
 
 // One token and one tour-complete for the whole worker. /api/auth and
 // /api/carrier-auth share one limiter (server.ts authLimiter, 100 per 15 min per
@@ -246,6 +248,52 @@ for (const width of WIDTHS) {
 
       await page.getByTestId("tour-next").click();
       await expect(page.getByTestId("tour-back")).toBeVisible();
+    });
+  });
+}
+
+// FINISH-2 G4 — the menu drawer below lg. It slides in over 200ms, so a box read
+// at the tap measures it mid-flight. The test waits for the drawer's OWN slide
+// to end (the listener is armed before the tap), not for a fixed delay, then
+// requires the whole drawer inside the viewport. Tailwind 4 slides with the CSS
+// `translate` property, not `transform` (.translate-x-0 sets --tw-translate-x;
+// .transition-transform covers transform, translate, scale, rotate), so the
+// event's propertyName is "translate"; the first run waited for "transform" and
+// never saw it. Either name is accepted, from the drawer itself only.
+for (const width of WIDTHS.filter((w) => w < 1024)) {
+  test.describe(`menu drawer at ${width}px`, () => {
+    test.use({ viewport: { width, height: 800 } });
+
+    test("opens fully on-screen once its slide has ended", async ({ page }) => {
+      await signInAsCarrier(page);
+      await page.goto("/carrier/dashboard");
+      await page.waitForLoadState("networkidle");
+      const drawer = page.getByRole("navigation", { name: "Carrier portal", exact: true });
+
+      const closed = (await drawer.boundingBox())!;
+      expect(closed.x + closed.width, "closed, the drawer sits off-screen").toBeLessThanOrEqual(0);
+
+      await drawer.evaluate((el) => {
+        (window as unknown as { __drawerEnd: Promise<string> }).__drawerEnd = new Promise((resolve, reject) => {
+          el.addEventListener("transitionend", (e) => {
+            const p = (e as TransitionEvent).propertyName;
+            if (e.target === el && (p === "translate" || p === "transform")) resolve(p);
+          });
+          // A deadline, not a wait: it only fires if the slide never ends.
+          setTimeout(() => reject(new Error("the drawer's slide (translate/transform) never ended")), 3000);
+        });
+      });
+      await page.getByRole("button", { name: "Open menu" }).click();
+      expect(["translate", "transform"]).toContain(
+        await page.evaluate(() => (window as unknown as { __drawerEnd: Promise<string> }).__drawerEnd),
+      );
+
+      const open = (await drawer.boundingBox())!;
+      expect(open.x, `drawer left edge at ${width}px`).toBeGreaterThanOrEqual(0);
+      expect(open.y, `drawer top edge at ${width}px`).toBeGreaterThanOrEqual(0);
+      expect(open.x + open.width, `drawer right edge at ${width}px`).toBeLessThanOrEqual(width);
+      expect(open.y + open.height, `drawer bottom edge at ${width}px`).toBeLessThanOrEqual(800);
+      await page.screenshot({ path: `test-results/carrier-portal/${width}-drawer-open.png` });
     });
   });
 }
