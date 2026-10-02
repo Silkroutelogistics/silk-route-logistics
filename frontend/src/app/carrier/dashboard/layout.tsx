@@ -16,6 +16,8 @@ import { AuthRefreshBanner } from "@/components/ui/AuthRefreshBanner";
 import { MarcoPolo } from "@/components/MarcoPolo";
 import type { Notification } from "@/types/entities";
 import { resolveNotificationHref } from "@/lib/notificationTarget";
+import { isFeatureEnabled, featureReason, lockedFeatureForPath } from "@/lib/carrierPortalFeatures";
+import { LockedFeature } from "@/components/carrier/LockedFeature";
 
 // v3.8.ajd Sprint 1 — Non-APPROVED carriers may log in but are confined
 // to /carrier/dashboard/application-status. The layout enforces this
@@ -31,6 +33,11 @@ const ACTIVATION_PAGE = "/carrier/dashboard/activation";
 // conditioned on APPROVED, because a PENDING carrier waiting on review
 // still has an account worth protecting.
 const SECURITY_PAGE = "/carrier/dashboard/security";
+
+// M5/G31 — one shape for the header's icon buttons: a 44px target, a visible
+// focus ring, a short transition that respects reduced motion.
+const ICON_BTN =
+  "relative inline-flex h-11 w-11 items-center justify-center rounded-md transition-colors duration-150 motion-reduce:transition-none hover:bg-[#F5EEE0] active:bg-[#EFE6D3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -198,6 +205,12 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
     }
   }, [user, pathname, checking, mustEnroll, activationData, router]);
 
+  // carrier-portal-upgrade M1 — a locked page is never shown. Anyone who lands on
+  // one (an old bookmark, a typed URL) is sent to the Dashboard.
+  useEffect(() => {
+    if (lockedFeatureForPath(pathname)) router.replace("/carrier/dashboard");
+  }, [pathname, router]);
+
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FBF7F0]">
@@ -256,11 +269,19 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
           <div className="flex items-center gap-3 flex-1 min-w-0">
             {showOperationalChrome ? (
               <>
-                <Search size={16} className="text-gray-400 shrink-0" />
-                <input
-                  placeholder="Search loads, documents, payments..."
-                  className="border-none outline-none text-[13px] text-gray-700 w-full max-w-[280px] bg-transparent"
-                />
+                {/* M1 — locked: the box had no handler and nothing behind it. */}
+                {isFeatureEnabled("headerSearch") ? (
+                  <>
+                    <Search size={16} className="text-[#5B6B7D] shrink-0" aria-hidden="true" />
+                    <input
+                      aria-label="Search"
+                      placeholder="Search loads, documents, payments..."
+                      className="border-none outline-none text-[13px] text-gray-700 w-full max-w-[280px] bg-transparent"
+                    />
+                  </>
+                ) : (
+                  <LockedFeature label="Search" reason={featureReason("headerSearch")} />
+                )}
               </>
             ) : (
               <Logo size="sm" />
@@ -274,10 +295,10 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
             {/* Notifications — activated (BCA-signed) carriers only. */}
             {showOperationalChrome && (
               <div className="relative">
-                <button onClick={() => setNotifOpen(!notifOpen)} className="relative">
-                  <Bell size={19} className="text-gray-500" />
+                <button onClick={() => setNotifOpen(!notifOpen)} aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"} aria-expanded={notifOpen} className={ICON_BTN}>
+                  <Bell size={19} className="text-[#5B6B7D]" aria-hidden="true" />
                   {unreadCount > 0 && (
-                    <span data-testid="notif-badge" className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#9B2C2C] text-[#FBF7F0] text-[9px] font-bold flex items-center justify-center">
+                    <span data-testid="notif-badge" className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#9B2C2C] text-[#FBF7F0] text-[9px] font-bold flex items-center justify-center">
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
@@ -286,7 +307,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
                   <div className="absolute top-8 right-0 w-[calc(100vw-2rem)] sm:w-80 bg-white rounded-lg shadow-[0_12px_40px_rgba(10,37,64,0.15)] border border-[#EFE6D3] z-[100]">
                     <div className="flex justify-between items-center px-3 py-2 border-b border-[#EFE6D3]">
                       <span className="text-[13px] font-bold text-[#0A2540]">Notifications</span>
-                      <button onClick={() => setNotifOpen(false)}><X size={14} className="text-gray-400" /></button>
+                      <button onClick={() => setNotifOpen(false)} aria-label="Close notifications" className={ICON_BTN}><X size={16} className="text-[#5B6B7D]" aria-hidden="true" /></button>
                     </div>
                     {notifications.length === 0 ? (
                       <div className="px-3 py-6 text-center text-xs text-gray-400">No notifications</div>
@@ -333,11 +354,11 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
               </div>
             )}
             {/* Avatar + Logout */}
-            <div className="w-[34px] h-[34px] rounded-full bg-[#C5A572] flex items-center justify-center text-xs font-bold text-[#0A2540] border-2 border-[#C5A572]/40 cursor-pointer">
+            <div className="hidden sm:flex w-[34px] h-[34px] rounded-full bg-[#C5A572] items-center justify-center text-xs font-bold text-[#0A2540] border-2 border-[#C5A572]/40" role="img" aria-label={companyName ? `Signed in to ${companyName}` : "Signed in"}>
               {initials}
             </div>
-            <button onClick={logout} className="text-gray-400 hover:text-[#9B2C2C]" title="Logout">
-              <LogOut size={17} />
+            <button onClick={logout} aria-label="Log out" title="Log out" className={`${ICON_BTN} text-[#5B6B7D] hover:text-[#9B2C2C]`}>
+              <LogOut size={17} aria-hidden="true" />
             </button>
           </div>
         </header>

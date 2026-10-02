@@ -19610,7 +19610,9 @@
 // v3.8.brf — the AE Insurance tab sends only what the AE changed and waits for the answer
 // (coi-verify-email-fix C3): no tier / safety score / trucks, no blank agent; a failed save stays open
 // with the server's reason; expiry dates render as their calendar day (UTC).
-export const SRL_VERSION = "3.8.brf";
+// v3.8.brg — carrier portal: broken features are locked from one flag file (carrier-portal-upgrade M1). The header
+// search shows a lock and why; locked pages go to the Dashboard; header icon buttons are named and 44px.
+export const SRL_VERSION = "3.8.brg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
