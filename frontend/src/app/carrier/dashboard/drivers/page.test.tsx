@@ -35,7 +35,9 @@ describe("Drivers", () => {
   it("names every icon-only row action and makes it a 44px target (G30)", async () => {
     mount();
     for (const name of ["Reset PIN & re-invite", "Edit driver", "Deactivate driver", "Delete driver"]) {
-      const b = await screen.findByRole("button", { name });
+      // The roster arrives from a query; under a loaded machine the 1s default
+      // findBy wait was too short and failed with nothing wrong (FINISH-2).
+      const b = await screen.findByRole("button", { name }, { timeout: 5000 });
       expect(b.className, name).toMatch(/\bh-11\b/);
       expect(b.className, name).toMatch(/\bw-11\b/);
     }
@@ -43,7 +45,7 @@ describe("Drivers", () => {
 
   it("labels each roster cell, so the row reads as a card under 768px (M4)", async () => {
     const { container } = mount();
-    await screen.findByText("Luis Ortega");
+    await screen.findByText("Luis Ortega", undefined, { timeout: 5000 });
     const labels = Array.from(container.querySelectorAll("td[data-label]")).map((td) => td.getAttribute("data-label"));
     expect(labels).toEqual(["Driver", "Phone", "License", "License expiry", "Medical card", "Training", "Status", "Actions"]);
     expect(container.querySelector("table")!.className).toMatch(/\bblock md:table\b/);
@@ -52,7 +54,7 @@ describe("Drivers", () => {
   it("deactivates only after the carrier confirms (M5)", async () => {
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     mount();
-    fireEvent.click(await screen.findByRole("button", { name: "Deactivate driver" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Deactivate driver" }, { timeout: 5000 }));
     expect(confirmSpy).toHaveBeenCalled();
     expect(patch).not.toHaveBeenCalled();
     confirmSpy.mockRestore();
