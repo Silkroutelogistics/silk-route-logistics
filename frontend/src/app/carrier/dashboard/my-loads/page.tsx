@@ -2,10 +2,13 @@
 import { formatStopDate } from "@/lib/stopDate";
 
 import { useState, useEffect } from "react";
-import { MapPin, Phone, FileText, CheckCircle, Clock, AlertCircle, Printer, Zap, Lock, ArrowRight } from "lucide-react";
+import { MapPin, FileText, CheckCircle, Clock, AlertCircle, Printer, Zap, Lock, ArrowRight } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge, DriverAssignmentPanel, PaperworkPanel } from "@/components/carrier";
+import { CopyButton, RateWithRpm, MapsLink, RepContact } from "@/components/carrier/LoadUtils";
+import { statusDisplay } from "@/lib/carrierStatus";
+import { BTN } from "@/lib/carrierUi";
 import { money, carrierPay } from "@/lib/rateDisplay";
 import { openPdfFromApi, extractApiError, apiHref } from "@/lib/download";
 // E2 — the next-step strip and the BOL button state come from the same
@@ -122,7 +125,7 @@ export default function MyLoadsPage() {
     <div>
       <div className="mb-6">
         <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">My Loads</h1>
-        <p className="text-[13px] text-gray-500">Manage your assigned loads and update shipment status</p>
+        <p className="text-[13px] text-[#5B6B7D]">Manage your assigned loads and update shipment status</p>
       </div>
 
       {/* Filters */}
@@ -132,44 +135,49 @@ export default function MyLoadsPage() {
             <button
               key={f}
               onClick={() => { setActiveFilter(f); setPage(1); }}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-medium ${
-                f === activeFilter ? "bg-[#0A2540] text-[#FBF7F0]" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              aria-pressed={f === activeFilter}
+              className={`min-h-[44px] px-3 rounded-full text-[12px] font-medium transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] ${
+                f === activeFilter ? "bg-[#0A2540] text-[#FBF7F0]" : "bg-[#F5EEE0] text-[#3A4A5F] hover:bg-[#EFE6D3]"
               }`}
-            >{f === "All" ? "All" : f.replace(/_/g, " ")}</button>
+            >{f === "All" || f === "Completed" ? f : statusDisplay("load", f).label}</button>
           ))}
         </div>
       </CarrierCard>
 
-      <div className="grid grid-cols-[1fr_400px] gap-5">
+      {/* M4 — one column under lg; the detail comes first once a load is chosen. */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-5">
         {/* Load list */}
         <div className="space-y-2">
           {isLoading ? (
             [...Array(5)].map((_, i) => (
-              <CarrierCard key={i} padding="p-4"><div className="h-16 bg-gray-100 rounded animate-pulse" /></CarrierCard>
+              <CarrierCard key={i} padding="p-4"><div className="h-16 bg-[#F5EEE0] rounded animate-pulse motion-reduce:animate-none" /></CarrierCard>
             ))
           ) : loads.length === 0 ? (
             <CarrierCard padding="p-12">
-              <div className="text-center text-gray-700 text-sm">No loads found</div>
+              <div className="text-center text-sm">
+                <div className="font-semibold text-[#0A2540]">{activeFilter === "All" ? "No loads yet" : "No loads with this status"}</div>
+                <div className="mt-1 text-[#5B6B7D]">{activeFilter === "All" ? "Loads you accept from Tenders or Available Loads appear here." : "Choose All to see every load."}</div>
+              </div>
             </CarrierCard>
           ) : (
             loads.map((load: Record<string, any>) => (
               <CarrierCard
                 key={load.id}
-                hover
                 padding="p-4"
                 onClick={() => setSelectedId(load.id)}
-                className={selectedId === load.id ? "!border-[#C5A572]" : ""}
+                selected={selectedId === load.id}
+                label={`Load ${load.referenceNumber}, ${statusDisplay("load", load.status).label}. Show details`}
               >
-                <div className="flex justify-between items-center">
-                  <div>
+                <div className="flex justify-between items-start gap-3">
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-mono text-xs font-bold text-[#0A2540]">{load.referenceNumber}</span>
-                      <CarrierBadge status={load.status} />
+                      <CarrierBadge kind="load" status={load.status} />
                     </div>
-                    <div className="text-xs text-gray-600">
+                    <div className="text-xs text-[#3A4A5F]">
                       {load.originCity}, {load.originState} &rarr; {load.destCity}, {load.destState}
                     </div>
-                    <div className="text-[10px] text-gray-700 mt-1">
+                    <div className="text-[11px] text-[#3A4A5F] mt-1">
                       {load.equipmentType} &middot; Pick: {formatStopDate(load.pickupDate)}
                     </div>
                     {(() => {
@@ -181,29 +189,32 @@ export default function MyLoadsPage() {
                       ) : null;
                     })()}
                   </div>
-                  <span className="text-sm font-bold text-[#0A2540]">{money(carrierPay(load))}</span>
+                  <RateWithRpm amount={carrierPay(load)} miles={load.distance} className="text-sm font-bold text-[#0A2540] text-right shrink-0" />
                 </div>
               </CarrierCard>
             ))
           )}
           {data && data.totalPages > 1 && (
             <div className="flex justify-center gap-2 pt-2">
-              {page > 1 && <button onClick={() => setPage(page - 1)} className="px-3 py-1.5 text-xs rounded bg-gray-100">Prev</button>}
-              <span className="px-3 py-1.5 text-xs text-gray-500">Page {page}/{data.totalPages}</span>
-              {page < data.totalPages && <button onClick={() => setPage(page + 1)} className="px-3 py-1.5 text-xs rounded bg-gray-100">Next</button>}
+              {page > 1 && <button onClick={() => setPage(page - 1)} className={BTN.secondary}>Previous</button>}
+              <span className="self-center px-3 text-xs text-[#5B6B7D]">Page {page} of {data.totalPages}</span>
+              {page < data.totalPages && <button onClick={() => setPage(page + 1)} className={BTN.secondary}>Next</button>}
             </div>
           )}
         </div>
 
         {/* Detail + Actions */}
-        <div className="space-y-4">
+        <div className={`space-y-4 ${selectedId ? "order-first lg:order-none" : ""}`}>
           {selectedId && detail ? (
             <>
               {/* Load info */}
               <CarrierCard padding="p-5">
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-sm font-bold text-[#0A2540]">{detail.referenceNumber}</h3>
-                  <CarrierBadge status={detail.status} size="md" />
+                  <h2 className="flex items-center text-sm font-bold text-[#0A2540]">
+                    {detail.referenceNumber}
+                    {detail.referenceNumber && <CopyButton value={detail.referenceNumber} label="load number" />}
+                  </h2>
+                  <CarrierBadge kind="load" status={detail.status} size="md" />
                 </div>
                 {(() => {
                   const step = carrierNextStep(detail);
@@ -220,27 +231,32 @@ export default function MyLoadsPage() {
                 })()}
                 <div className="space-y-2 text-xs">
                   <div className="flex items-start gap-2">
-                    <MapPin size={14} className="text-[#BA7517] mt-0.5" />
+                    <MapPin size={14} className="text-[#854F0B] mt-0.5" aria-hidden="true" />
                     <div>
-                      <div className="font-medium">{detail.originCity}, {detail.originState} {detail.originZip || ""}</div>
-                      <div className="text-gray-700">&darr;</div>
-                      <div className="font-medium">{detail.destCity}, {detail.destState} {detail.destZip || ""}</div>
+                      {[
+                        { k: "Pickup", a: `${detail.originCity}, ${detail.originState} ${detail.originZip || ""}`.trim() },
+                        { k: "Delivery", a: `${detail.destCity}, ${detail.destState} ${detail.destZip || ""}`.trim() },
+                      ].map((stop) => (
+                        <div key={stop.k} className="flex items-center font-medium">
+                          <span className="sr-only">{stop.k}: </span>
+                          <MapsLink address={stop.a}>{stop.a}</MapsLink>
+                          <CopyButton value={stop.a} label={`${stop.k.toLowerCase()} address`} />
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100">
+                  <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-[#F5EEE0]">
                     <div><span className="text-gray-700">Equipment</span><br />{detail.equipmentType}</div>
-                    <div><span className="text-gray-700">Weight</span><br />{detail.weight ? `${Number(detail.weight).toLocaleString()} lbs` : "—"}</div>
+                    <div><span className="text-gray-700">Weight</span><br />{detail.weight ? `${Number(detail.weight).toLocaleString()} lbs` : "Not set"}</div>
                     <div><span className="text-gray-700">Pickup</span><br />{formatStopDate(detail.pickupDate)}</div>
-                    <div><span className="text-gray-700">Delivery</span><br />{detail.deliveryDate ? formatStopDate(detail.deliveryDate) : "—"}</div>
-                    <div><span className="text-gray-700">Rate</span><br /><span className="text-[#BA7517] font-bold">{money(carrierPay(detail))}</span></div>
-                    <div><span className="text-gray-700">Distance</span><br />{detail.distance ? `${detail.distance} mi` : "—"}</div>
+                    <div><span className="text-gray-700">Delivery</span><br />{detail.deliveryDate ? formatStopDate(detail.deliveryDate) : "Not set"}</div>
+                    <div><span className="text-gray-700">Rate</span><br /><RateWithRpm amount={carrierPay(detail)} miles={detail.distance} className="text-[#854F0B] font-bold" /></div>
+                    <div><span className="text-gray-700">Distance</span><br />{detail.distance ? `${detail.distance} mi` : "Not set"}</div>
                   </div>
-                  {detail.poster && (
-                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
-                      <Phone size={14} className="text-gray-700" />
-                      <span>{detail.poster.company || `${detail.poster.firstName} ${detail.poster.lastName}`}</span>
-                    </div>
-                  )}
+                  {/* G40/M5 — a reachable rep on every load: tap to call, tap to email. */}
+                  <div className="mt-3 pt-3 border-t border-[#F5EEE0]">
+                    <RepContact rep={detail.poster ?? {}} />
+                  </div>
                   {detail.rateConfirmationPdfUrl && (
                     <>
                       <button
@@ -252,7 +268,7 @@ export default function MyLoadsPage() {
                           try {
                             await openPdfFromApi(detail.rateConfirmationPdfUrl!);
                           } catch (err) {
-                            setRcError(await extractApiError(err, "Couldn't open the rate confirmation."));
+                            setRcError(await extractApiError(err, "Could not open the rate confirmation."));
                           } finally {
                             setRcOpening(false);
                           }
@@ -306,7 +322,7 @@ export default function MyLoadsPage() {
                             try {
                               await openPdfFromApi(`/pdf/bol-load/${detail.id}`);
                             } catch (err) {
-                              setBolError(await extractApiError(err, "Couldn't open the bill of lading."));
+                              setBolError(await extractApiError(err, "Could not open the bill of lading."));
                             } finally {
                               setBolOpening(false);
                             }
@@ -540,7 +556,7 @@ function RcSignPanel({ loadId }: { loadId: string }) {
               const r = await api.post(`/carrier-loads/${loadId}/rc-sign-link/email`);
               setMail({ kind: "sent", to: String(r.data?.sentTo ?? "the email on file") });
             } catch (err) {
-              setMail({ kind: "error", message: await extractApiError(err, "Couldn't send a new link.") });
+              setMail({ kind: "error", message: await extractApiError(err, "Could not send a new link.") });
             }
           }}
           className="text-[11px] text-[#0A2540] underline disabled:opacity-60"

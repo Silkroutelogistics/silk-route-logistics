@@ -19624,7 +19624,9 @@
 // status (DISPUTED and REJECTED pay in red, TONU named); tender history shows pickup on the right day and stacks on a phone.
 // v3.8.brm — carrier portal: a clickable card can be chosen from the keyboard and shows which is selected;
 // shared carrier utilities for copy, rate per mile, maps and the SRL rep (carrier-portal-upgrade G28/M5).
-export const SRL_VERSION = "3.8.brm";
+// v3.8.brn — carrier portal: My Loads fits a phone, names statuses from the DB enums, shows rate per mile,
+// copies the load number and addresses, opens stops in maps, and puts a callable SRL rep on every load (M4/M5/G40).
+export const SRL_VERSION = "3.8.brn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

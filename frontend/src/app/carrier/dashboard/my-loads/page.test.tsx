@@ -297,8 +297,9 @@ describe("E6 — the Completed chip", () => {
     await state.myLoadsFn!();
     const url = vi.mocked(api.get).mock.calls.at(-1)![0] as string;
     expect(decodeURIComponent(url)).toBe("/carrier-loads/my-loads?status=POD_RECEIVED,INVOICED,COMPLETED&page=1&limit=20");
-    // The other chips are still their own status.
-    fireEvent.click(screen.getByRole("button", { name: "DELIVERED" }));
+    // The other chips are still their own status. Their words come from
+    // lib/carrierStatus now (carrier-portal-upgrade G20), not the raw enum.
+    fireEvent.click(screen.getByRole("button", { name: "Delivered" }));
     await state.myLoadsFn!();
     expect(decodeURIComponent(vi.mocked(api.get).mock.calls.at(-1)![0] as string)).toBe("/carrier-loads/my-loads?status=DELIVERED&page=1&limit=20");
   });
