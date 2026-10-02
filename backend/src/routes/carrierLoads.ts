@@ -40,6 +40,7 @@ import {
   RC_SIGN_LINK_MINTS_PER_HOUR,
 } from "../services/rcSignLinkService";
 import { shipmentSyncFor } from "../lib/shipmentStatusFor";
+import { toCarrierLoadView } from "../lib/carrierLoadView";
 
 const router = Router();
 
@@ -149,7 +150,7 @@ router.get("/available", async (req: AuthRequest, res: Response) => {
         originCity: true, originState: true, originZip: true,
         destCity: true, destState: true, destZip: true,
         equipmentType: true, weight: true, commodity: true,
-        carrierRate: true, rate: true, distance: true,
+        carrierRate: true, distance: true, // no `rate`: see lib/carrierLoadView
         pickupDate: true, deliveryDate: true,
         pickupTimeStart: true, pickupTimeEnd: true,
         deliveryTimeStart: true, deliveryTimeEnd: true,
@@ -209,7 +210,7 @@ router.get("/my-loads", async (req: AuthRequest, res: Response) => {
         originCity: true, originState: true, originZip: true, originCompany: true,
         destCity: true, destState: true, destZip: true, destCompany: true,
         equipmentType: true, weight: true, commodity: true,
-        carrierRate: true, rate: true, distance: true,
+        carrierRate: true, distance: true, // no `rate`: see lib/carrierLoadView
         pickupDate: true, deliveryDate: true,
         pickupTimeStart: true, pickupTimeEnd: true,
         deliveryTimeStart: true, deliveryTimeEnd: true,
@@ -241,9 +242,8 @@ router.get("/:id", async (req: AuthRequest, res: Response) => {
   const load = await prisma.load.findUnique({
     where: { id: req.params.id },
     include: {
-      poster: { select: { firstName: true, lastName: true, company: true, phone: true, email: true } },
+      poster: { select: { firstName: true, lastName: true, company: true } },
       carrier: { select: { firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { companyName: true, mcNumber: true, dotNumber: true } } } },
-      customer: { select: { name: true, contactName: true, email: true, phone: true } },
       // E4 (ruling 6) — the paperwork panel reads every settlement type, so the
       // carrier sees each slot's state; the original BOL and the RC ride along
       // for the buttons that were already here.
@@ -267,7 +267,9 @@ router.get("/:id", async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  res.json(load);
+  // G3 — the customer side of the row (rate, margin, shipper contact) never
+  // leaves for a carrier; this read also serves open POSTED loads.
+  res.json(toCarrierLoadView(load));
 });
 
 const acceptSchema = z.object({

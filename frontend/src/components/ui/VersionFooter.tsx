@@ -19566,7 +19566,9 @@
 // G1). It could decline another carrier's tender; the portal declines through /tenders/:id/decline.
 // v3.8.bqn — carrier portal: /load-tracking/:loadId/* is scoped to the load (carrier-portal-upgrade G2/G7). A carrier
 // could confirm another carrier's load LOADED or DELIVERED, and any role could read any load's timeline.
-export const SRL_VERSION = "3.8.bqn";
+// v3.8.bqo — carrier portal: a carrier no longer receives SRL's customer rate, margin or the shipper's contact
+// on load detail, the load lists or the tender list (carrier-portal-upgrade G3/G4, lib/carrierLoadView).
+export const SRL_VERSION = "3.8.bqo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

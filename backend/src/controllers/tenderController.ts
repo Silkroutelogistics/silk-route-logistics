@@ -27,6 +27,7 @@ import { autoIssueRateConfirmation } from "../services/rateConfirmationAutoIssue
 import { issueRateConfirmationAtOffer } from "../services/offerRateConfirmationService";
 import { offerQuickPayIneligibility, recordOfferQuickPay } from "../services/offerQuickPayService";
 import { withdrawLiveTenders, settleTender, settleTenders } from "../services/tenderTransitionService";
+import { toCarrierLoadView } from "../lib/carrierLoadView";
 
 export async function createTender(req: AuthRequest, res: Response) {
   const { carrierId, offeredRate, expiresAt, quickPay } = createTenderSchema.parse(req.body);
@@ -846,7 +847,9 @@ export async function getCarrierTenders(req: AuthRequest, res: Response) {
     : [];
   const signable = new Set(issued.map((r) => r.tenderId));
 
-  res.json(tenders.map((t) => ({ ...t, signable: signable.has(t.id) })));
+  // G4 — the load rides along for the card; its customer side (rate, margin,
+  // shipper contact) does not. lib/carrierLoadView.
+  res.json(tenders.map((t) => ({ ...t, load: toCarrierLoadView(t.load), signable: signable.has(t.id) })));
 }
 
 /** Broker/admin: view all tenders for a specific load */
