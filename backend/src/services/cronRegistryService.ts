@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import cron from "node-cron";
 import { log } from "../lib/logger";
+import { nextFire } from "../lib/cronSchedule";
 import { AR_REMINDER_SWITCH, AR_REMINDER_SCHEDULE, AR_REMINDER_DESCRIPTION } from "../lib/arReminderSwitch";
 
 /**
@@ -127,34 +128,12 @@ export async function getAllCronJobs() {
   return prisma.cronRegistry.findMany({ orderBy: { jobName: "asc" } });
 }
 
-/** Calculate next run time from cron expression (approximate) */
+/**
+ * Next run, evaluated in UTC. Replaces an approximation that treated every
+ * fixed-hour expression as daily, so a monthly job read "tomorrow".
+ */
 function getNextRunTime(schedule: string): Date | null {
-  try {
-    // Parse cron expression for next run (simple approximation)
-    const parts = schedule.split(" ");
-    if (parts.length < 5) return null;
-
-    const now = new Date();
-    // For simple schedules, just add the interval
-    if (parts[0].startsWith("*/")) {
-      const minutes = parseInt(parts[0].replace("*/", ""));
-      return new Date(now.getTime() + minutes * 60 * 1000);
-    }
-    if (parts[1].startsWith("*/")) {
-      const hours = parseInt(parts[1].replace("*/", ""));
-      return new Date(now.getTime() + hours * 60 * 60 * 1000);
-    }
-    // Daily jobs
-    if (parts[0] !== "*" && parts[1] !== "*") {
-      const nextRun = new Date(now);
-      nextRun.setUTCHours(parseInt(parts[1]), parseInt(parts[0]), 0, 0);
-      if (nextRun <= now) nextRun.setDate(nextRun.getDate() + 1);
-      return nextRun;
-    }
-    return null;
-  } catch {
-    return null;
-  }
+  return nextFire(schedule, new Date());
 }
 
 /** Seed all existing crons into registry (call at startup) */
@@ -187,6 +166,10 @@ export async function seedCronRegistry() {
     // v3.8.bko — the payment-reminder email switch. Created OFF; the update
     // clause below never writes `enabled`, so a restart cannot turn it back on.
     { jobName: AR_REMINDER_SWITCH, schedule: AR_REMINDER_SCHEDULE, description: AR_REMINDER_DESCRIPTION, enabled: false },
+    // health-digest arc — registered ahead of its first recorded run, so its next
+    // run is visible now. The name is schedulerService's withLock key, which is
+    // the row lib/cronRun.ts writes when it fires.
+    { jobName: "monthly-carrier-revet", schedule: "0 7 1 * *", description: "Monthly carrier re-vetting, 1st of month 07:00 UTC: alerts the AE on a CRITICAL score, never suspends (v3.8.bot)" },
   ];
 
   for (const { enabled = true, ...job } of jobs as Array<{ jobName: string; schedule: string; description: string; enabled?: boolean }>) {

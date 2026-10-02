@@ -19588,7 +19588,10 @@
 // v3.8.bqx — every scheduled job records its run in cron_registry: start, end, status, duration,
 // error and next run, through one wrapper (lib/cronRun.ts) behind withGuard and withLock. A job that
 // catches and logs its own error records FAILED. compass-score-recalc is no longer stuck at RUNNING.
-export const SRL_VERSION = "3.8.bqx";
+// v3.8.bqy — the health digest judges each cron job against its own expression (1.5x its longest
+// gap) instead of a flat 25 hours, counts cron failures apart from web-request errors, and
+// monthly-carrier-revet is registered with its next run, 2026-11-01 07:00 UTC.
+export const SRL_VERSION = "3.8.bqy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -2,7 +2,7 @@
 // existed read UNHEALTHY on a single cold-start SELECT 1 (1214 ms on
 // 2026-10-02), and 30 of 30 were held off HEALTHY by a missing Sentry DSN.
 import { describe, it, expect } from "vitest";
-import { measureDbLatency, overallStatus } from "../../../src/services/healthDigestService";
+import { judgeCrons, measureDbLatency, overallStatus } from "../../../src/services/healthDigestService";
 
 /** A query whose successive calls take the given times; call 0 is the warm-up. */
 function queryTaking(ms: number[]) {
@@ -52,5 +52,37 @@ describe("overallStatus", () => {
   it("degraded and unhealthy still do", () => {
     expect(overallStatus([{ status: "warn" }, { status: "degraded" }])).toBe("DEGRADED");
     expect(overallStatus([{ status: "degraded" }, { status: "unhealthy" }])).toBe("UNHEALTHY");
+  });
+});
+
+// The digest's cron row, judged per job. Under the flat 25h rule this replaced,
+// the weekly row below read stale and the stuck daily row was the only kind caught.
+describe("judgeCrons", () => {
+  const NOW = new Date("2026-10-02T12:00:00.000Z");
+  const hoursAgo = (h: number) => new Date(NOW.getTime() - h * 3_600_000);
+  const row = (jobName: string, schedule: string, lastRun: Date | null, lastStatus: string | null) =>
+    ({ jobName, schedule, enabled: true, lastRun, lastStatus });
+
+  it("a weekly job inside its week stays fresh, and the row stays healthy", () => {
+    const r = judgeCrons([row("compass-score-recalc", "0 23 * * 0", hoursAgo(4 * 24 + 13), "SUCCESS")], NOW);
+    expect(r.staleCrons).toHaveLength(0);
+    expect(r.component.status).toBe("healthy");
+  });
+
+  it("a job that started and never ended, beyond its interval, flags stale", () => {
+    const r = judgeCrons([row("health-digest", "7 7 * * *", hoursAgo(40), "RUNNING")], NOW);
+    expect(r.staleCrons.map((c) => c.jobName)).toEqual(["health-digest"]);
+    expect(r.component.status).toBe("degraded");
+  });
+
+  it("counts cron failures in the last 24h apart from web errors, and never-run rows without judging them", () => {
+    const r = judgeCrons([
+      row("ofac-rescan", "0 4 * * 1", hoursAgo(2), "FAILED"),
+      row("old-failure", "0 4 * * 1", hoursAgo(30), "FAILED"),
+      row("pre-tracing", "0 * * * *", null, null),
+    ], NOW);
+    expect(r.cronFailures24h).toBe(1);
+    expect(r.component.detail).toContain("Never recorded: 1");
+    expect(r.staleCrons).toHaveLength(0);
   });
 });

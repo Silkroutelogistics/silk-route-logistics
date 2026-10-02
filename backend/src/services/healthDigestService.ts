@@ -3,6 +3,9 @@ import { sendEmail } from "./emailService";
 import { getTrainingDigestMetrics } from "./trainingService";
 import * as Sentry from "@sentry/node";
 import { log } from "../lib/logger";
+import { isStale } from "../lib/cronSchedule";
+
+const esc = (s: string) => s.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]!);
 
 /**
  * Daily Health Digest — Emails admins a system status summary every morning.
@@ -62,6 +65,27 @@ export async function measureDbLatency(
   };
 }
 
+type CronRow = { jobName: string; schedule: string; enabled: boolean; lastRun: Date | null; lastStatus: string | null };
+
+/**
+ * Every scheduled run is recorded by lib/cronRun.ts. Staleness is per job, from
+ * its own expression; a row that has never recorded a run is counted, not
+ * judged (seeded names no job uses would otherwise degrade it forever).
+ */
+export function judgeCrons<R extends CronRow>(cronJobs: R[], now: Date) {
+  const failedCrons = cronJobs.filter((c) => c.lastStatus === "FAILED");
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const cronFailures24h = failedCrons.filter((c) => c.lastRun && c.lastRun >= oneDayAgo).length;
+  const staleCrons = cronJobs.filter((c) => isStale(c, now));
+  const neverRecorded = cronJobs.filter((c) => c.enabled && !c.lastRun).length;
+  const component: ComponentHealth = {
+    name: "Cron Jobs",
+    status: failedCrons.length === 0 && staleCrons.length === 0 ? "healthy" : "degraded",
+    detail: `Total: ${cronJobs.length} | Failed: ${failedCrons.length} | Stale: ${staleCrons.length} | Never recorded: ${neverRecorded}`,
+  };
+  return { failedCrons, staleCrons, cronFailures24h, component };
+}
+
 /** The headline. A "warn" row is informational and is deliberately not consulted. */
 export function overallStatus(components: Pick<ComponentHealth, "status">[]): "HEALTHY" | "DEGRADED" | "UNHEALTHY" {
   if (components.some((c) => c.status === "unhealthy")) return "UNHEALTHY";
@@ -96,8 +120,10 @@ export async function sendHealthDigest() {
     })
     .catch(() => []);
 
+  // error_logs is written by the Express error handler only, so this row is web
+  // requests. Scheduled-job failures are counted from cron_registry below.
   components.push({
-    name: "Error Rate",
+    name: "Error Rate (web requests)",
     status: errorsLastHour < 5 ? "healthy" : errorsLastHour < 10 ? "degraded" : "unhealthy",
     detail: `Last hour: ${errorsLastHour} | Last 24h: ${errors24h}`,
   });
@@ -113,15 +139,8 @@ export async function sendHealthDigest() {
 
   // ── Cron Jobs ──
   const cronJobs = await prisma.cronRegistry.findMany().catch(() => []);
-  const failedCrons = cronJobs.filter((c) => c.lastStatus === "FAILED");
-  const staleThreshold = new Date(now.getTime() - 25 * 60 * 60 * 1000); // 25h for daily jobs
-  const staleCrons = cronJobs.filter((c) => c.enabled && c.lastRun && c.lastRun < staleThreshold);
-
-  components.push({
-    name: "Cron Jobs",
-    status: failedCrons.length === 0 && staleCrons.length === 0 ? "healthy" : "degraded",
-    detail: `Total: ${cronJobs.length} | Failed: ${failedCrons.length} | Stale: ${staleCrons.length}`,
-  });
+  const { failedCrons, staleCrons, cronFailures24h, component: cronRow } = judgeCrons(cronJobs, now);
+  components.push(cronRow);
 
   // ── Entity Counts ──
   const [users, loads, invoices, carriers] = await Promise.all([
@@ -216,7 +235,8 @@ export async function sendHealthDigest() {
           <div><span style="color:#4ade80;font-weight:700;">${newLoads}</span> <span style="color:#8899AA;font-size:12px;">new loads</span></div>
           <div><span style="color:#4ade80;font-weight:700;">${deliveredLoads}</span> <span style="color:#8899AA;font-size:12px;">delivered</span></div>
           <div><span style="color:#4ade80;font-weight:700;">${newUsers}</span> <span style="color:#8899AA;font-size:12px;">new users</span></div>
-          <div><span style="color:${errors24h > 10 ? "#f87171" : "#4ade80"};font-weight:700;">${errors24h}</span> <span style="color:#8899AA;font-size:12px;">errors</span></div>
+          <div><span style="color:${errors24h > 10 ? "#f87171" : "#4ade80"};font-weight:700;">${errors24h}</span> <span style="color:#8899AA;font-size:12px;">web-request errors</span></div>
+          <div><span style="color:${cronFailures24h > 0 ? "#f87171" : "#4ade80"};font-weight:700;">${cronFailures24h}</span> <span style="color:#8899AA;font-size:12px;">cron failures</span></div>
         </div>
       </div>
 
@@ -240,11 +260,12 @@ export async function sendHealthDigest() {
       }
 
       ${
-        failedCrons.length > 0
+        failedCrons.length + staleCrons.length > 0
           ? `
       <div style="background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.2);border-radius:8px;padding:14px;margin-bottom:16px;">
-        <h3 style="color:#f87171;font-size:13px;margin:0 0 8px;">Failed Cron Jobs</h3>
-        ${failedCrons.map((c) => `<div style="font-size:12px;color:#E0E7EE;padding:2px 0;">${c.jobName} — last run: ${c.lastRun?.toISOString() || "never"}</div>`).join("")}
+        <h3 style="color:#f87171;font-size:13px;margin:0 0 8px;">Cron Jobs Needing Attention</h3>
+        ${failedCrons.map((c) => `<div style="font-size:12px;color:#E0E7EE;padding:2px 0;">FAILED ${c.jobName} — last run: ${c.lastRun?.toISOString() || "never"} — ${esc(c.lastError ?? "")}</div>`).join("")}
+        ${staleCrons.map((c) => `<div style="font-size:12px;color:#E0E7EE;padding:2px 0;">STALE ${c.jobName} (${c.schedule}) — last started: ${c.lastRun?.toISOString()} — ${c.lastStatus ?? ""}</div>`).join("")}
       </div>`
           : ""
       }
@@ -287,6 +308,8 @@ export async function sendHealthDigest() {
           status: overall,
           components: components.map((c) => ({ name: c.name, status: c.status })),
           errors24h,
+          cronFailures24h,
+          staleCrons: staleCrons.map((c) => c.jobName),
           db: { medianMs: dbMedianMs, samplesMs: dbSamplesMs },
           recipients: admins.length,
         },
