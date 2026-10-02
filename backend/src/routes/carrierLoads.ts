@@ -161,34 +161,10 @@ router.get("/available", async (req: AuthRequest, res: Response) => {
     prisma.load.count({ where }),
   ]);
 
-  // Enrich loads with facility detention warnings
-  const { getFacilityDetentionWarning } = await import("../services/detentionTrackingService");
-  // carrier-portal-upgrade G33 — this looked up two facilities per load, so a
-  // page of 20 cost 40 extra queries, most of them repeats: loads share
-  // origins and destinations. One lookup per distinct city and state now, shared
-  // by every load on the page. The response is unchanged. (No client in this
-  // repo reads detentionWarnings; whether to keep it is an open decision.)
-  const warningByPlace = new Map<string, ReturnType<typeof getFacilityDetentionWarning>>();
-  const warningFor = (city: string, state: string) => {
-    const key = `${city}|${state}`;
-    if (!warningByPlace.has(key)) warningByPlace.set(key, getFacilityDetentionWarning("", city, state));
-    return warningByPlace.get(key)!;
-  };
-  const enrichedLoads = await Promise.all(
-    loads.map(async (load) => {
-      const pickupWarning = await warningFor(load.originCity, load.originState);
-      const deliveryWarning = await warningFor(load.destCity, load.destState);
-      return {
-        ...load,
-        detentionWarnings: {
-          pickup: pickupWarning,
-          delivery: deliveryWarning,
-        },
-      };
-    })
-  );
-
-  res.json({ loads: enrichedLoads, total, page, totalPages: Math.ceil(total / limit) });
+  // carrier-portal-upgrade R3 — the per-load `detentionWarnings` enrichment is
+  // gone. No client read it (owner ruling, OPEN 13), and it cost a facility
+  // lookup per distinct place on every page of the board.
+  res.json({ loads, total, page, totalPages: Math.ceil(total / limit) });
 });
 
 // GET /api/carrier-loads/my-loads — Carrier's assigned loads

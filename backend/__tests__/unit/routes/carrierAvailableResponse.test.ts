@@ -1,11 +1,15 @@
 /**
- * carrier-portal-upgrade G33 — GET /carrier-loads/available looks up each
- * facility once per request, not twice per load.
+ * carrier-portal-upgrade R3 — GET /carrier-loads/available carries no
+ * `detentionWarnings`.
  *
- * The handler enriched every load with a pickup and a delivery detention
- * warning, each a database read, inside a per-load loop: a page of 20 cost 40
- * extra queries. Loads on one page share places, so the lookups are now shared
- * by city and state. The service is mocked so the assertion counts calls.
+ * Every load on the board was enriched with a pickup and a delivery facility
+ * detention warning, a database lookup per distinct place on every page. No
+ * client in the repo ever read the field (owner ruling, OPEN 13), so the
+ * enrichment and its service function were deleted. This holds the deletion:
+ * the loads come back as queried, and no facility lookup is made.
+ *
+ * The service is mocked with a spy under the old export name, so restoring the
+ * enrichment would both call it and put the field back, and fail here twice.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import express from "express";
@@ -42,21 +46,23 @@ const lane = (id: string, o: string, d: string) => ({ id, originCity: o, originS
 
 beforeEach(() => {
   vi.clearAllMocks();
-  warn.mockImplementation(async (_n: string, city: string) => ({ city }));
+  warn.mockResolvedValue({ avgWaitMinutes: 300, detentionRisk: "HIGH", warning: "x" });
   mockPrisma.carrierProfile.findUnique.mockResolvedValue({ id: "cp-1", onboardingStatus: "APPROVED", equipmentTypes: [] });
-  mockPrisma.load.count.mockResolvedValue(4);
+  mockPrisma.load.findMany.mockResolvedValue([lane("l1", "Kalamazoo", "Dallas"), lane("l2", "Grand Rapids", "Houston")]);
+  mockPrisma.load.count.mockResolvedValue(2);
 });
 
 describe("GET /carrier-loads/available", () => {
-  it("looks each place up once, however many loads share it", async () => {
-    mockPrisma.load.findMany.mockResolvedValue([
-      lane("l1", "Kalamazoo", "Dallas"), lane("l2", "Kalamazoo", "Dallas"),
-      lane("l3", "Kalamazoo", "Houston"), lane("l4", "Kalamazoo", "Dallas"),
-    ]);
+  it("returns the loads without detentionWarnings", async () => {
     const res = await request(theApp).get("/api/carrier-loads/available");
     expect(res.status).toBe(200);
-    expect(warn).toHaveBeenCalledTimes(3); // Kalamazoo, Dallas, Houston (was 8)
-    expect(res.body.loads).toHaveLength(4);
-    expect(res.body.loads[3].detentionWarnings).toEqual({ pickup: { city: "Kalamazoo" }, delivery: { city: "Dallas" } });
+    expect(res.body.loads).toHaveLength(2);
+    for (const load of res.body.loads) expect(load).not.toHaveProperty("detentionWarnings");
+    expect(res.body).toMatchObject({ total: 2, page: 1, totalPages: 1 });
+  });
+
+  it("makes no facility detention lookup", async () => {
+    await request(theApp).get("/api/carrier-loads/available");
+    expect(warn).not.toHaveBeenCalled();
   });
 });

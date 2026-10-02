@@ -231,36 +231,3 @@ async function computeDwellFromCheckCalls(): Promise<Map<string, number[]>> {
 
   return result;
 }
-
-/**
- * Get detention warning for a specific facility.
- * Returns null if facility is fine, or a warning object if high-detention.
- */
-export async function getFacilityDetentionWarning(
-  facilityName: string,
-  city: string,
-  state: string,
-): Promise<{ avgWaitMinutes: number; detentionRisk: "LOW" | "MEDIUM" | "HIGH"; warning: string } | null> {
-  const profile = await prisma.facilityProfile.findFirst({
-    where: {
-      city: { equals: city, mode: "insensitive" },
-      state: { equals: state, mode: "insensitive" },
-    },
-  });
-
-  if (!profile || profile.totalRatings < 3) return null; // not enough data
-
-  const avg = profile.avgWaitTime;
-  if (avg <= 120) return null; // under 2 hours = fine
-
-  const risk = avg > 240 ? "HIGH" : avg > 180 ? "MEDIUM" : "LOW";
-  const hrs = (avg / 60).toFixed(1);
-  const warning = risk === "HIGH"
-    // Detention is automatic and uniform on every SRL load ($40/hr after 2 free hours
-    // at each stop, $200/stop cap). It is never negotiated per load, so this advisory
-    // tells the driver what to do on arrival rather than implying a rate to ask for.
-    ? `High detention risk: ${facilityName} averages ${hrs} hours wait time (${profile.totalRatings} visits). Get a firm appointment if you can, log your arrival time, and call SRL 30 minutes before free time runs out.`
-    : `Moderate detention: ${facilityName} averages ${hrs} hours (${profile.totalRatings} visits).`;
-
-  return { avgWaitMinutes: avg, detentionRisk: risk, warning };
-}
