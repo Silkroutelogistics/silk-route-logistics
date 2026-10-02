@@ -19568,7 +19568,9 @@
 // could confirm another carrier's load LOADED or DELIVERED, and any role could read any load's timeline.
 // v3.8.bqo — carrier portal: a carrier no longer receives SRL's customer rate, margin or the shipper's contact
 // on load detail, the load lists or the tender list (carrier-portal-upgrade G3/G4, lib/carrierLoadView).
-export const SRL_VERSION = "3.8.bqo";
+// v3.8.bqp — carrier portal: load accessorials and load stops are owner-gated (carrier-portal-upgrade G5/G6).
+// A carrier could add a charge to, or rewrite detention on, a load it does not haul.
+export const SRL_VERSION = "3.8.bqp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

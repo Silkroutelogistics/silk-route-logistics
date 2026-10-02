@@ -5,6 +5,7 @@ import { auditLog } from "../middleware/audit";
 import { log } from "../lib/logger";
 import { syncCarrierPayAccessorials } from "../services/integrationService";
 import { syncInvoiceAccessorials } from "../services/invoiceService";
+import { loadIdOwnershipGate } from "../lib/loadOwnershipGate";
 
 /**
  * Fan an approval or rejection into both money paths.
@@ -63,6 +64,9 @@ function syncWarning(r: { carrier: boolean; invoice: boolean }): string | null {
 
 const router = Router();
 router.use(authenticate);
+// carrier-portal-upgrade G5 — POST /:loadId admitted any CARRIER, so a carrier
+// could add a charge to a load it does not haul; GET /:loadId had no role gate.
+router.param("loadId", loadIdOwnershipGate);
 
 /**
  * GET /api/load-accessorials/pending — every unapproved claim, across loads.

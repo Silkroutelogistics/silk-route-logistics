@@ -4,9 +4,16 @@ import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
 import { log } from "../lib/logger";
 import { applyStopDwellCharges } from "../lib/detentionLayover";
+import { loadIdOwnershipGate, stopIdOwnershipGate } from "../lib/loadOwnershipGate";
 
 const router = Router();
 router.use(authenticate);
+// carrier-portal-upgrade G6 — PUT /:loadId/:stopId and PATCH /stop/:stopId
+// admitted any CARRIER, so one carrier could rewrite another carrier's stop
+// times, detention and dwell (which feed billing); GET /:loadId had no role
+// gate and returned facility contacts. Both params are now owner-gated.
+router.param("loadId", loadIdOwnershipGate);
+router.param("stopId", stopIdOwnershipGate);
 
 /**
  * Settle detention and layover for a stop whose departure was just written.
