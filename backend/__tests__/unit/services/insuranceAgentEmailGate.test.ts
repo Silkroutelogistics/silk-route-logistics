@@ -13,7 +13,7 @@ const priorKey = vi.hoisted(() => {
 import { prisma } from "../../../src/config/database";
 import {
   AGENT_EMAIL_HOLD,
-  agentEmailBlockReason,
+  agentEmailBlock,
   sendInsuranceVerificationEmail,
   checkExpiringInsurance,
 } from "../../../src/services/insuranceVerificationService";
@@ -65,7 +65,7 @@ describe("14-day cooldown", () => {
   });
 
   it("looks back 14 days, by source tag or by agent address", async () => {
-    expect(await agentEmailBlockReason("c1", "agent@broker.test")).toBeNull();
+    expect(await agentEmailBlock("c1", "agent@broker.test")).toBeNull();
     const where = p.communication.findFirst.mock.calls[0][0].where;
     const days = (Date.now() - where.createdAt.gte.getTime()) / 86_400_000;
     expect(Math.round(days)).toBe(14);

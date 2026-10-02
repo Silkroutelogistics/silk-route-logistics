@@ -172,9 +172,13 @@ export const AGENT_EMAIL_HOLD: ReadonlyMap<string, string> = new Map([
 // COOLDOWN: one agent email per carrier per 14 days, whichever path asks.
 export const AGENT_EMAIL_COOLDOWN_DAYS = 14;
 
-export async function agentEmailBlockReason(carrierId: string, agentEmail: string): Promise<string | null> {
+// A block carries its reason and, for a cooldown, the moment it clears. A hold
+// has no clear date: it lasts until it is lifted.
+export type AgentEmailBlock = { reason: string; clearsAt: Date | null };
+
+export async function agentEmailBlock(carrierId: string, agentEmail: string): Promise<AgentEmailBlock | null> {
   const held = AGENT_EMAIL_HOLD.get(carrierId);
-  if (held) return `agent email on hold: ${held}`;
+  if (held) return { reason: `agent email on hold: ${held}`, clearsAt: null };
 
   const since = new Date(Date.now() - AGENT_EMAIL_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
   const recent = await prisma.communication.findFirst({
@@ -192,7 +196,8 @@ export async function agentEmailBlockReason(carrierId: string, agentEmail: strin
     select: { createdAt: true },
   });
   if (recent) {
-    return `agent emailed ${recent.createdAt.toISOString()}; ${AGENT_EMAIL_COOLDOWN_DAYS}-day cooldown`;
+    const clearsAt = new Date(recent.createdAt.getTime() + AGENT_EMAIL_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
+    return { reason: `agent emailed ${recent.createdAt.toISOString()}; ${AGENT_EMAIL_COOLDOWN_DAYS}-day cooldown`, clearsAt };
   }
   return null;
 }
@@ -208,10 +213,10 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
   if (!carrier) throw new Error("Carrier not found");
   if (!carrier.insuranceAgentEmail) throw new Error("No insurance agent email on file");
 
-  const blocked = await agentEmailBlockReason(carrierId, carrier.insuranceAgentEmail);
+  const blocked = await agentEmailBlock(carrierId, carrier.insuranceAgentEmail);
   if (blocked) {
-    log.info({ carrierId, reason: blocked }, "[InsVerify] Agent email blocked");
-    return { sent: false as const, reason: blocked };
+    log.info({ carrierId, reason: blocked.reason }, "[InsVerify] Agent email blocked");
+    return { sent: false as const, reason: blocked.reason, clearsAt: blocked.clearsAt };
   }
   if (!RESEND_API_KEY) { log.warn("[InsVerify] RESEND_API_KEY not set, skipping email"); return null; }
 

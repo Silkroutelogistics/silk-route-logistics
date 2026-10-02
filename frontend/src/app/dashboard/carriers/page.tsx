@@ -360,6 +360,30 @@ function insuranceBadge(expiry: string | null) {
   return <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400">Valid ({days}d)</span>;
 }
 
+// coi-verify-email-fix C1c — the only on-demand agent email. The server applies
+// the hold and the 14-day cooldown; a refusal is shown here with its reason.
+function SendVerificationButton({ carrierId }: { carrierId: string }) {
+  const [result, setResult] = useState<{ sent: boolean; text: string } | null>(null);
+  const send = useMutation({
+    mutationFn: () => api.post(`/carriers/${carrierId}/send-insurance-verification`),
+    onSuccess: () => setResult({ sent: true, text: "Sent to the insurance agent." }),
+    onError: (err: any) => {
+      const d = err?.response?.data ?? {};
+      const clears = d.cooldownClearsAt ? ` Cooldown clears ${new Date(d.cooldownClearsAt).toLocaleDateString()}.` : "";
+      setResult({ sent: false, text: `Not sent: ${d.reason || "send failed"}.${clears}` });
+    },
+  });
+  return (
+    <div className="bg-gray-100 rounded-lg p-4 space-y-2">
+      <button onClick={() => send.mutate()} disabled={send.isPending}
+        className="w-full px-4 py-2 bg-[#C5A572] text-[#0A2540] rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
+        {send.isPending ? "Sending..." : "Send verification"}
+      </button>
+      {result && <p role="status" className={`text-xs ${result.sent ? "text-green-700" : "text-red-700"}`}>{result.text}</p>}
+    </div>
+  );
+}
+
 function InsuranceBlock({ title, provider, policy, amount, expiry }: {
   title: string; provider?: string | null; policy?: string | null; amount?: number | null; expiry?: string | null;
 }) {
@@ -1646,6 +1670,7 @@ export default function CarrierPoolPage() {
                     <InsuranceBlock title="CARGO INSURANCE" provider={selectedCarrier.cargoInsuranceProvider} policy={selectedCarrier.cargoInsurancePolicy} amount={selectedCarrier.cargoInsuranceAmount} expiry={selectedCarrier.cargoInsuranceExpiry} />
                     <InsuranceBlock title="GENERAL LIABILITY" provider={selectedCarrier.generalLiabilityProvider} policy={selectedCarrier.generalLiabilityPolicy} amount={selectedCarrier.generalLiabilityAmount} expiry={selectedCarrier.generalLiabilityExpiry} />
                     <InsuranceBlock title="WORKERS COMPENSATION" provider={selectedCarrier.workersCompProvider} policy={selectedCarrier.workersCompPolicy} amount={selectedCarrier.workersCompAmount} expiry={selectedCarrier.workersCompExpiry} />
+                    <SendVerificationButton carrierId={selectedCarrier.id} />
 
                     {/* v3.8.awh — what the parser read, beside what was typed.
                         Deliberately BELOW the typed blocks: the carrier's own

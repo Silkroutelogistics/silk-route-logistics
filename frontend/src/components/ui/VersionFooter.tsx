@@ -19560,7 +19560,9 @@
 // data. The body no longer says the carrier operates under SRL's brokerage authority.
 // v3.8.bqk — saving insurance fields no longer emails the insurance agent, from the AE console or the
 // carrier portal (coi-verify-email-fix C1b). Agent email: registration, expiry cron, AE Send verification.
-export const SRL_VERSION = "3.8.bqk";
+// v3.8.bql — the AE carriers page gets Send verification (coi-verify-email-fix C1c): the only on-demand
+// agent email, behind the same hold and 14-day cooldown. A refusal shows its reason and clear date.
+export const SRL_VERSION = "3.8.bql";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

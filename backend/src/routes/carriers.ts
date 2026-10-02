@@ -43,6 +43,7 @@ import { verifyCarrierWithFMCSA } from "../services/fmcsaService";
 import { buildCarrierTrainingSummary } from "../services/trainingService";
 import { uploadLimiter, staffUploadLimiter } from "../middleware/rateLimiters";
 import { log } from "../lib/logger";
+import { sendInsuranceVerificationEmail } from "../services/insuranceVerificationService";
 import {
   closeOpenInfoRequestsForStatus,
   announceInfoRequestsClosedByStatus,
@@ -282,6 +283,32 @@ router.post("/:id/read-coi", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), 
     log.error({ err: err }, "[COI Reader] Error:");
     res.status(500).json({ error: err instanceof Error ? err.message : "COI reading failed" });
   }
+});
+
+// coi-verify-email-fix C1c — the AE's explicit Send verification. The only
+// on-demand agent email: saving insurance fields sends nothing (C1b). Same
+// gates as the cron (hold + 14-day cooldown) and no override. Every outcome is
+// audited here, because auditLog() records only 2xx and no result.
+router.post("/:id/send-insurance-verification", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), async (req: AuthRequest, res: Response) => {
+  let status = 200;
+  let body: Record<string, unknown>;
+  try {
+    const out = await sendInsuranceVerificationEmail(req.params.id);
+    if (out?.sent) body = { sent: true, emailId: out.emailId };
+    else if (out) { status = 409; body = { sent: false, reason: out.reason, cooldownClearsAt: out.clearsAt }; }
+    else { status = 503; body = { sent: false, reason: "email delivery is not configured" }; }
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "send failed";
+    status = reason === "Carrier not found" ? 404 : reason.startsWith("No insurance agent email") ? 400 : 502;
+    body = { sent: false, reason };
+  }
+  await prisma.auditLog.create({
+    data: {
+      userId: req.user!.id, action: "SEND_INSURANCE_VERIFICATION", entity: "Carrier", entityId: req.params.id,
+      details: { result: body.sent ? "SENT" : "BLOCKED", status, ...body } as any,
+    },
+  }).catch((err) => log.error({ err }, "[InsVerify] audit row failed"));
+  res.status(status).json(body);
 });
 
 router.put("/:id", authorize("ADMIN", "CEO"), validateBody(updateCarrierSchema), auditLog("UPDATE", "Carrier"), updateCarrier);
