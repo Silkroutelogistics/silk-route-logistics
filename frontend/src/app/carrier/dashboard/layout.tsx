@@ -250,7 +250,11 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   const showOperationalChrome = isApproved && !mustActivate && !mustEnroll;
 
   return (
-    <div className="flex h-screen bg-[#FBF7F0] overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-screen bg-[#FBF7F0] overflow-hidden">
+      {/* carrier-portal-upgrade M4 — a column below lg. The sidebar's mobile bar
+          is fixed at the top and its spacer reserves that height, but in a ROW
+          the spacer had no height to give, so the bar sat on this header and
+          hid the bell and logout on every page under 1024px (E2E measured it). */}
       {/* v3.8.ajd Sprint 1 — Sidebar hidden for non-APPROVED carriers.
           They only have one accessible route (application-status) so there's
           no nav to surface. Approved carriers see the full sidebar. */}

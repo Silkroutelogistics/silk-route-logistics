@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Home, Package, Send, Truck, Users, GraduationCap, Shield, DollarSign, FileText, MessageSquare, Settings, ExternalLink, Menu, X, History } from "lucide-react";
+  Home, Package, Send, Truck, Users, GraduationCap, Shield, DollarSign, FileText, MessageSquare, Settings, ExternalLink, Menu, X, History, Lock } from "lucide-react";
+import { lockedFeatureForPath } from "@/lib/carrierPortalFeatures";
 
 // Sprint 52.hotfix.b — Tenders nav entry added at position 3 between
 // Available Loads and My Loads. Reflects workflow: scout available loads
@@ -36,6 +37,8 @@ const nav = [
 export function CarrierSidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  // M1 — which locked nav item has its reason open (tap shows it; there is no hover on a phone).
+  const [lockedOpen, setLockedOpen] = useState<string | null>(null);
 
   // Close sidebar on route change
   useEffect(() => {
@@ -59,10 +62,33 @@ export function CarrierSidebar() {
       <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
         {nav.map((item) => {
           const active = pathname === item.href || (item.id !== "overview" && pathname.startsWith(item.href));
+          const locked = lockedFeatureForPath(item.href);
+          if (locked) {
+            // M1 — locked: shown, explained, never a link. The layout also sends
+            // anyone who types the URL back to the Dashboard.
+            return (
+              <div key={item.id}>
+                <button
+                  type="button"
+                  aria-disabled="true"
+                  aria-expanded={lockedOpen === item.id}
+                  aria-label={`${item.label}: Available soon. ${locked.reason}`}
+                  title={locked.reason}
+                  onClick={() => setLockedOpen((o) => (o === item.id ? null : item.id))}
+                  className="w-full flex items-center gap-2.5 px-2.5 min-h-[44px] rounded-md text-[13px] font-medium text-[#8AA5C0] cursor-not-allowed transition-colors duration-150 motion-reduce:transition-none hover:bg-[#FBF7F0]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A572]"
+                >
+                  <item.icon size={18} strokeWidth={1.8} aria-hidden="true" />
+                  <span>{item.label}</span>
+                  <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-[#C9D2DE]"><Lock size={11} aria-hidden="true" /> Soon</span>
+                </button>
+                {lockedOpen === item.id && <p className="px-2.5 pb-2 text-[11px] leading-snug text-[#C9D2DE]">{locked.reason}</p>}
+              </div>
+            );
+          }
           return (
-            <Link key={item.id} href={item.href}>
+            <Link key={item.id} href={item.href} aria-current={active ? "page" : undefined} className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A572]">
               <div
-                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] font-medium transition-colors ${
+                className={`flex items-center gap-2.5 px-2.5 min-h-[44px] rounded-md text-[13px] font-medium transition-colors duration-150 motion-reduce:transition-none ${
                   active
                     ? "bg-[#C5A572]/15 text-[#DAC39C]"
                     : "text-[#C9D2DE] hover:bg-[#FBF7F0]/5 hover:text-[#FBF7F0]"
@@ -98,7 +124,9 @@ export function CarrierSidebar() {
         </div>
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="p-2 text-[#FBF7F0]/60 hover:text-[#FBF7F0] hover:bg-[#FBF7F0]/5 rounded-lg transition"
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
+          aria-expanded={mobileOpen}
+          className="inline-flex h-11 w-11 items-center justify-center text-[#FBF7F0]/80 hover:text-[#FBF7F0] hover:bg-[#FBF7F0]/5 rounded-lg transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A572]"
         >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>

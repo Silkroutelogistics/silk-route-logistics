@@ -19612,7 +19612,9 @@
 // with the server's reason; expiry dates render as their calendar day (UTC).
 // v3.8.brg — carrier portal: broken features are locked from one flag file (carrier-portal-upgrade M1). The header
 // search shows a lock and why; locked pages go to the Dashboard; header icon buttons are named and 44px.
-export const SRL_VERSION = "3.8.brg";
+// v3.8.brh — carrier portal: the phone-width header is no longer hidden under the menu bar, so the bell and
+// logout are reachable under 1024px; locked nav items render locked (carrier-portal-upgrade M4/M1).
+export const SRL_VERSION = "3.8.brh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
