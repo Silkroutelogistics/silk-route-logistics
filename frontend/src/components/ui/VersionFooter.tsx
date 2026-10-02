@@ -19593,7 +19593,10 @@
 // monthly-carrier-revet is registered with its next run, 2026-11-01 07:00 UTC.
 // v3.8.bqz — the cron "run now" endpoint is removed (health-digest arc B5): its handler map was
 // only ever filled by registerCronJob, which had no callers, so every request failed. No UI used it.
-export const SRL_VERSION = "3.8.bqz";
+// v3.8.bra — cron_registry stops seeding two names no job records under (daily-cpp-tiers,
+// cpp-weekly-recalc), and scripts/delete-orphan-cron-rows.ts removes their rows: dry run by default
+// as srl_readonly; --execute on owner go only, after this is deployed.
+export const SRL_VERSION = "3.8.bra";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

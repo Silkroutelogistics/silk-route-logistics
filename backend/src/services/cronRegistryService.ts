@@ -53,14 +53,15 @@ export async function seedCronRegistry() {
     { jobName: "shipper-transit-pm", schedule: "0 21 * * *", description: "Shipper transit updates 4 PM ET daily" },
     { jobName: "password-expiry", schedule: "0 9 * * *", description: "Password expiry reminders daily at 9 AM" },
     { jobName: "otp-cleanup", schedule: "0 3 * * *", description: "Clean expired OTP codes daily at 3 AM" },
-    { jobName: "daily-cpp-tiers", schedule: "0 6 * * *", description: "CPP tier updates + log cleanup daily 6 AM" },
     // v3.8.bnn — ruling 2026-09-27, 5: this slot runs the 90-day credit block
     // (schedulerService, overdueCreditBlock) and has emailed nobody since
     // v3.8.blg. The row keeps its name so the existing registry row is updated.
     { jobName: "ar-reminders-daily", schedule: "0 11 * * *", description: "90-day credit block, daily 11:00 UTC (7 AM EDT / 6 AM EST): blocks a customer's credit once an invoice is 90 days past due. Tipalti exempt. Sends no reminders." },
     { jobName: "ap-aging-weekly", schedule: "0 12 * * 1", description: "AP aging check weekly Monday 7 AM ET" },
     { jobName: "weekly-report", schedule: "0 7 * * 1", description: "Weekly report snapshot Monday 7 AM" },
-    { jobName: "cpp-weekly-recalc", schedule: "0 11 * * 0", description: "CPP tier recalculation weekly Sunday 6 AM ET" },
+    // health-digest arc B6: "daily-cpp-tiers" and "cpp-weekly-recalc" are no longer
+    // seeded. No job records under either name (the jobs run as "daily-cpp-cleanup"
+    // and "compass-score-recalc"); scripts/delete-orphan-cron-rows.ts removes the rows.
     { jobName: "monthly-report-gen", schedule: "0 13 1 * *", description: "Monthly financial report auto-generation 1st of month 8 AM ET" },
     { jobName: "ai-queue-processor", schedule: "*/10 * * * *", description: "AI learning event queue processor every 10 minutes" },
     { jobName: "ai-anomaly-scan", schedule: "15 */2 * * *", description: "AI anomaly detection scanner every 2 hours" },

@@ -158,6 +158,10 @@ describe("only the production scripts load the production file", () => {
       klass: "NAMED_COMMAND",
       why: "carrier-unsuspend arc one-off: the default dry run reads as srl_readonly via _census-credential; only --execute loads this file (owner credential), and refuses unless its endpoint matches; scope proven per row, all-or-nothing in one transaction",
     },
+    "scripts/delete-orphan-cron-rows.ts": {
+      klass: "NAMED_COMMAND",
+      why: "health-digest arc B6: the default dry run reads as srl_readonly via _census-credential in a READ ONLY transaction verified with SHOW; only --execute loads this file (owner credential), refuses unless its endpoint matches the dry run's, and deletes only inside a transaction that rolls back unless exactly the expected rows go",
+    },
     "scripts/prisma-target-guard.ts": {
       klass: "RAIL_ENFORCEMENT",
       why: "reads the file to COMPARE hostnames and refuses; never puts a credential into the environment and never connects. Allow-listing the breach detector as a breach was the first version's error",
