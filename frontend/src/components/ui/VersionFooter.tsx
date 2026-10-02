@@ -19602,7 +19602,9 @@
 // v3.8.brc — the health digest judges a cron job that has NEVER run by its seeded next run plus a
 // grace (half its interval, at most a day), so a missed first fire (the monthly re-vet, 2026-11-01)
 // is flagged the next day instead of never. Pre-existing approximate nextRun values are corrected once.
-export const SRL_VERSION = "3.8.brc";
+// v3.8.brd — a cron job whose own cron_registry row is disabled is skipped and recorded SKIPPED;
+// the toggle endpoint now does something. The AR reminder switch is a separate row and is unchanged.
+export const SRL_VERSION = "3.8.brd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

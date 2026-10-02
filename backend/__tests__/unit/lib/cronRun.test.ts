@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../../../src/config/database", () => ({
-  prisma: { cronRegistry: { upsert: vi.fn(), update: vi.fn() } },
+  prisma: { cronRegistry: { upsert: vi.fn(), update: vi.fn(), findUnique: vi.fn() } },
 }));
 
 const fires: Array<() => unknown> = [];
@@ -21,6 +21,7 @@ vi.mock("node-cron", () => ({
 import { prisma } from "../../../src/config/database";
 import { cron, recordRun } from "../../../src/lib/cronRun";
 import { log } from "../../../src/lib/logger";
+import { AR_REMINDER_SWITCH } from "../../../src/lib/arReminderSwitch";
 
 const reg = vi.mocked(prisma).cronRegistry as any;
 
@@ -33,6 +34,7 @@ async function fireOnce(expr: string, body: () => Promise<void>) {
 beforeEach(() => {
   reg.upsert.mockReset().mockResolvedValue({});
   reg.update.mockReset().mockResolvedValue({});
+  reg.findUnique.mockReset().mockResolvedValue(null);
 });
 
 describe("recordRun", () => {
@@ -89,6 +91,52 @@ describe("recordRun", () => {
     await recordRun("manual", body);
     expect(body).toHaveBeenCalledTimes(1);
     expect(reg.upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("recordRun honours the job's enabled flag (D1)", () => {
+  it("a disabled job records SKIPPED and does not execute", async () => {
+    reg.findUnique.mockResolvedValue({ enabled: false });
+    const body = vi.fn(async () => {});
+    await fireOnce("0 4 * * 1", () => recordRun("ofac-rescan", body));
+    expect(body).not.toHaveBeenCalled();
+    expect(reg.upsert).not.toHaveBeenCalled(); // no RUNNING, no lastRun moved
+    expect(reg.update.mock.calls[0][0]).toMatchObject({ where: { jobName: "ofac-rescan" }, data: { lastStatus: "SKIPPED", nextRun: NEXT } });
+    expect(reg.update.mock.calls[0][0].data.runCount).toBeUndefined();
+  });
+
+  it("an enabled job, and one with no row yet, run as before", async () => {
+    reg.findUnique.mockResolvedValueOnce({ enabled: true }).mockResolvedValueOnce(null);
+    const body = vi.fn(async () => {});
+    await fireOnce("0 * * * *", () => recordRun("invoice-aging", body));
+    await fireOnce("0 * * * *", () => recordRun("brand-new-job", body));
+    expect(body).toHaveBeenCalledTimes(2);
+    expect(reg.update.mock.calls.map((c: any) => c[0].data.lastStatus)).toEqual(["SUCCESS", "SUCCESS"]);
+  });
+
+  it("the AR reminder job still runs while the AR switch row is OFF — the switch is its own row, read inside the job", async () => {
+    reg.findUnique.mockImplementation(async ({ where }: any) => ({ enabled: where.jobName !== AR_REMINDER_SWITCH }));
+    const body = vi.fn(async () => {});
+    await fireOnce("0 14 * * *", () => recordRun("ar-daily-reminders", body));
+    expect(reg.findUnique.mock.calls[0][0].where).toEqual({ jobName: "ar-daily-reminders" });
+    expect(body).toHaveBeenCalledTimes(1);
+  });
+
+  it("a registry that cannot be read fails OPEN: the job runs", async () => {
+    reg.findUnique.mockRejectedValue(new Error("registry down"));
+    const body = vi.fn(async () => {});
+    await fireOnce("0,30 * * * *", () => recordRun("risk-flagging", body));
+    expect(body).toHaveBeenCalledTimes(1);
+  });
+
+  it("no scheduled job is named after the AR switch row, so the wrapper can never skip it by that switch", () => {
+    const fs = require("fs") as typeof import("fs");
+    const path = require("path") as typeof import("path");
+    const names = ["cron/index.ts", "services/schedulerService.ts"].flatMap((f) =>
+      [...fs.readFileSync(path.join(__dirname, "../../../src", f), "utf8").matchAll(/with(?:Guard|Lock)\(\s*"([^"]+)"/g)].map((m) => m[1]));
+    expect(names.length).toBeGreaterThan(50);
+    expect(names).not.toContain(AR_REMINDER_SWITCH);
+    expect(names).toContain("ar-daily-reminders");
   });
 });
 

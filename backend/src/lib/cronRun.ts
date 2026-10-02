@@ -54,6 +54,26 @@ export async function recordRun(jobName: string, fn: () => Promise<void>): Promi
   const fire = fireCtx.getStore();
   if (!fire) return fn(); // not a scheduled fire (a manual call): nothing to record against
 
+  // A disabled row means "do not run": POST /monitoring/crons/:name/toggle was
+  // decorative until this read (health-digest arc D1). It reads the JOB'S OWN
+  // row. The AR switch (ar-reminder-emails) is a different row that
+  // ar-daily-reminders consults inside the job, and is untouched by this.
+  // A failed read fails OPEN: the job runs, exactly as before the toggle counted.
+  let enabled = true;
+  try {
+    enabled = (await prisma.cronRegistry.findUnique({ where: { jobName }, select: { enabled: true } }))?.enabled ?? true;
+  } catch (err) {
+    log.warn({ err, job: jobName }, "[CronRun] could not read enabled; running");
+  }
+  if (!enabled) {
+    await quietly(jobName, () => prisma.cronRegistry.update({
+      where: { jobName },
+      data: { lastStatus: "SKIPPED", lastError: null, nextRun: fire.nextRun() },
+    }));
+    log.info({ job: jobName }, "[CronRun] disabled in cron_registry: skipped");
+    return;
+  }
+
   const startedAt = new Date();
   await quietly(jobName, () => prisma.cronRegistry.upsert({
     where: { jobName },
