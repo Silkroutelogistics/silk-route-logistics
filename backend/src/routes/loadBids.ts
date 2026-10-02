@@ -58,7 +58,8 @@ router.get("/loadboard", async (req: AuthRequest, res: Response) => {
         pickupDate: true,
         deliveryDate: true,
         carrierRate: true,
-        rate: true,
+        // No `rate` (carrier-portal-upgrade G37): it holds the CUSTOMER rate on some
+        // creation paths, and this feed goes to every approved carrier. lib/carrierLoadView.
       },
     });
     res.json({ loads });

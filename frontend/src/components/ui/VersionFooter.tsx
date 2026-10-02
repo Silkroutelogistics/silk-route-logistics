@@ -19570,7 +19570,9 @@
 // on load detail, the load lists or the tender list (carrier-portal-upgrade G3/G4, lib/carrierLoadView).
 // v3.8.bqp — carrier portal: load accessorials and load stops are owner-gated (carrier-portal-upgrade G5/G6).
 // A carrier could add a charge to, or rewrite detention on, a load it does not haul.
-export const SRL_VERSION = "3.8.bqp";
+// v3.8.bqq — carrier portal: the load board feed no longer sends Load.rate (carrier-portal-upgrade G37), and
+// load-tracking uses the shared ownership gate (lib/loadOwnershipGate).
+export const SRL_VERSION = "3.8.bqq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
