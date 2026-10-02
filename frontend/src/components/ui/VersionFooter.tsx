@@ -19626,7 +19626,9 @@
 // shared carrier utilities for copy, rate per mile, maps and the SRL rep (carrier-portal-upgrade G28/M5).
 // v3.8.brn — carrier portal: My Loads fits a phone, names statuses from the DB enums, shows rate per mile,
 // copies the load number and addresses, opens stops in maps, and puts a callable SRL rep on every load (M4/M5/G40).
-export const SRL_VERSION = "3.8.brn";
+// v3.8.bro — carrier portal: Available Loads fits a phone, cards are chosen from the keyboard, rates show per
+// mile, Accept fires once, and the rep is a tap away (carrier-portal-upgrade M4/M5).
+export const SRL_VERSION = "3.8.bro";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

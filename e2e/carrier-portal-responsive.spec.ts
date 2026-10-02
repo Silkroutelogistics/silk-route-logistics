@@ -37,6 +37,7 @@ const COVERED = [
   "carrier/dashboard/revenue",
   "carrier/dashboard/loadboard",
   "carrier/dashboard/my-loads",
+  "carrier/dashboard/available-loads",
 ];
 const PAGES: string[] = (process.env.CARRIER_PORTAL_PAGES || COVERED.join(","))
   .split(",")
