@@ -19654,7 +19654,9 @@
 // drop zone, named view and download links, and a one-column form on a phone (carrier-portal-upgrade F2/G43/M4/M5).
 // v3.8.bsb — carrier portal: the Scorecard shows a skeleton while loading, its bonus table reads as cards on a
 // phone, and its pay ladder no longer forces its width (carrier-portal-upgrade F2/M4/M5).
-export const SRL_VERSION = "3.8.bsb";
+// v3.8.bsc — carrier portal: the training matrix keeps a narrow sticky Driver column on a phone with the courses
+// scrolling under it, and certificate downloads are named 44px buttons (carrier-portal-upgrade F2/M4/M5).
+export const SRL_VERSION = "3.8.bsc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

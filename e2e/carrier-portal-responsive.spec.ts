@@ -134,6 +134,58 @@ for (const width of WIDTHS) {
   });
 }
 
+// Owner check 1 (F2 Training): at 380px the sticky Driver column takes at most
+// ~40% of the viewport, and the course cells scroll under it. The seed has no
+// training courses, so the summary is answered with a fixture (3 drivers x 6
+// courses): the property under test is layout, not data. Playwright has no
+// swipe primitive, so the horizontal scroll is programmatic, in a touch-enabled
+// context.
+const TRAINING_FIXTURE = {
+  courses: Array.from({ length: 6 }, (_, i) => ({ id: "c" + i, slug: "course-" + i, title: "Course number " + (i + 1), category: "Safety" })),
+  drivers: Array.from({ length: 3 }, (_, i) => ({
+    id: "d" + i, firstName: "Driver", lastName: "Number" + (i + 1), activated: true, passedCount: 0, progress: {},
+  })),
+  summary: { driverCount: 3, courseCount: 6, passedCells: 0, totalCells: 18, pctTrained: 0 },
+};
+for (const width of WIDTHS) {
+  test.describe(`training matrix at ${width}px`, () => {
+    test.use({ viewport: { width, height: 800 }, hasTouch: true });
+
+    test("the Driver column stays narrow and the cells scroll under it", async ({ page }) => {
+      await signInAsCarrier(page);
+      await page.route("**/carrier-drivers/training-summary", (route) => route.fulfill({ json: TRAINING_FIXTURE }));
+      await page.goto("/carrier/dashboard/training");
+      const sticky = page.getByTestId("sticky-driver");
+      await expect(sticky).toBeVisible();
+      const matrix = page.getByTestId("training-matrix");
+
+      const before = (await sticky.boundingBox())!;
+      if (width < 768) expect(before.width, "sticky Driver column width at " + width + "px").toBeLessThanOrEqual(width * 0.4);
+
+      const docOverflow = await page.evaluate(() => (document.scrollingElement || document.documentElement).scrollWidth - window.innerWidth);
+      expect(docOverflow, "the page itself must not scroll sideways").toBeLessThanOrEqual(1);
+
+      // Under md a site-wide rule (globals.css, `table { display: block; overflow-x: auto }`)
+      // makes the TABLE the scroll container, not its wrapper; measure the real one.
+      const scroller = matrix.locator("table");
+      const overflows = await scroller.evaluate((el) => el.scrollWidth > el.clientWidth);
+      if (width < 768) {
+        expect(overflows, "the matrix should overflow its own box on a phone").toBe(true);
+        const firstCourse = page.locator("thead th").nth(1);
+        const courseBefore = (await firstCourse.boundingBox())!;
+        await scroller.evaluate((el) => el.scrollBy({ left: 220 }));
+        await page.waitForTimeout(100);
+        const after = (await sticky.boundingBox())!;
+        const courseAfter = (await firstCourse.boundingBox())!;
+        expect(Math.round(after.x), "the sticky column stays put").toBe(Math.round(before.x));
+        expect(courseAfter.x, "course cells move left").toBeLessThan(courseBefore.x - 100);
+        expect(courseAfter.x, "and pass under the sticky column").toBeLessThan(after.x + after.width);
+      }
+      await page.screenshot({ path: `test-results/carrier-portal/${width}-training-matrix.png` });
+    });
+  });
+}
+
 // M3 — the welcome tour, replayed from Settings. On a phone it is a bottom sheet
 // (its card ends at the bottom edge); on a desktop it is a centred card. Neither
 // may make the page scroll sideways.

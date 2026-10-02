@@ -15,6 +15,7 @@ import { GraduationCap, Loader2, CheckCircle2, Download, Users, ClipboardList, F
 import { api } from "@/lib/api";
 import { downloadFromApi } from "@/lib/download";
 import { CarrierCard } from "@/components/carrier";
+import { BTN } from "@/lib/carrierUi";
 
 interface Course { id: string; slug: string; title: string; category: string; required?: boolean; dueDays?: number | null }
 interface CellProgress { status: "NOT_STARTED" | "IN_PROGRESS" | "PASSED" | "FAILED"; bestScorePct: number | null; completedAt: string | null; expiresAt: string | null; isExpired?: boolean; daysUntilExpiry?: number | null }
@@ -33,9 +34,9 @@ interface Summary { driverCount: number; courseCount: number; passedCells: numbe
 function StatCard({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "danger" }) {
   return (
     <CarrierCard padding="p-4">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BA7517]">{label}</div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#854F0B]">{label}</div>
       <div className={`font-serif text-3xl mt-1 ${tone === "danger" ? "text-[#9B2C2C]" : "text-[#0A2540]"}`}>{value}</div>
-      {sub && <div className="text-[11px] text-gray-400 mt-0.5">{sub}</div>}
+      {sub && <div className="text-[11px] text-[#5B6B7D] mt-0.5">{sub}</div>}
     </CarrierCard>
   );
 }
@@ -91,7 +92,7 @@ export default function CarrierTrainingPage() {
       setSeeded(false); // re-seed from refetched data
       qc.invalidateQueries({ queryKey: ["carrier-training"] });
     },
-    onError: () => setSaveError("Couldn't save required courses. Try again."),
+    onError: () => setSaveError("Could not save required courses. Try again."),
   });
 
   const downloadCert = async (driverId: string, slug: string) => {
@@ -99,7 +100,7 @@ export default function CarrierTrainingPage() {
     try {
       await downloadFromApi(`/carrier-drivers/${driverId}/certificate/${slug}`, `SRL-Certificate-${slug}.pdf`);
     } catch {
-      setCertError("Couldn't download that certificate. Try again in a moment.");
+      setCertError("Could not download that certificate. Try again in a moment.");
     }
   };
 
@@ -110,7 +111,7 @@ export default function CarrierTrainingPage() {
       const today = new Date().toISOString().slice(0, 10);
       await downloadFromApi("/carrier-drivers/compliance-export", `SRL-training-transcript-${today}.csv`);
     } catch {
-      setExportError("Couldn't export the transcript. Try again in a moment.");
+      setExportError("Could not export the transcript. Try again in a moment.");
     } finally {
       setExporting(false);
     }
@@ -126,13 +127,13 @@ export default function CarrierTrainingPage() {
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Driver Training</h1>
-          <p className="text-[13px] text-gray-500">
-            SRL Driver Academy completion across your roster. Set required courses, track who&apos;s due, and export an audit-ready transcript.
+          <p className="text-[13px] text-[#5B6B7D]">
+            SRL Driver Academy completion across your roster. Set required courses, track who is due, and export an audit-ready transcript.
           </p>
         </div>
         {drivers.length > 0 && (
           <button type="button" onClick={downloadTranscript} disabled={exporting}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#C5A572]/40 bg-white px-3 py-2 text-[12px] font-semibold text-[#BA7517] hover:bg-[#FAEEDA] disabled:opacity-50">
+            className={BTN.secondary}>
             {exporting ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />} Download transcript (CSV)
           </button>
         )}
@@ -143,8 +144,8 @@ export default function CarrierTrainingPage() {
 
       {isLoading ? (
         <CarrierCard padding="p-8">
-          <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
-            <Loader2 size={16} className="animate-spin" /> Loading training progress...
+          <div role="status" aria-label="Loading training progress" className="space-y-2">
+            {[0, 1, 2].map((k) => <div key={k} className="h-10 rounded bg-[#F5EEE0] animate-pulse motion-reduce:animate-none" />)}
           </div>
         </CarrierCard>
       ) : error ? (
@@ -165,19 +166,19 @@ export default function CarrierTrainingPage() {
           <CarrierCard padding="p-4 mb-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex items-start gap-2.5">
-                <ClipboardList size={18} className="text-[#BA7517] shrink-0 mt-0.5" />
+                <ClipboardList size={18} className="text-[#854F0B] shrink-0 mt-0.5" />
                 <div>
                   <div className="text-[13px] font-semibold text-[#0A2540]">Required training</div>
                   {requiredCount === 0 ? (
-                    <p className="text-[12px] text-gray-500 mt-0.5">No required courses set. Pick the courses every driver on your roster must complete, with a due window.</p>
+                    <p className="text-[12px] text-[#5B6B7D] mt-0.5">No required courses set. Pick the courses every driver on your roster must complete, with a due window.</p>
                   ) : (
-                    <p className="text-[12px] text-gray-500 mt-0.5">{requiredCount} course{requiredCount === 1 ? "" : "s"} required of every driver: <span className="text-[#3A4A5F]">{requiredTitles.join(", ")}</span></p>
+                    <p className="text-[12px] text-[#5B6B7D] mt-0.5">{requiredCount} course{requiredCount === 1 ? "" : "s"} required of every driver: <span className="text-[#3A4A5F]">{requiredTitles.join(", ")}</span></p>
                   )}
                 </div>
               </div>
               {!editing && (
                 <button type="button" onClick={() => setEditing(true)}
-                  className="rounded-lg bg-[#BA7517] px-3 py-1.5 text-[12px] font-semibold text-[#FBF7F0] hover:bg-[#854F0B] shrink-0">
+                  className={`${BTN.primary} shrink-0`}>
                   {requiredCount ? "Edit" : "Set required courses"}
                 </button>
               )}
@@ -185,7 +186,7 @@ export default function CarrierTrainingPage() {
 
             {editing && (
               <div className="mt-4 border-t border-[#F5EEE0] pt-4">
-                <p className="text-[11px] text-gray-500 mb-3">Check each course to require it, and set how many days a driver has to complete it (counted from when they&apos;re added to your roster, or when you set the requirement, whichever is later).</p>
+                <p className="text-[11px] text-[#5B6B7D] mb-3">Check each course to require it, and set how many days a driver has to complete it (counted from when they are added to your roster, or when you set the requirement, whichever is later).</p>
                 <div className="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
                   {courses.map((c) => {
                     const row = reqEdit[c.id] || { required: false, dueDays: 30 };
@@ -197,15 +198,15 @@ export default function CarrierTrainingPage() {
                             className="h-4 w-4 shrink-0 accent-[#BA7517]" />
                           <span className="min-w-0">
                             <span className="block text-[13px] text-[#0A2540] truncate">{c.title}</span>
-                            <span className="block text-[10px] text-gray-400">{c.category}</span>
+                            <span className="block text-[10px] text-[#5B6B7D]">{c.category}</span>
                           </span>
                         </label>
                         <div className={`flex items-center gap-1.5 shrink-0 ${row.required ? "" : "opacity-40"}`}>
-                          <span className="text-[11px] text-gray-500">due in</span>
+                          <span className="text-[11px] text-[#5B6B7D]">due in</span>
                           <input type="number" min={1} max={365} value={row.dueDays} disabled={!row.required}
                             onChange={(e) => setReqEdit((m) => ({ ...m, [c.id]: { ...row, dueDays: parseInt(e.target.value || "0", 10) } }))}
                             className="w-16 rounded border border-[#EFE6D3] px-2 py-1 text-[12px] text-right disabled:bg-gray-50" />
-                          <span className="text-[11px] text-gray-500">days</span>
+                          <span className="text-[11px] text-[#5B6B7D]">days</span>
                         </div>
                       </div>
                     );
@@ -213,12 +214,12 @@ export default function CarrierTrainingPage() {
                 </div>
                 {saveError && <div className="mt-3 text-[12px] text-[#9B2C2C]">{saveError}</div>}
                 <div className="mt-4 flex items-center gap-2">
-                  <button type="button" onClick={() => saveReq.mutate()} disabled={saveReq.isPending}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#BA7517] px-4 py-2 text-[12px] font-semibold text-[#FBF7F0] hover:bg-[#854F0B] disabled:opacity-50">
+                  <button type="button" onClick={() => { if (!saveReq.isPending) saveReq.mutate(); }} disabled={saveReq.isPending}
+                    className={BTN.primary}>
                     {saveReq.isPending ? <Loader2 size={14} className="animate-spin" /> : null} Save{editSelectedCount ? ` (${editSelectedCount} required)` : ""}
                   </button>
                   <button type="button" onClick={() => { setEditing(false); setSeeded(false); setSaveError(null); }}
-                    className="rounded-lg border border-[#EFE6D3] px-4 py-2 text-[12px] font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                    className={BTN.secondary}>Cancel</button>
                 </div>
               </div>
             )}
@@ -236,30 +237,34 @@ export default function CarrierTrainingPage() {
           {overdueCells > 0 ? (
             <div className="mb-4 px-3 py-2.5 bg-[#F6E3E3] border-l-4 border-[#9B2C2C] rounded text-[13px] text-[#0A2540] flex items-start gap-2">
               <AlertTriangle size={15} className="text-[#9B2C2C] shrink-0 mt-0.5" />
-              <span><span className="font-semibold text-[#9B2C2C]">{overdueCells} required course{overdueCells === 1 ? "" : "s"} overdue</span> across your roster. Overdue cells are flagged below — have those drivers complete them in the Academy.</span>
+              <span><span className="font-semibold text-[#9B2C2C]">{overdueCells} required course{overdueCells === 1 ? "" : "s"} overdue</span> across your roster. Overdue cells are flagged below. Have those drivers complete them in the Academy.</span>
             </div>
           ) : null}
 
           {drivers.length === 0 ? (
             <CarrierCard padding="p-10">
               <div className="text-center">
-                <Users size={32} className="mx-auto text-[#BA7517] mb-3" />
+                <Users size={32} className="mx-auto text-[#854F0B] mb-3" />
                 <h3 className="text-sm font-bold text-[#0A2540] mb-1">No active drivers yet</h3>
-                <p className="text-xs text-gray-500">Add drivers and send them training invites from the Drivers page.</p>
+                <p className="text-xs text-[#5B6B7D]">Add drivers and send them training invites from the Drivers page.</p>
               </div>
             </CarrierCard>
           ) : (
             <CarrierCard padding="p-0">
-              <div className="overflow-x-auto">
+              {/* carrier-portal-upgrade F2 (owner check 1): the matrix scrolls inside
+                  its own container, never the page. The sticky Driver column is
+                  capped at 36vw on a phone (under the 40% ruling) with an edge
+                  shadow, and the course cells pass under it. */}
+              <div className="overflow-x-auto overscroll-x-contain" data-testid="training-matrix">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-[#F5EEE0] text-[11px] uppercase tracking-wide text-gray-400">
-                      <th className="px-4 py-3 font-medium sticky left-0 bg-white z-10">Driver</th>
+                    <tr className="border-b border-[#F5EEE0] text-[11px] uppercase tracking-wide text-[#5B6B7D]">
+                      <th data-testid="sticky-driver" className="px-3 md:px-4 py-3 font-medium sticky left-0 z-10 bg-white w-[36vw] max-w-[150px] md:w-auto md:max-w-none shadow-[2px_0_4px_-2px_rgba(10,37,64,0.15)]">Driver</th>
                       {courses.map((c) => (
                         <th key={c.id} className={`px-3 py-3 font-medium text-center min-w-[120px] ${hoverCol === c.id ? "bg-[#BA7517]/5" : ""}`}
                           onMouseEnter={() => setHoverCol(c.id)} onMouseLeave={() => setHoverCol(null)} title={c.category}>
                           {c.title}
-                          {c.required ? <span className="block text-[9px] font-semibold text-[#BA7517] normal-case tracking-normal">Required · {c.dueDays}d</span> : null}
+                          {c.required ? <span className="block text-[9px] font-semibold text-[#854F0B] normal-case tracking-normal">Required · {c.dueDays}d</span> : null}
                         </th>
                       ))}
                     </tr>
@@ -267,11 +272,11 @@ export default function CarrierTrainingPage() {
                   <tbody>
                     {drivers.map((d) => (
                       <tr key={d.id} className="border-b border-gray-50 last:border-0">
-                        <td className="px-4 py-3 sticky left-0 bg-white z-10">
-                          <div className="text-[13px] font-semibold text-[#0A2540]">{d.firstName} {d.lastName}</div>
+                        <td className="px-3 md:px-4 py-3 sticky left-0 z-10 bg-white w-[36vw] max-w-[150px] md:w-auto md:max-w-none shadow-[2px_0_4px_-2px_rgba(10,37,64,0.15)]">
+                          <div className="text-[13px] font-semibold text-[#0A2540] break-words">{d.firstName} {d.lastName}</div>
                           {!d.activated
                             ? <div className="text-[10px] text-[#B07A1A]">Not activated</div>
-                            : <div className="text-[10px] text-gray-400">{d.passedCount}/{courses.length} done</div>}
+                            : <div className="text-[10px] text-[#5B6B7D]">{d.passedCount}/{courses.length} done</div>}
                         </td>
                         {courses.map((c) => {
                           const p = d.progress[c.id];
@@ -282,7 +287,8 @@ export default function CarrierTrainingPage() {
                             <td key={c.id} className={`px-3 py-3 text-center align-middle ${overdue ? "bg-[#F6E3E3]/50" : hoverCol === c.id ? "bg-[#BA7517]/5" : ""}`}>
                               {status === "PASSED" ? (
                                 <button type="button" onClick={() => downloadCert(d.id, c.slug)}
-                                  className="inline-flex flex-col items-center gap-0.5 group" title="Download certificate">
+                                  aria-label={`Download ${d.firstName} ${d.lastName}'s ${c.title} certificate`}
+                                  className="inline-flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-0.5 group rounded transition-colors duration-150 motion-reduce:transition-none hover:bg-[#F5EEE0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]" title="Download certificate">
                                   <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#2F7A4F]">
                                     <CheckCircle2 size={13} /> {p?.bestScorePct ?? 0}%
                                   </span>
@@ -291,7 +297,7 @@ export default function CarrierTrainingPage() {
                                   ) : p && p.daysUntilExpiry != null && p.daysUntilExpiry <= 30 ? (
                                     <span className="text-[10px] font-semibold text-[#B07A1A]">{p.daysUntilExpiry}d left</span>
                                   ) : null}
-                                  <span className="inline-flex items-center gap-0.5 text-[10px] text-[#BA7517] group-hover:underline">
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] text-[#854F0B] group-hover:underline">
                                     <Download size={10} /> cert
                                   </span>
                                 </button>
@@ -302,7 +308,7 @@ export default function CarrierTrainingPage() {
                                   ) : status === "FAILED" ? (
                                     <span className="text-[11px] text-[#9B2C2C]">Retry</span>
                                   ) : (
-                                    <span className="text-[12px] text-gray-300">—</span>
+                                    <span className="text-[12px] text-[#5B6B7D]" aria-label="Not started">Not started</span>
                                   )}
                                   {overdue ? (
                                     <span className="text-[10px] font-semibold text-[#9B2C2C]">Overdue</span>
@@ -323,8 +329,8 @@ export default function CarrierTrainingPage() {
           )}
 
           <div className="mt-5 px-4 py-3 bg-[#BA7517]/5 border border-[#C5A572]/20 rounded-lg flex items-center gap-3">
-            <GraduationCap size={18} className="text-[#BA7517] shrink-0" />
-            <p className="text-xs text-gray-600">
+            <GraduationCap size={18} className="text-[#854F0B] shrink-0" />
+            <p className="text-xs text-[#3A4A5F]">
               Drivers complete courses at their own pace in SRL Driver Academy. Each pass records a completion you can
               show on a roadside audit, to a shipper, or to your insurer. Manage your roster and send invites from the Drivers page.
             </p>
