@@ -18,7 +18,8 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 
-const API = `http://localhost:${Number(process.env.E2E_BACKEND_PORT || 3110)}/api`;
+// The runner sets E2E_API_URL to the backend it started (e2ePortParity.test.ts).
+const API = process.env.E2E_API_URL || "http://localhost:3110/api";
 const CARRIER_EMAIL = "test-carrier@srl.invalid";
 
 /** Pages whose layout a slice in this arc made responsive. */
