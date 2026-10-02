@@ -19640,7 +19640,9 @@
 // badges name tier and insurance status in words (carrier-portal-upgrade G32).
 // v3.8.bru — carrier portal: Revenue counts the carrier's loads, its YTD tab asks for year-to-date, and its
 // invoices read as cards on a phone (carrier-portal-upgrade G14/G15/M4).
-export const SRL_VERSION = "3.8.bru";
+// v3.8.brv — carrier portal: installs to a phone's home screen as its own app opening on the dashboard, and
+// links the terms and privacy policy from its sidebar (carrier-portal-upgrade G42/G44).
+export const SRL_VERSION = "3.8.brv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -47,3 +47,23 @@ describe("the mobile menu button", () => {
     expect(screen.getByRole("button", { name: "Close menu" }).getAttribute("aria-expanded")).toBe("true");
   });
 });
+
+// carrier-portal-upgrade G44/G42 — legal links in the portal, and an installable portal.
+describe("legal links and the portal manifest", () => {
+  it("links the terms and the privacy policy from the sidebar", () => {
+    render(<CarrierSidebar />);
+    const legal = screen.getByRole("navigation", { name: "Legal" });
+    expect(legal.querySelector('a[href="/terms.html"]')).not.toBeNull();
+    expect(legal.querySelector('a[href="/privacy.html"]')).not.toBeNull();
+  });
+
+  it("gives /carrier pages their own standalone manifest, starting at the dashboard", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const { metadata } = await import("@/app/carrier/layout");
+    expect(metadata.manifest).toBe("/carrier-manifest.json");
+    const m = JSON.parse(fs.readFileSync(path.join(__dirname, "../../../public/carrier-manifest.json"), "utf8"));
+    expect(m).toMatchObject({ display: "standalone", start_url: "/carrier/dashboard", scope: "/carrier/" });
+    for (const icon of m.icons) expect(fs.existsSync(path.join(__dirname, "../../../public", icon.src))).toBe(true);
+  });
+});

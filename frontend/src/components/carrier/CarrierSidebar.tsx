@@ -105,10 +105,17 @@ export function CarrierSidebar() {
 
       {/* Bottom */}
       <div className="px-2 pb-3 space-y-1">
-        <Link href="/" className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[#8AA5C0] hover:bg-[#FBF7F0]/5 hover:text-[#FBF7F0] text-[13px]">
-          <ExternalLink size={16} />
+        <Link href="/" className="flex items-center gap-2.5 px-2.5 min-h-[44px] rounded-md text-[#C9D2DE] hover:bg-[#FBF7F0]/5 hover:text-[#FBF7F0] text-[13px] transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A572]">
+          <ExternalLink size={16} aria-hidden="true" />
           <span>Back to Website</span>
         </Link>
+        {/* carrier-portal-upgrade G44 — the portal linked no terms or privacy
+            policy anywhere a signed-in carrier could reach them. */}
+        <nav aria-label="Legal" className="flex items-center gap-1 px-1.5 text-[12px]">
+          <a href="/terms.html" className="inline-flex min-h-[44px] items-center rounded px-1 text-[#C9D2DE] underline-offset-2 hover:text-[#FBF7F0] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A572]">Terms</a>
+          <span aria-hidden="true" className="text-[#8AA5C0]">·</span>
+          <a href="/privacy.html" className="inline-flex min-h-[44px] items-center rounded px-1 text-[#C9D2DE] underline-offset-2 hover:text-[#FBF7F0] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A572]">Privacy</a>
+        </nav>
       </div>
     </>
   );

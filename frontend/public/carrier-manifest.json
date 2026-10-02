@@ -1,0 +1,16 @@
+{
+  "name": "SRL Carrier Portal",
+  "short_name": "SRL Carrier",
+  "description": "Silk Route Logistics carrier portal: tenders, loads, documents and pay.",
+  "id": "/carrier/dashboard",
+  "start_url": "/carrier/dashboard",
+  "scope": "/carrier/",
+  "display": "standalone",
+  "background_color": "#FBF7F0",
+  "theme_color": "#0A2540",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
