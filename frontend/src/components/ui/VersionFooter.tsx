@@ -19646,7 +19646,9 @@
 // census keeps every swept carrier file that way (carrier-portal-upgrade G35).
 // v3.8.brx — carrier portal: Available Loads looks each facility up once per page instead of twice per load
 // (carrier-portal-upgrade G33).
-export const SRL_VERSION = "3.8.brx";
+// v3.8.bry — carrier portal: the Load Board stacks on a phone, its bid form is a bottom sheet that sends once
+// and shows why a bid failed, and rates show per mile (carrier-portal-upgrade F2/M4/M5).
+export const SRL_VERSION = "3.8.bry";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
