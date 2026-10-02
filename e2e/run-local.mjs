@@ -35,6 +35,7 @@ import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { frontendSourceHash, readStamp, writeStamp, staleReason } from "./helpers/frontendSourceHash.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CONTAINER = process.env.E2E_LOCAL_CONTAINER || "srl-e2e-local";
@@ -382,11 +383,19 @@ const baked =
     .filter((f) => f.endsWith(".js"))
     .some((f) => readFileSync(path.join(chunkDir, f), "utf8").includes(apiUrl));
 
-if (baked) {
-  say("[4/5] Frontend   (reused — " + apiUrl + " already baked in)");
+// G48 (carrier-portal-upgrade F1): a baked URL says the build talks to THIS
+// backend; it says nothing about whether it was built from THIS source. Reuse
+// also requires the source hash stamped at the last build to match now, so a
+// frontend edit always rebuilds. See e2e/helpers/frontendSourceHash.mjs.
+const why = staleReason({ apiUrlBaked: baked, stamp: readStamp(ROOT), current: frontendSourceHash(ROOT) });
+if (!why) {
+  say("[4/5] Frontend   (reused — " + apiUrl + " baked in, source unchanged since the last build)");
 } else {
-  say("[4/5] Frontend   (rebuilding — needs " + apiUrl + " baked in)");
+  say("[4/5] Frontend   (rebuilding — " + why + ")");
   run("npm", ["run", "build"], { cwd: path.join(ROOT, "frontend"), env: E });
+  // Stamp AFTER the build: its prebuild rewrites generated files under public/,
+  // and the stamp must describe the tree as the build left it.
+  writeStamp(ROOT, frontendSourceHash(ROOT));
 }
 
 // ── 5. test ─────────────────────────────────────────────────────────────────
