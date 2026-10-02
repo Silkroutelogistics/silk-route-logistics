@@ -25,6 +25,9 @@ uploads/
 # Logs
 *.log
 npm-debug.log*
+# Gate output and arc scratch (§2.5). *.log alone left .logs/notes.txt and
+# helper scripts untracked-but-visible, where a broad git add sweeps them in.
+.logs/
 
 # OS files
 .DS_Store
