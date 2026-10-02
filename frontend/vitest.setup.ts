@@ -1,8 +1,15 @@
 // Shared setup for frontend component + store tests (Arc 12 Phase 1).
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
+
+// findBy* and waitFor give up after 1s by default. Under a loaded machine (the
+// full suite beside a backend run and a Next build) a query-backed render can
+// take longer, and two carrier tests failed with nothing wrong (FINISH-2: the
+// drivers roster, then the dashboard's active load). 5s for the whole class
+// rather than one test at a time; a real miss still fails, just later.
+configure({ asyncUtilTimeout: 5000 });
 
 // Unmount between tests. Without this a component from one test is still in the
 // document during the next, and a query that should find nothing finds the
