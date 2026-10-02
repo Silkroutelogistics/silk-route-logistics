@@ -397,8 +397,11 @@ export function initCronJobs() {
     }
   }));
 
-  // ─── Daily at 7 AM: System health digest email to admins ────
-  cron.schedule("0 7 * * *", () => withGuard("health-digest", async () => {
+  // ─── Daily at 7:07 AM Eastern: System health digest email to admins ────
+  // :07, not :00. About 19 jobs fire at 07:00 Eastern, onto a Neon compute
+  // that has usually suspended since the :30 burst; the digest measured that
+  // cold start and called it an outage (health-digest arc, 2026-10-02).
+  cron.schedule("7 7 * * *", () => withGuard("health-digest", async () => {
     try {
       log.info("[Cron Daily] Generating system health digest...");
       const { sendHealthDigest } = require("../services/healthDigestService");
@@ -407,7 +410,7 @@ export function initCronJobs() {
     } catch (err) {
       log.error({ err }, "[Cron Daily] Health digest error:");
     }
-  }), { timezone: "America/New_York" });  // Eastern per Item 185 — admin digest email
+  }), { timezone: "America/Toronto" });  // Eastern per Item 185 — admin digest email
 
   // ─── Weekly (Sunday 11 PM): Compass Score full recalc ────────
   // 7-factor scorecard recalc for every APPROVED carrier per the public

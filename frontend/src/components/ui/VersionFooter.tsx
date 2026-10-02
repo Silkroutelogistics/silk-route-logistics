@@ -19583,7 +19583,9 @@
 // v3.8.bqv — the health digest stops crying wolf (health-digest arc B1): a warm-up query, then
 // the median of three samples; a slow database caps at DEGRADED and only a failed or timed-out
 // query is UNHEALTHY. A missing Sentry DSN is a WARN on its own row and no longer sets the headline.
-export const SRL_VERSION = "3.8.bqv";
+// v3.8.bqw — the health digest moves to 07:07 Eastern (America/Toronto), off the 07:00 burst of
+// about 19 jobs that met a just-woken Neon compute.
+export const SRL_VERSION = "3.8.bqw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
