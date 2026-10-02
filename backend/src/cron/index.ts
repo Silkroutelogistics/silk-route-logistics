@@ -1,4 +1,4 @@
-import cron from "node-cron";
+import { cron, recordRun } from "../lib/cronRun";
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
 import { checkMilestoneAdvancement, calculateTierFromMilestone } from "../services/caravanService";
@@ -136,7 +136,7 @@ async function withGuard(jobName: string, fn: () => Promise<void>): Promise<void
   }
   runningJobs.add(jobName);
   try {
-    await fn();
+    await recordRun(jobName, fn);
   } finally {
     runningJobs.delete(jobName);
   }

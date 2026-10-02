@@ -19585,7 +19585,10 @@
 // query is UNHEALTHY. A missing Sentry DSN is a WARN on its own row and no longer sets the headline.
 // v3.8.bqw — the health digest moves to 07:07 Eastern (America/Toronto), off the 07:00 burst of
 // about 19 jobs that met a just-woken Neon compute.
-export const SRL_VERSION = "3.8.bqw";
+// v3.8.bqx — every scheduled job records its run in cron_registry: start, end, status, duration,
+// error and next run, through one wrapper (lib/cronRun.ts) behind withGuard and withLock. A job that
+// catches and logs its own error records FAILED. compass-score-recalc is no longer stuck at RUNNING.
+export const SRL_VERSION = "3.8.bqx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

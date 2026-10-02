@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import cron from "node-cron";
+import { cron, recordRun } from "../lib/cronRun";
 import { prisma } from "../config/database";
 import type { LoadStatus } from "@prisma/client";
 import { AT_PICKUP_OR_LATER } from "../lib/loadStateMachine";
@@ -357,7 +357,7 @@ async function withLock(jobName: string, ttlMs: number, fn: () => Promise<void>)
     return;
   }
   try {
-    await fn();
+    await recordRun(jobName, fn);
   } finally {
     await releaseLock(jobName);
   }
