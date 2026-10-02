@@ -38,6 +38,23 @@ describe("a locked nav item", () => {
   });
 });
 
+// carrier-portal-upgrade R2 (G24) — Revenue is linked; Loadboard stays unlinked
+// until the redesign arc folds it into Available Loads.
+describe("Revenue and Loadboard in the nav", () => {
+  it("links Revenue, right after Payments", () => {
+    render(<CarrierSidebar />);
+    const revenue = document.querySelector('a[href="/carrier/dashboard/revenue"]');
+    expect(revenue?.textContent).toMatch(/Revenue/);
+    const hrefs = Array.from(document.querySelectorAll("a[href^='/carrier/dashboard']")).map((a) => a.getAttribute("href"));
+    expect(hrefs.indexOf("/carrier/dashboard/revenue")).toBe(hrefs.indexOf("/carrier/dashboard/payments") + 1);
+  });
+
+  it("does not link Loadboard", () => {
+    render(<CarrierSidebar />);
+    expect(document.querySelector('a[href="/carrier/dashboard/loadboard"]')).toBeNull();
+  });
+});
+
 describe("the mobile menu button", () => {
   it("is named and reports whether the menu is open", () => {
     render(<CarrierSidebar />);

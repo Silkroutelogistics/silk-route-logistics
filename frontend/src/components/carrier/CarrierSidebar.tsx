@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Home, Package, Send, Truck, Users, GraduationCap, Shield, DollarSign, FileText, MessageSquare, Settings, ExternalLink, Menu, X, History, Lock } from "lucide-react";
+  Home, Package, Send, Truck, Users, GraduationCap, Shield, DollarSign, FileText, MessageSquare, Settings, ExternalLink, Menu, X, History, Lock, TrendingUp } from "lucide-react";
 import { lockedFeatureForPath } from "@/lib/carrierPortalFeatures";
 
 // Sprint 52.hotfix.b — Tenders nav entry added at position 3 between
@@ -30,6 +30,10 @@ export const CARRIER_NAV = [
   { id: "training", href: "/carrier/dashboard/training", icon: GraduationCap, label: "Training" },
   { id: "compliance", href: "/carrier/dashboard/compliance", icon: Shield, label: "Compliance" },
   { id: "payments", href: "/carrier/dashboard/payments", icon: DollarSign, label: "Payments" },
+  // carrier-portal-upgrade R2 (G24) — Revenue was a finished page nothing linked
+  // to. It sits beside Payments: what was paid, then what was earned. Loadboard
+  // stays unlinked on purpose; the redesign arc folds it into Available Loads.
+  { id: "revenue", href: "/carrier/dashboard/revenue", icon: TrendingUp, label: "Revenue" },
   { id: "documents", href: "/carrier/dashboard/documents", icon: FileText, label: "Documents" },
   { id: "messaging", href: "/carrier/dashboard/messaging", icon: MessageSquare, label: "Messages" },
   { id: "settings", href: "/carrier/dashboard/settings", icon: Settings, label: "Settings" },
