@@ -19558,7 +19558,9 @@
 // v3.8.bqh — the COI agent email passes a per-carrier hold and a 14-day cooldown on every path
 // (coi-verify-email-fix C1a): JETEX is held after the 2026-10-02 cron sent McGriff stale policy
 // data. The body no longer says the carrier operates under SRL's brokerage authority.
-export const SRL_VERSION = "3.8.bqh";
+// v3.8.bqk — saving insurance fields no longer emails the insurance agent, from the AE console or the
+// carrier portal (coi-verify-email-fix C1b). Agent email: registration, expiry cron, AE Send verification.
+export const SRL_VERSION = "3.8.bqk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -11,7 +11,7 @@ import { env } from "../config/env";
 import { AuthRequest } from "../middleware/auth";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
 import { getBonusPercentage } from "../services/tierService";
-import { sendInsuranceVerificationEmail, validateInsuranceCoverage, maybeSendInsuranceVerificationEmail, didInsuranceFieldsChange } from "../services/insuranceVerificationService";
+import { validateInsuranceCoverage, maybeSendInsuranceVerificationEmail, didInsuranceFieldsChange } from "../services/insuranceVerificationService";
 import { log } from "../lib/logger";
 import { onCarrierApproved } from "../services/integrationService";
 import { uploadFile } from "../services/storageService";
@@ -1914,26 +1914,8 @@ export async function updateCarrier(req: AuthRequest, res: Response) {
     }).catch((err) => log.warn({ err }, "[Carrier] update info-request close notice failed"));
   }
 
-  // v3.8.akz Item 1 Path β — unified insurance-agent verification gate.
-  // Replaces the prior single-field check (`updated.insuranceAgentEmail`
-  // alone) with the two-condition gate that lives in insurance
-  // VerificationService.maybeSendInsuranceVerificationEmail: (a) change-
-  // condition via didInsuranceFieldsChange on the request payload, and
-  // (b) completeness-condition on all 4 agent fields read from the post-
-  // write CarrierProfile record. Fire-and-forget, non-blocking. Skip-
-  // reasons logged at info level for AE forensic visibility.
-  const insuranceFieldsUpdated = didInsuranceFieldsChange(data as Record<string, unknown>);
-  if (insuranceFieldsUpdated) {
-    maybeSendInsuranceVerificationEmail(updated.id, insuranceFieldsUpdated)
-      .then((result) => {
-        if (!result.sent && result.reason) {
-          log.info({ carrierId: updated.id, reason: result.reason }, "[InsVerify] Skipped after admin update");
-        }
-      })
-      .catch((err) => {
-        log.error({ err, carrierId: updated.id }, "[InsVerify] Auto-send failed after admin update");
-      });
-  }
+  // No agent email on save (coi-verify-email-fix C1b). Agent email goes out at
+  // registration, from the expiry cron, or from the AE's Send verification.
 
   const validation = validateInsuranceCoverage(updated);
   res.json({ ...updated, insuranceValidation: validation });
