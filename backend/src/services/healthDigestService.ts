@@ -11,8 +11,62 @@ import { log } from "../lib/logger";
 
 interface ComponentHealth {
   name: string;
-  status: "healthy" | "degraded" | "unhealthy";
+  // "warn" is shown on its own row and never moves the headline.
+  status: "healthy" | "warn" | "degraded" | "unhealthy";
   detail: string;
+}
+
+const DB_PROBE_TIMEOUT_MS = 5_000;
+
+/**
+ * Database latency, measured so that one slow query cannot call the system down.
+ *
+ * Neon suspends the compute between the :00/:30 cron bursts (schedulerService's
+ * waterfall comment), so the first query of a digest often pays a cold start —
+ * 1214 ms on 2026-10-02, and the only reason 10 of 30 digests read UNHEALTHY.
+ * So: one warm-up query whose time is discarded, then three timed samples, and
+ * the median decides. Slowness caps at DEGRADED. Only a query that throws or
+ * outlives DB_PROBE_TIMEOUT_MS is UNHEALTHY, because only that is an outage.
+ */
+export async function measureDbLatency(
+  run: () => Promise<unknown> = () => prisma.$queryRaw`SELECT 1`,
+  timeoutMs = DB_PROBE_TIMEOUT_MS,
+): Promise<ComponentHealth & { samplesMs: number[]; medianMs: number | null }> {
+  const once = async () => {
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`SELECT 1 exceeded ${timeoutMs}ms`)), timeoutMs);
+    });
+    const start = Date.now();
+    try {
+      await Promise.race([run(), timeout]);
+    } finally {
+      clearTimeout(timer);
+    }
+    return Date.now() - start;
+  };
+  const samplesMs: number[] = [];
+  try {
+    await once(); // warm-up, discarded
+    for (let i = 0; i < 3; i++) samplesMs.push(await once());
+  } catch (e: any) {
+    return { name: "Database", status: "unhealthy", detail: `Query failed: ${e?.message ?? e}`, samplesMs, medianMs: null };
+  }
+  const medianMs = [...samplesMs].sort((a, b) => a - b)[1];
+  return {
+    name: "Database",
+    status: medianMs < 100 ? "healthy" : "degraded",
+    detail: `Median ${medianMs}ms (samples ${samplesMs.join(" / ")} ms, after warm-up)`,
+    samplesMs,
+    medianMs,
+  };
+}
+
+/** The headline. A "warn" row is informational and is deliberately not consulted. */
+export function overallStatus(components: Pick<ComponentHealth, "status">[]): "HEALTHY" | "DEGRADED" | "UNHEALTHY" {
+  if (components.some((c) => c.status === "unhealthy")) return "UNHEALTHY";
+  if (components.some((c) => c.status === "degraded")) return "DEGRADED";
+  return "HEALTHY";
 }
 
 export async function sendHealthDigest() {
@@ -22,19 +76,8 @@ export async function sendHealthDigest() {
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
   // ── Database Health ──
-  let dbLatency = 0;
-  try {
-    const start = Date.now();
-    await prisma.$queryRaw`SELECT 1`;
-    dbLatency = Date.now() - start;
-    components.push({
-      name: "Database",
-      status: dbLatency < 100 ? "healthy" : dbLatency < 500 ? "degraded" : "unhealthy",
-      detail: `Latency: ${dbLatency}ms`,
-    });
-  } catch (e: any) {
-    components.push({ name: "Database", status: "unhealthy", detail: e.message });
-  }
+  const { samplesMs: dbSamplesMs, medianMs: dbMedianMs, ...dbRow } = await measureDbLatency();
+  components.push(dbRow);
 
   // ── Error Rate (last 24h and last hour) ──
   const [errors24h, errorsLastHour] = await Promise.all([
@@ -99,21 +142,20 @@ export async function sendHealthDigest() {
   const training = await getTrainingDigestMetrics().catch(() => ({ driversTrained: 0, carriersWithTraining: 0, certsExpiring30: 0 }));
 
   // ── Sentry Status ──
+  // A missing DSN is a configuration gap, not a system fault. As "degraded" it
+  // held the headline off HEALTHY on 30 of 30 digests (2026-09-03 → 10-02), so
+  // the headline carried no information. It is a WARN on its own row now.
   const sentryEnabled = !!process.env.SENTRY_DSN;
   components.push({
     name: "Sentry",
-    status: sentryEnabled ? "healthy" : "degraded",
-    detail: sentryEnabled ? "Connected and capturing errors" : "Not configured (SENTRY_DSN missing)",
+    status: sentryEnabled ? "healthy" : "warn",
+    detail: sentryEnabled ? "DSN set (capture not verified here — see /api/monitoring/sentry-test)" : "Not configured (SENTRY_DSN missing)",
   });
 
   // ── Build Email ──
-  const overallStatus = components.some((c) => c.status === "unhealthy")
-    ? "UNHEALTHY"
-    : components.some((c) => c.status === "degraded")
-      ? "DEGRADED"
-      : "HEALTHY";
+  const overall = overallStatus(components);
 
-  const statusEmoji: Record<string, string> = { healthy: "&#9989;", degraded: "&#9888;&#65039;", unhealthy: "&#10060;" };
+  const statusEmoji: Record<string, string> = { healthy: "&#9989;", warn: "&#9888;&#65039;", degraded: "&#9888;&#65039;", unhealthy: "&#10060;" };
   const overallEmoji: Record<string, string> = { HEALTHY: "&#9989;", DEGRADED: "&#9888;&#65039;", UNHEALTHY: "&#10060;" };
 
   const html = `
@@ -124,9 +166,9 @@ export async function sendHealthDigest() {
       </div>
 
       <div style="background:#162236;border-radius:8px;padding:16px;margin-bottom:16px;text-align:center;">
-        <span style="font-size:28px;">${overallEmoji[overallStatus]}</span>
-        <h2 style="color:${overallStatus === "HEALTHY" ? "#4ade80" : overallStatus === "DEGRADED" ? "#fbbf24" : "#f87171"};margin:8px 0 0;font-size:18px;">
-          System ${overallStatus}
+        <span style="font-size:28px;">${overallEmoji[overall]}</span>
+        <h2 style="color:${overall === "HEALTHY" ? "#4ade80" : overall === "DEGRADED" ? "#fbbf24" : "#f87171"};margin:8px 0 0;font-size:18px;">
+          System ${overall}
         </h2>
         <p style="color:#8899AA;font-size:12px;margin:4px 0 0;">Uptime: ${formatUptime(process.uptime())}</p>
       </div>
@@ -224,7 +266,7 @@ export async function sendHealthDigest() {
     try {
       await sendEmail(
         admin.email,
-        `${overallEmoji[overallStatus]} SRL Health Digest — ${overallStatus} — ${now.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+        `${overallEmoji[overall]} SRL Health Digest — ${overall} — ${now.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
         html
       );
     } catch (e: any) {
@@ -238,13 +280,14 @@ export async function sendHealthDigest() {
     .create({
       data: {
         logType: "CRON_JOB",
-        severity: overallStatus === "HEALTHY" ? "INFO" : "WARNING",
+        severity: overall === "HEALTHY" ? "INFO" : "WARNING",
         source: "cron:health-digest",
-        message: `Daily health digest sent: ${overallStatus}`,
+        message: `Daily health digest sent: ${overall}`,
         details: {
-          status: overallStatus,
+          status: overall,
           components: components.map((c) => ({ name: c.name, status: c.status })),
           errors24h,
+          db: { medianMs: dbMedianMs, samplesMs: dbSamplesMs },
           recipients: admins.length,
         },
       },

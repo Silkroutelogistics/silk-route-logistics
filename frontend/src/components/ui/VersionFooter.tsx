@@ -19580,7 +19580,10 @@
 // (carrier-portal-upgrade G40, correcting v3.8.bow).
 // v3.8.bqu — carrier portal: a suspended carrier can no longer post capacity or send GPS pings, and the 2FA
 // wall no longer claims SRL holds bank details (carrier-portal-upgrade G10/G11).
-export const SRL_VERSION = "3.8.bqu";
+// v3.8.bqv — the health digest stops crying wolf (health-digest arc B1): a warm-up query, then
+// the median of three samples; a slow database caps at DEGRADED and only a failed or timed-out
+// query is UNHEALTHY. A missing Sentry DSN is a WARN on its own row and no longer sets the headline.
+export const SRL_VERSION = "3.8.bqv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
