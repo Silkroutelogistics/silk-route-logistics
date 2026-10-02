@@ -19622,7 +19622,9 @@
 // assistant button, and covers only unlocked pages (carrier-portal-upgrade M3).
 // v3.8.brl — carrier portal: one status mapper derived from the DB enums labels every load, pay and tender
 // status (DISPUTED and REJECTED pay in red, TONU named); tender history shows pickup on the right day and stacks on a phone.
-export const SRL_VERSION = "3.8.brl";
+// v3.8.brm — carrier portal: a clickable card can be chosen from the keyboard and shows which is selected;
+// shared carrier utilities for copy, rate per mile, maps and the SRL rep (carrier-portal-upgrade G28/M5).
+export const SRL_VERSION = "3.8.brm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
