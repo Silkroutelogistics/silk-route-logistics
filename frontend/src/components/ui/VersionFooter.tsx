@@ -19656,7 +19656,9 @@
 // phone, and its pay ladder no longer forces its width (carrier-portal-upgrade F2/M4/M5).
 // v3.8.bsc — carrier portal: the training matrix keeps a narrow sticky Driver column on a phone with the courses
 // scrolling under it, and certificate downloads are named 44px buttons (carrier-portal-upgrade F2/M4/M5).
-export const SRL_VERSION = "3.8.bsc";
+// v3.8.bsd — carrier portal: the 2FA enrollment screen uses AA buttons and a 44px named copy control, and its
+// copy carries no em dash (carrier-portal-upgrade F2/M5).
+export const SRL_VERSION = "3.8.bsd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

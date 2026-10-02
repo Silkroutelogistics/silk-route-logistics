@@ -33,6 +33,7 @@ const COVERED = [
   "carrier/dashboard/payments",
   "carrier/dashboard/documents",
   "carrier/dashboard/settings",
+  "carrier/dashboard/security",
   "carrier/dashboard/scorecard",
   "carrier/dashboard/revenue",
   "carrier/dashboard/loadboard",

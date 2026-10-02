@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { CarrierCard } from "@/components/carrier";
+import { BTN } from "@/lib/carrierUi";
 
 interface TotpStatus {
   enrolled: boolean;
@@ -172,7 +173,7 @@ export default function CarrierSecurityPage() {
               <AlertTriangle className="w-4 h-4 text-[#B07A1A] flex-shrink-0 mt-0.5" />
               <p className="text-sm text-[#B07A1A] leading-relaxed">
                 <strong>This is the only time these are shown.</strong> They are stored
-                scrambled, so we cannot look them up or send them again — not even if you ask.
+                scrambled, so we cannot look them up or send them again, not even if you ask.
                 Each one works once, and they are the only way back in if you lose your phone.
               </p>
             </div>
@@ -191,7 +192,7 @@ export default function CarrierSecurityPage() {
 
           <button
             onClick={copyCodes}
-            className="w-full mb-3 flex items-center justify-center gap-2 rounded-md border border-[#EFE6D3] px-4 py-2.5 text-sm font-medium text-[#0A2540] hover:bg-[#FBF7F0] transition-colors"
+            className={`${BTN.secondary} w-full mb-3`}
           >
             {copied ? (
               <>
@@ -219,7 +220,7 @@ export default function CarrierSecurityPage() {
           <button
             onClick={finish}
             disabled={!saved}
-            className="w-full rounded-md bg-[#BA7517] px-4 py-2.5 text-sm font-semibold text-[#FBF7F0] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#A5680F] transition-colors"
+            className={`${BTN.primary} w-full`}
           >
             Continue to the portal
           </button>
@@ -285,7 +286,7 @@ export default function CarrierSecurityPage() {
             <button
               onClick={() => startSetup.mutate()}
               disabled={startSetup.isPending}
-              className="w-full flex items-center justify-center gap-2 rounded-md bg-[#BA7517] px-4 py-2.5 text-sm font-semibold text-[#FBF7F0] hover:bg-[#A5680F] disabled:opacity-50 transition-colors"
+              className={`${BTN.primary} w-full`}
             >
               {startSetup.isPending ? (
                 <>
@@ -335,13 +336,13 @@ export default function CarrierSecurityPage() {
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
                     }}
-                    className="rounded-md border border-[#EFE6D3] p-2 hover:bg-[#FBF7F0] transition-colors"
-                    aria-label="Copy setup key"
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-[#EFE6D3] hover:bg-[#FBF7F0] transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]"
+                    aria-label={copied ? "Setup key copied" : "Copy setup key"}
                   >
                     {copied ? (
                       <Check className="w-4 h-4 text-[#2F7A4F]" />
                     ) : (
-                      <Copy className="w-4 h-4 text-[#6B7685]" />
+                      <Copy className="w-4 h-4 text-[#5B6B7D]" aria-hidden="true" />
                     )}
                   </button>
                 </div>
@@ -380,7 +381,7 @@ export default function CarrierSecurityPage() {
                   <button
                     onClick={() => confirm.mutate()}
                     disabled={code.length !== 6 || confirm.isPending}
-                    className="rounded-md bg-[#BA7517] px-5 py-2.5 text-sm font-semibold text-[#FBF7F0] hover:bg-[#A5680F] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className={BTN.primary}
                   >
                     {confirm.isPending ? (
                       <Loader2 className="w-4 h-4 animate-spin" />

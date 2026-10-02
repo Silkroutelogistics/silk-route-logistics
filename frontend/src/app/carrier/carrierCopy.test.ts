@@ -24,6 +24,7 @@ export const CLEAN = [
   "app/carrier/dashboard/documents/page.tsx",
   "app/carrier/dashboard/scorecard/page.tsx",
   "app/carrier/dashboard/training/page.tsx",
+  "app/carrier/dashboard/security/page.tsx",
   "app/carrier/dashboard/settings/page.tsx",
   "app/carrier/dashboard/activation/page.tsx",
   "app/carrier/dashboard/application-status/page.tsx",
