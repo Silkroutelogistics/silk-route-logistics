@@ -77,6 +77,7 @@
  */
 
 const { execSync } = require("child_process");
+const { readFileSync } = require("fs");
 
 // maxBuffer: execSync defaults to 1 MiB and THROWS past it. VersionFooter.tsx
 // crossed that at v3.8.bbt (2026-09-14); from then until 2026-09-19 every read
@@ -195,8 +196,36 @@ const worktreeBranches = sh("git worktree list --porcelain")
   .filter((l) => l.startsWith("branch "))
   .map((l) => l.slice("branch ".length).trim().replace(/^refs\/heads\//, ""))
   .filter((b) => b && b !== headBranch);
+
+// RELEASE ORDER (owner ruling, FINISH-2 G5, 2026-10-02). Letters on unmerged
+// branches are provisional; final letters are assigned at release in the order
+// listed in .release-order (one branch per line, # comments). A letter that
+// duplicates an unmerged local branch LATER in that order than this one is a
+// WARN, and the commit proceeds: the later branch re-letters when it rebases
+// after this one ships. A duplicate against origin, against a branch EARLIER in
+// the order, or against any branch when this one is not listed, is refused as
+// before. Later branches' letters therefore do not count toward "highest".
+const releaseOrder = (() => {
+  const top = sh("git rev-parse --show-toplevel");
+  try {
+    return readFileSync(`${top}/.release-order`, "utf8")
+      .split(/\r?\n/)
+      .map((l) => l.replace(/#.*/, "").trim())
+      .filter(Boolean);
+  } catch { return []; }
+})();
+const myPos = releaseOrder.indexOf(headBranch);
+const isLaterInOrder = (b) => myPos >= 0 && releaseOrder.indexOf(b) > myPos;
+const laterClaims = new Map(); // letter -> [{ ref, hash, subject }], WARN only
 for (const b of worktreeBranches) {
-  for (const c of versionedCommitsIn(`${originRef}..${b}`, 200)) claim(c.letter, `worktree ${b}`, c.hash, c.subject);
+  for (const c of versionedCommitsIn(`${originRef}..${b}`, 200)) {
+    if (isLaterInOrder(b)) {
+      if (!laterClaims.has(c.letter)) laterClaims.set(c.letter, []);
+      laterClaims.get(c.letter).push({ ref: `worktree ${b}`, hash: c.hash, subject: c.subject });
+    } else {
+      claim(c.letter, `worktree ${b}`, c.hash, c.subject);
+    }
+  }
 }
 const originMax = maxLetter([...originClaims.keys()]);
 const describeClaims = (cs) => cs.map((c) => (c.hash ? `${c.ref} ${short(c.hash)}` : c.ref)).join(" | ");
@@ -291,6 +320,15 @@ const expected = highest ? nextLetter(highest) : intended;
 console.log(`  footer at HEAD             : ${headFooter || "(none)"}`);
 console.log(`  next free letter           : ${expected}`);
 console.log(`  you intend                 : ${intended}`);
+
+// The WARN half of the release order: duplicates this branch makes, or is about
+// to make, against branches that release AFTER it. Reported every run, never
+// refused; the later branch re-letters when it rebases.
+const warns = [...new Set([...mine, intended])].filter((L) => laterClaims.has(L));
+if (warns.length) {
+  console.log(`\n  WARN — duplicates against branches LATER in .release-order (${releaseOrder.join(" > ")}); they re-letter at release:`);
+  for (const L of warns.sort(cmp)) console.log(`    ${L.padEnd(5)} ${describeClaims(laterClaims.get(L))}`);
+}
 
 // TRAP 7, the refusing half, and it runs BEFORE the intended-letter checks:
 // the post-commit re-check below answers "is HEAD the only claimant of the

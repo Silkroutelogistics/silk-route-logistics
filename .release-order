@@ -1,0 +1,7 @@
+# Release order for unmerged branches (owner ruling FINISH-2 G5, 2026-10-02).
+# Letters on these branches are provisional; final letters are assigned at
+# release in this order. backend/scripts/check-version-letter.js reads this:
+# a duplicate against a branch LATER in the list warns; earlier refuses.
+security-first
+health-digest
+carrier-portal-upgrade
