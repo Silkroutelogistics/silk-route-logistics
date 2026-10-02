@@ -63,3 +63,28 @@ describe("a payment row", () => {
     expect(link.getAttribute("href")).toBe("/carrier/dashboard/my-loads?load=load-1");
   });
 });
+
+// carrier-portal-upgrade G11/M4/G35 — the problems have chips, the table reads as
+// cards on a phone, and the copy carries no contractions.
+describe("filters and layout", () => {
+  it("offers a chip for each state that means something is wrong with pay", async () => {
+    mount();
+    await screen.findByTestId("payment-load-link");
+    for (const name of ["On hold", "Disputed", "Rejected"]) {
+      expect(screen.getByRole("button", { name })).toBeTruthy();
+    }
+  });
+
+  it("labels each payment cell, so the row reads as a card under 768px", async () => {
+    const { container } = mount();
+    await screen.findByTestId("payment-load-link");
+    const labels = Array.from(container.querySelectorAll("td[data-label]")).map((td) => td.getAttribute("data-label"));
+    expect(labels).toEqual(["Payment", "Load", "Route", "Amount", "Status", "Date", "Quick Pay"]);
+  });
+
+  it("uses no contraction or em-dash placeholder", async () => {
+    const { container } = mount();
+    await screen.findByTestId("payment-load-link");
+    expect(container.textContent).not.toMatch(/n't|'d |'re |'ll |\u2014/);
+  });
+});

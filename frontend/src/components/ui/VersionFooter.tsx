@@ -19634,7 +19634,9 @@
 // phone with 44px targets, and decline reasons carry no contractions (carrier-portal-upgrade M4/M5/G35).
 // v3.8.brr — carrier portal: the driver roster reads as cards on a phone, and its row actions are named 44px
 // buttons a screen reader can announce (carrier-portal-upgrade G30/M4/M5).
-export const SRL_VERSION = "3.8.brr";
+// v3.8.brs — carrier portal: Payments reads as cards on a phone, has chips for on-hold, disputed and rejected
+// pay, names each status in words, and carries no contraction (carrier-portal-upgrade G11/M4/M5).
+export const SRL_VERSION = "3.8.brs";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

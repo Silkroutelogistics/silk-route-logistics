@@ -5,9 +5,13 @@ import { DollarSign, Zap, Calendar, TrendingUp, Download, X, CheckCircle, AlertT
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
+import { statusDisplay } from "@/lib/carrierStatus";
+import { BTN } from "@/lib/carrierUi";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 
-const statusFilters = ["All", "PENDING", "APPROVED", "PROCESSING", "SCHEDULED", "PAID"];
+// carrier-portal-upgrade G11: the three states that mean something is wrong with
+// a carrier's pay now have chips of their own. Labels come from lib/carrierStatus.
+const statusFilters = ["All", "PENDING", "APPROVED", "PROCESSING", "SCHEDULED", "PAID", "ON_HOLD", "DISPUTED", "REJECTED"];
 
 // Caravan Partner Program (v3.7.a) — 3 tiers. Silver is Day-1 entry.
 // v3 QP pricing: Silver 3%/7-day (5% same-day), Gold 2%/7-day (4% same-day),
@@ -122,7 +126,7 @@ export default function CarrierPaymentsPage() {
       queryClient.invalidateQueries({ queryKey: ["carrier-pay-summary"] });
       const loadRef = qpModal?.load?.referenceNumber || "this load";
       setQpModal(null);
-      setQpSuccess(`Quick Pay requested! Estimated payment in ${tierDays === 0 ? "same day" : `${tierDays} day${tierDays > 1 ? "s" : ""}`}.`);
+      setQpSuccess(`Quick Pay requested. Estimated payment in ${tierDays === 0 ? "same day" : `${tierDays} day${tierDays > 1 ? "s" : ""}`}.`);
       setTimeout(() => setQpSuccess(null), 5000);
     },
   });
@@ -157,9 +161,9 @@ export default function CarrierPaymentsPage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Payments &amp; Earnings</h1>
-          <p className="text-[13px] text-gray-500">Track your payment history, pending earnings, and QuickPay options</p>
+          <p className="text-[13px] text-[#5B6B7D]">Track your payment history, pending earnings, and QuickPay options</p>
         </div>
-        <button onClick={exportCSV} className="inline-flex items-center gap-1.5 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
+        <button onClick={exportCSV} className="inline-flex items-center gap-1.5 text-[#5B6B7D] text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
           <Download size={14} /> Export
         </button>
       </div>
@@ -169,42 +173,42 @@ export default function CarrierPaymentsPage() {
         <CarrierCard padding="p-5">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp size={16} className="text-[#2F7A4F]" />
-            <span className="text-[11px] text-gray-700">YTD Earnings</span>
+            <span className="text-[11px] text-[#3A4A5F]">YTD Earnings</span>
           </div>
           <div className="text-[28px] font-bold text-[#0A2540]">
             ${(summary?.ytdEarnings?.amount || 0).toLocaleString()}
           </div>
-          <div className="text-[11px] text-gray-700 mt-1">{summary?.ytdEarnings?.count || 0} loads</div>
+          <div className="text-[11px] text-[#3A4A5F] mt-1">{summary?.ytdEarnings?.count || 0} loads</div>
         </CarrierCard>
         <CarrierCard padding="p-5">
           <div className="flex items-center gap-2 mb-2">
             <DollarSign size={16} className="text-[#2F7A4F]" />
-            <span className="text-[11px] text-gray-700">Total Paid</span>
+            <span className="text-[11px] text-[#3A4A5F]">Total Paid</span>
           </div>
           <div className="text-[28px] font-bold text-[#2F7A4F]">
             ${(summary?.totalPaid?.amount || 0).toLocaleString()}
           </div>
-          <div className="text-[11px] text-gray-700 mt-1">{summary?.totalPaid?.count || 0} payments</div>
+          <div className="text-[11px] text-[#3A4A5F] mt-1">{summary?.totalPaid?.count || 0} payments</div>
         </CarrierCard>
         <CarrierCard padding="p-5">
           <div className="flex items-center gap-2 mb-2">
             <Calendar size={16} className="text-[#B07A1A]" />
-            <span className="text-[11px] text-gray-700">Pending</span>
+            <span className="text-[11px] text-[#3A4A5F]">Pending</span>
           </div>
           <div className="text-[28px] font-bold text-[#B07A1A]">
             ${(summary?.totalPending?.amount || 0).toLocaleString()}
           </div>
-          <div className="text-[11px] text-gray-700 mt-1">{summary?.totalPending?.count || 0} pending</div>
+          <div className="text-[11px] text-[#3A4A5F] mt-1">{summary?.totalPending?.count || 0} pending</div>
         </CarrierCard>
         <CarrierCard padding="p-5">
           <div className="flex items-center gap-2 mb-2">
             <Zap size={16} className="text-[#BA7517]" />
-            <span className="text-[11px] text-gray-700">QuickPay Used</span>
+            <span className="text-[11px] text-[#3A4A5F]">QuickPay Used</span>
           </div>
           <div className="text-[28px] font-bold text-[#0A2540]">
             {summary?.quickPayUsed?.count || 0}
           </div>
-          <div className="text-[11px] text-gray-700 mt-1">
+          <div className="text-[11px] text-[#3A4A5F] mt-1">
             ${(summary?.quickPayUsed?.discount || 0).toLocaleString()} in fees
           </div>
         </CarrierCard>
@@ -218,7 +222,7 @@ export default function CarrierPaymentsPage() {
           className={`mb-4 flex flex-wrap items-center gap-2 px-4 py-2.5 rounded-lg border text-[12px] ${
             pilotNotice.tone === "warn"
               ? "bg-[#FBEFD4]/60 border-[#B07A1A]/30 text-[#B07A1A]"
-              : "bg-[#F5EEE0] border-[#EFE6D3] text-gray-600"
+              : "bg-[#F5EEE0] border-[#EFE6D3] text-[#3A4A5F]"
           }`}
         >
           <Zap size={14} className="shrink-0" />
@@ -238,10 +242,11 @@ export default function CarrierPaymentsPage() {
             <button
               key={f}
               onClick={() => { setActiveFilter(f); setPage(1); }}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-medium ${
-                f === activeFilter ? "bg-[#0A2540] text-[#FBF7F0]" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              aria-pressed={f === activeFilter}
+              className={`min-h-[44px] px-3 rounded-full text-[12px] font-medium transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] ${
+                f === activeFilter ? "bg-[#0A2540] text-[#FBF7F0]" : "bg-[#F5EEE0] text-[#3A4A5F] hover:bg-[#EFE6D3]"
               }`}
-            >{f}</button>
+            >{f === "All" ? f : statusDisplay("pay", f).label}</button>
           ))}
         </div>
       </CarrierCard>
@@ -249,51 +254,51 @@ export default function CarrierPaymentsPage() {
       {/* Payment Table */}
       <CarrierCard padding="p-0">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[13px]">
-            <thead>
-              <tr className="bg-gray-50">
+          <table className="w-full border-collapse text-[13px] block md:table">
+            <thead className="hidden md:table-header-group">
+              <tr className="bg-[#FBF7F0]">
                 {["Payment #", "Load", "Route", "Amount", "Status", "Date", "QuickPay"].map((h) => (
-                  <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold text-gray-500 tracking-wide uppercase whitespace-nowrap">{h}</th>
+                  <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold text-[#5B6B7D] tracking-wide uppercase whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="block md:table-row-group">
               {isLoading ? (
                 [...Array(5)].map((_, i) => (
-                  <tr key={i} className="border-b border-gray-100">
+                  <tr key={i} className="block md:table-row p-3 md:p-0 border-b border-[#F5EEE0]">
                     {[...Array(7)].map((_, j) => (
-                      <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-200 rounded animate-pulse w-16" /></td>
+                      <td key={j} className="block md:table-cell px-0 py-1 md:px-4 md:py-3"><div className="h-4 bg-[#F5EEE0] rounded animate-pulse motion-reduce:animate-none w-16" /></td>
                     ))}
                   </tr>
                 ))
               ) : payments.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-700">No payments found</td></tr>
+                <tr className="block md:table-row"><td colSpan={7} className="block md:table-cell px-4 py-12 text-center text-sm text-[#3A4A5F]">{activeFilter === "All" ? "No payments yet. Pay for each load appears here once it is delivered and its paperwork is in." : "No payments with this status. Choose All to see every payment."}</td></tr>
               ) : (
                 payments.map((pay: Record<string, any>) => (
-                  <tr key={pay.id} className="border-b border-[#F5EEE0] hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-[11px] font-semibold text-[#0A2540]">{pay.paymentNumber || pay.id.slice(-8)}</td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-gray-600">
+                  <tr key={pay.id} className="block md:table-row p-3 md:p-0 border-b border-[#F5EEE0] hover:bg-[#FBF7F0]">
+                    <td data-label="Payment" className="block md:table-cell px-0 py-1 md:px-4 md:py-3 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none font-mono text-[11px] font-semibold text-[#0A2540]">{pay.paymentNumber || pay.id.slice(-8)}</td>
+                    <td data-label="Load" className="block md:table-cell px-0 py-1 md:px-4 md:py-3 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none font-mono text-[11px] text-[#3A4A5F]">
                       {/* E6 — a payment row names its load; the load is one click away. */}
                       {pay.load?.id ? (
-                        <a href={`/carrier/dashboard/my-loads?load=${encodeURIComponent(pay.load.id)}`} data-testid="payment-load-link" className="text-[#0A2540] underline hover:text-[#BA7517]">
+                        <a href={`/carrier/dashboard/my-loads?load=${encodeURIComponent(pay.load.id)}`} data-testid="payment-load-link" className="inline-flex min-h-[44px] items-center text-[#0A2540] underline hover:text-[#854F0B] rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]">
                           {pay.load.referenceNumber || pay.load.id}
                         </a>
-                      ) : "—"}
+                      ) : "Not set"}
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
-                      {pay.load ? `${pay.load.originCity}, ${pay.load.originState} → ${pay.load.destCity}, ${pay.load.destState}` : "—"}
+                    <td data-label="Route" className="block md:table-cell px-0 py-1 md:px-4 md:py-3 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none text-xs text-[#3A4A5F]">
+                      {pay.load ? `${pay.load.originCity}, ${pay.load.originState} → ${pay.load.destCity}, ${pay.load.destState}` : "Not set"}
                     </td>
-                    <td className="px-4 py-3 font-bold text-[#0A2540]">
+                    <td data-label="Amount" className="block md:table-cell px-0 py-1 md:px-4 md:py-3 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none font-bold text-[#0A2540]">
                       ${(pay.netAmount || pay.amount || 0).toLocaleString()}
                       {pay.quickPayDiscount > 0 && (
-                        <span className="text-[10px] text-gray-700 ml-1">(-${pay.quickPayDiscount})</span>
+                        <span className="text-[10px] text-[#3A4A5F] ml-1">(-${pay.quickPayDiscount})</span>
                       )}
                     </td>
-                    <td className="px-4 py-3"><CarrierBadge status={pay.status} /></td>
-                    <td className="px-4 py-3 text-xs text-gray-500">
+                    <td data-label="Status" className="block md:table-cell px-0 py-1 md:px-4 md:py-3 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none"><CarrierBadge kind="pay" status={pay.status} /></td>
+                    <td data-label="Date" className="block md:table-cell px-0 py-1 md:px-4 md:py-3 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none text-xs text-[#5B6B7D]">
                       {pay.paidAt ? new Date(pay.paidAt).toLocaleDateString() : new Date(pay.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-3">
+                    <td data-label="Quick Pay" className="block md:table-cell px-0 py-1 md:px-4 md:py-3 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none">
                       {/* The control is shown only when the load carries a recorded
                           Quick Pay election. The backend requires one and 422s
                           QP_NOT_ELECTED_ON_LOAD without it, so an ungated button
@@ -313,14 +318,14 @@ export default function CarrierPaymentsPage() {
                         <button
                           onClick={() => setQpModal(pay)}
                           disabled={quickPayMutation.isPending}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#FAEEDA] text-[#BA7517] text-[11px] font-semibold rounded hover:bg-[#FAEEDA] disabled:opacity-50"
+                          className="inline-flex min-h-[44px] items-center gap-1 px-3 bg-[#FAEEDA] text-[#854F0B] text-[12px] font-semibold rounded hover:bg-[#F3E3C4] disabled:opacity-50 transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]"
                         >
                           <Zap size={12} /> QuickPay
                         </button>
                       ) : pay.paymentMethod === "FLASH" || pay.quickPayDiscount > 0 ? (
                         <span className="text-[11px] text-[#BA7517] font-medium flex items-center gap-1"><Zap size={12} /> Used</span>
                       ) : (
-                        <span className="text-[11px] text-gray-700">—</span>
+                        <span className="text-[11px] text-[#3A4A5F]">Not used</span>
                       )}
                     </td>
                   </tr>
@@ -330,11 +335,11 @@ export default function CarrierPaymentsPage() {
           </table>
         </div>
         {data && data.totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-[#F5EEE0] flex justify-between items-center text-xs text-gray-500">
+          <div className="px-4 py-3 border-t border-[#F5EEE0] flex justify-between items-center text-xs text-[#5B6B7D]">
             <span>Page {page} of {data.totalPages}</span>
             <div className="flex gap-1">
-              {page > 1 && <button onClick={() => setPage(page - 1)} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">Prev</button>}
-              {page < data.totalPages && <button onClick={() => setPage(page + 1)} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">Next</button>}
+              {page > 1 && <button onClick={() => setPage(page - 1)} className={BTN.secondary}>Previous</button>}
+              {page < data.totalPages && <button onClick={() => setPage(page + 1)} className={BTN.secondary}>Next</button>}
             </div>
           </div>
         )}
@@ -381,7 +386,7 @@ export default function CarrierPaymentsPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/50 " onClick={() => setQpModal(null)} />
             <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-              <button onClick={() => setQpModal(null)} className="absolute top-4 right-4 text-gray-700 hover:text-gray-600">
+              <button onClick={() => setQpModal(null)} className="absolute top-4 right-4 text-[#3A4A5F] hover:text-[#3A4A5F]">
                 <X size={18} />
               </button>
 
@@ -391,22 +396,22 @@ export default function CarrierPaymentsPage() {
                 </div>
                 <div>
                   <h3 className="text-[15px] font-bold text-[#0A2540]">Request Quick Pay</h3>
-                  <p className="text-[11px] text-gray-700">Load {loadRef}</p>
+                  <p className="text-[11px] text-[#3A4A5F]">Load {loadRef}</p>
                 </div>
               </div>
 
               {/* Fee Breakdown */}
               <div className="bg-[#F5EEE0] rounded-lg p-4 mb-4 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Gross Amount</span>
+                  <span className="text-[#5B6B7D]">Gross Amount</span>
                   <span className="font-semibold text-[#0A2540]">${gross.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">QP Fee ({recordedPct}%)</span>
+                  <span className="text-[#5B6B7D]">QP Fee ({recordedPct}%)</span>
                   <span className="font-semibold text-[#9B2C2C]">-${fee.toLocaleString()}</span>
                 </div>
                 <div className="border-t border-[#EFE6D3] pt-2 flex justify-between text-sm">
-                  <span className="font-semibold text-gray-700">Net Payment</span>
+                  <span className="font-semibold text-[#3A4A5F]">Net Payment</span>
                   <span className="font-bold text-[#2F7A4F] text-lg">${net.toLocaleString()}</span>
                 </div>
               </div>
@@ -428,7 +433,7 @@ export default function CarrierPaymentsPage() {
                 <div className="flex items-start gap-2">
                   <AlertTriangle size={14} className="text-[#2F7A4F] mt-0.5 shrink-0" />
                   <div className="text-xs text-[#2F7A4F]">
-                    <p>With factoring you&apos;d pay ~<strong>${factoringFee.toLocaleString()}</strong> ({FACTORING_RATE}%).</p>
+                    <p>With factoring you would pay ~<strong>${factoringFee.toLocaleString()}</strong> ({FACTORING_RATE}%).</p>
                     <p className="font-semibold mt-0.5">SRL Quick Pay saves you ${savings.toLocaleString()} on this payment.</p>
                   </div>
                 </div>
@@ -437,7 +442,7 @@ export default function CarrierPaymentsPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setQpModal(null)}
-                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-[#3A4A5F] bg-gray-100 rounded-lg hover:bg-gray-200 transition"
                 >
                   Cancel
                 </button>
