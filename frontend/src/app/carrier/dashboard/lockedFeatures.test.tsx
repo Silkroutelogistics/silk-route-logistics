@@ -70,6 +70,14 @@ describe("the flag file", () => {
   });
 });
 
+describe("Messages (owner ruling F2)", () => {
+  it("is locked as a whole page, with a route and a reason", () => {
+    expect(isFeatureEnabled("messaging")).toBe(false);
+    expect(CARRIER_PORTAL_FEATURES.messaging.route).toBe("/carrier/dashboard/messaging");
+    expect(CARRIER_PORTAL_FEATURES.messaging.reason).toMatch(/SRL rep/);
+  });
+});
+
 describe("the header search", () => {
   it("renders no search box while locked, and a lock that explains itself on tap", async () => {
     await mount();

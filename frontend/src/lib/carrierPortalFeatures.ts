@@ -38,6 +38,14 @@ export const CARRIER_PORTAL_FEATURES = {
     enabled: false,
     reason: "Notification choices cannot be saved yet. You receive every carrier notice for now.",
   },
+  // Owner ruling (F2, 2026-10-02): Messages is locked. The A11 walk found it
+  // working end to end, and v3.8.boz limited it to SRL staff; the owner's M1
+  // ruling named it among the features to lock. Unlocking is `enabled: true`.
+  messaging: {
+    enabled: false,
+    route: "/carrier/dashboard/messaging",
+    reason: "Messages are not open yet. Call your SRL rep; the number is on every load, or call (269) 220-6760.",
+  },
 } satisfies Record<string, CarrierPortalFeature>;
 
 export type CarrierPortalFeatureKey = keyof typeof CARRIER_PORTAL_FEATURES;

@@ -19648,7 +19648,9 @@
 // (carrier-portal-upgrade G33).
 // v3.8.bry — carrier portal: the Load Board stacks on a phone, its bid form is a bottom sheet that sends once
 // and shows why a bid failed, and rates show per mile (carrier-portal-upgrade F2/M4/M5).
-export const SRL_VERSION = "3.8.bry";
+// v3.8.brz — carrier portal: Messages is locked by owner ruling; its sidebar entry shows a lock and the reason,
+// and the route sends the carrier to the Dashboard (carrier-portal-upgrade F2/M1).
+export const SRL_VERSION = "3.8.brz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

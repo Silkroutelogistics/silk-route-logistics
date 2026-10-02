@@ -32,7 +32,6 @@ const COVERED = [
   "carrier/dashboard/compliance",
   "carrier/dashboard/payments",
   "carrier/dashboard/documents",
-  "carrier/dashboard/messaging",
   "carrier/dashboard/settings",
   "carrier/dashboard/scorecard",
   "carrier/dashboard/revenue",
@@ -111,6 +110,27 @@ for (const width of WIDTHS) {
         expect(onTop, `something is painted over the bell on ${path} at ${width}px`).toBe(true);
       });
     }
+  });
+}
+
+// M1 — a locked page. Messages is locked by owner ruling: its sidebar entry
+// shows a lock and the route sends the carrier to the Dashboard.
+for (const width of WIDTHS) {
+  test.describe(`a locked page at ${width}px`, () => {
+    test.use({ viewport: { width, height: 800 } });
+
+    test("Messages redirects to the Dashboard and reads as locked", async ({ page }) => {
+      await signInAsCarrier(page);
+      await page.goto("/carrier/dashboard/messaging");
+      await expect(page).toHaveURL(/\/carrier\/dashboard$/);
+      if (width < 1024) await page.getByRole("button", { name: "Open menu" }).click();
+      const item = page.getByRole("button", { name: /Messages: Available soon/ });
+      await expect(item).toBeVisible();
+      // aria-disabled: Playwright will not click it (actionability), a finger will.
+      await item.dispatchEvent("click");
+      await expect(page.getByText(/Messages are not open yet/)).toBeVisible();
+      await page.screenshot({ path: `test-results/carrier-portal/${width}-messages-locked.png` });
+    });
   });
 }
 
