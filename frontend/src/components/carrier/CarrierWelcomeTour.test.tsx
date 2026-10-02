@@ -118,3 +118,38 @@ describe("replay never restamps", () => {
     expect(invalidateQueries).not.toHaveBeenCalled();
   });
 });
+
+// carrier-portal-upgrade M3 — the tour covers only unlocked features, and on a
+// phone it is a bottom sheet with full-size controls.
+describe("M3: what the tour points at, and how it sits on a phone", () => {
+  it("every slide names a sidebar page, and none of those pages is locked", async () => {
+    const { CARRIER_NAV } = await import("./CarrierSidebar");
+    const { lockedFeatureForPath } = await import("@/lib/carrierPortalFeatures");
+    for (const s of TOUR_SLIDES) {
+      const labels = s.where.split(",").map((w) => w.trim());
+      for (const label of labels) {
+        const item = CARRIER_NAV.find((n) => n.label === label);
+        expect(item, `slide "${s.title}" points at "${label}", which is not in the sidebar`).toBeTruthy();
+        expect(lockedFeatureForPath(item!.href), `slide "${s.title}" sends a carrier to locked "${label}"`).toBeNull();
+      }
+    }
+  });
+
+  it("is a bottom sheet under 768px and a centred card above", () => {
+    render(<CarrierWelcomeTour mode="first-run" onClose={vi.fn()} />);
+    const root = screen.getByTestId("carrier-welcome-tour");
+    expect(root.className).toMatch(/\bitems-end\b/);
+    expect(root.className).toMatch(/\bmd:items-center\b/);
+    expect((root.firstElementChild as HTMLElement).className).toMatch(/\brounded-t-xl\b/);
+  });
+
+  it("gives every control a 44px target", () => {
+    render(<CarrierWelcomeTour mode="first-run" onClose={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("tour-next"));
+    for (const id of ["tour-next", "tour-back", "tour-skip"]) {
+      expect(screen.getByTestId(id).className, id).toMatch(/min-h-\[44px\]/);
+    }
+    // The X icon carries aria-label "Skip tour"; the text button shares the name.
+    expect(document.querySelector('button[aria-label="Skip tour"]')!.className).toMatch(/\bh-11\b/);
+  });
+});

@@ -47,9 +47,12 @@ const PAGES: string[] = (process.env.CARRIER_PORTAL_PAGES || COVERED.join(","))
 
 const WIDTHS = [380, 1280] as const;
 
-// One token for the whole run: /auth/e2e-token is rate limited, and minting one
-// per test hit 429 on the 26th visit of the first run.
+// One token and one tour-complete for the whole worker. /api/auth and
+// /api/carrier-auth share one limiter (server.ts authLimiter, 100 per 15 min per
+// IP), and the lifecycle spec runs after this one: posting both per test spent
+// that budget and starved its shipper mint (429) in the M3 run.
 let token: string | undefined;
+let tourMarked = false;
 
 async function signInAsCarrier(page: Page) {
   if (!token) {
@@ -61,7 +64,10 @@ async function signInAsCarrier(page: Page) {
     { name: "srl_token", value: token, domain: "localhost", path: "/", httpOnly: true, secure: false, sameSite: "Lax" },
   ]);
   // The tour opens for a carrier who has never seen it and would cover the page.
-  await page.context().request.post(`${API}/carrier-auth/portal-tour/complete`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!tourMarked) {
+    await page.context().request.post(`${API}/carrier-auth/portal-tour/complete`, { headers: { Authorization: `Bearer ${token}` } });
+    tourMarked = true;
+  }
 }
 
 for (const width of WIDTHS) {
@@ -102,5 +108,38 @@ for (const width of WIDTHS) {
         expect(onTop, `something is painted over the bell on ${path} at ${width}px`).toBe(true);
       });
     }
+  });
+}
+
+// M3 — the welcome tour, replayed from Settings. On a phone it is a bottom sheet
+// (its card ends at the bottom edge); on a desktop it is a centred card. Neither
+// may make the page scroll sideways.
+for (const width of WIDTHS) {
+  test.describe(`welcome tour at ${width}px`, () => {
+    test.use({ viewport: { width, height: 800 } });
+
+    test("replays from Settings and sits where it should", async ({ page }) => {
+      await signInAsCarrier(page);
+      await page.goto("/carrier/dashboard/settings");
+      await page.getByTestId("replay-tour").click();
+      const tour = page.getByTestId("carrier-welcome-tour");
+      await expect(tour).toBeVisible();
+      await page.screenshot({ path: `test-results/carrier-portal/${width}-tour.png` });
+
+      const card = await tour.locator(":scope > div").boundingBox();
+      expect(card).not.toBeNull();
+      if (width < 768) {
+        expect(Math.round(card!.y + card!.height), "the sheet should end at the bottom edge").toBe(800);
+        expect(Math.round(card!.width)).toBe(width);
+      } else {
+        expect(card!.y, "the card should float, not sit on the bottom edge").toBeGreaterThan(0);
+        expect(card!.y + card!.height).toBeLessThan(800);
+      }
+      const docOverflow = await page.evaluate(() => (document.scrollingElement || document.documentElement).scrollWidth - window.innerWidth);
+      expect(docOverflow).toBeLessThanOrEqual(1);
+
+      await page.getByTestId("tour-next").click();
+      await expect(page.getByTestId("tour-back")).toBeVisible();
+    });
   });
 }

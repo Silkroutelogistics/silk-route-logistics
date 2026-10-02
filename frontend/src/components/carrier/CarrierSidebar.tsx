@@ -12,7 +12,8 @@ import { lockedFeatureForPath } from "@/lib/carrierPortalFeatures";
 // → review pending tenders (action required) → check active booked loads.
 // Page wired to /api/carrier/tenders (LoadTender consumer) per Sprint
 // 52.hotfix.b — see frontend/src/app/carrier/dashboard/tenders/page.tsx.
-const nav = [
+// Exported so the welcome tour can be checked against what the sidebar offers (M3).
+export const CARRIER_NAV = [
   { id: "overview", href: "/carrier/dashboard", icon: Home, label: "Dashboard" },
   { id: "available", href: "/carrier/dashboard/available-loads", icon: Package, label: "Available Loads" },
   { id: "tenders", href: "/carrier/dashboard/tenders", icon: Send, label: "Tenders" },
@@ -60,7 +61,7 @@ export function CarrierSidebar() {
 
       {/* Nav */}
       <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
-        {nav.map((item) => {
+        {CARRIER_NAV.map((item) => {
           const active = pathname === item.href || (item.id !== "overview" && pathname.startsWith(item.href));
           const locked = lockedFeatureForPath(item.href);
           if (locked) {

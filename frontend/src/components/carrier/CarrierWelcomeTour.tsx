@@ -138,13 +138,16 @@ export function CarrierWelcomeTour({ mode, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A2540]/60 px-4"
+      className="fixed inset-0 z-[120] flex items-end md:items-center justify-center bg-[#0A2540]/60 md:px-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="carrier-tour-title"
       data-testid="carrier-welcome-tour"
     >
-      <div className="w-full max-w-xl bg-white rounded-xl shadow-[0_24px_48px_rgba(10,37,64,0.18)] border border-[#EFE6D3] overflow-hidden">
+      {/* carrier-portal-upgrade M3 — a bottom sheet under 768px, a centred card above.
+          z-[120] sits above the floating assistant button (z-50), which the 380px
+          E2E caught intercepting taps on Next in the sheet's bottom-right corner. */}
+      <div className="w-full md:max-w-xl max-h-[90vh] overflow-y-auto bg-white rounded-t-xl md:rounded-xl shadow-[0_24px_48px_rgba(10,37,64,0.18)] border border-[#EFE6D3]">
         {/* top rule + close */}
         <div className="h-1 bg-[#C5A572]" />
         <div className="flex items-start justify-between px-6 pt-5">
@@ -155,7 +158,7 @@ export function CarrierWelcomeTour({ mode, onClose }: Props) {
             type="button"
             onClick={() => void finish()}
             aria-label={mode === "first-run" ? "Skip tour" : "Close"}
-            className="p-1 -mr-1 text-[#6B7685] hover:text-[#0A2540] rounded transition"
+            className="inline-flex h-11 w-11 -mr-3 -mt-2 items-center justify-center text-[#5B6B7D] hover:text-[#0A2540] rounded transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]"
           >
             <X size={16} />
           </button>
@@ -172,7 +175,7 @@ export function CarrierWelcomeTour({ mode, onClose }: Props) {
                 {slide.title}
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-[#3A4A5F]" data-testid="tour-body">{slide.body}</p>
-              <p className="mt-3 text-xs text-[#6B7685]">
+              <p className="mt-3 text-xs text-[#5B6B7D]">
                 Where: <span className="font-medium text-[#0A2540]">{slide.where}</span>
               </p>
             </div>
@@ -182,14 +185,14 @@ export function CarrierWelcomeTour({ mode, onClose }: Props) {
         <div className="h-px bg-[#EFE6D3]" />
 
         {/* progress + controls */}
-        <div className="flex items-center justify-between px-6 py-4 bg-[#FBF7F0]">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-6 py-3 bg-[#FBF7F0]">
           <div className="flex items-center gap-1.5" aria-hidden="true">
             {TOUR_SLIDES.map((_, i) => (
               <span
                 key={i}
                 data-testid="tour-dot"
                 data-active={i === index ? "true" : "false"}
-                className={`h-1.5 rounded-full transition-all ${i === index ? "w-5 bg-[#BA7517]" : "w-1.5 bg-[#C5A572]/60"}`}
+                className={`h-1.5 rounded-full transition-all motion-reduce:transition-none ${i === index ? "w-5 bg-[#BA7517]" : "w-1.5 bg-[#C5A572]/60"}`}
               />
             ))}
           </div>
@@ -198,7 +201,7 @@ export function CarrierWelcomeTour({ mode, onClose }: Props) {
               <button
                 type="button"
                 onClick={() => void finish()}
-                className="text-xs text-[#6B7685] hover:text-[#0A2540] px-2 py-1.5"
+                className="min-h-[44px] text-xs text-[#5B6B7D] hover:text-[#0A2540] px-2 rounded transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]"
                 data-testid="tour-skip"
               >
                 Skip tour
@@ -208,7 +211,7 @@ export function CarrierWelcomeTour({ mode, onClose }: Props) {
               <button
                 type="button"
                 onClick={back}
-                className="inline-flex items-center gap-1 text-xs font-medium text-[#0A2540] border border-[#EFE6D3] bg-white rounded px-3 py-1.5 hover:bg-[#F5EEE0]"
+                className="inline-flex min-h-[44px] items-center gap-1 text-xs font-medium text-[#0A2540] border border-[#EFE6D3] bg-white rounded px-3 hover:bg-[#F5EEE0] transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]"
                 data-testid="tour-back"
               >
                 <ChevronLeft size={14} aria-hidden="true" /> Back
@@ -218,7 +221,7 @@ export function CarrierWelcomeTour({ mode, onClose }: Props) {
               ref={nextRef}
               type="button"
               onClick={next}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#FBF7F0] bg-[#BA7517] hover:brightness-95 rounded px-3.5 py-1.5"
+              className="inline-flex min-h-[44px] items-center gap-1 text-xs font-semibold text-white bg-[#854F0B] hover:bg-[#6B3F08] rounded px-4 transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]"
               data-testid="tour-next"
             >
               {last ? (mode === "first-run" ? "Finish" : "Done") : "Next"}
