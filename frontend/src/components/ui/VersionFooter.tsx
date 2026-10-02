@@ -19572,7 +19572,9 @@
 // A carrier could add a charge to, or rewrite detention on, a load it does not haul.
 // v3.8.bqq — carrier portal: the load board feed no longer sends Load.rate (carrier-portal-upgrade G37), and
 // load-tracking uses the shared ownership gate (lib/loadOwnershipGate).
-export const SRL_VERSION = "3.8.bqq";
+// v3.8.bqr — carrier portal: carriers and shippers message the SRL team only; the recipient search no longer
+// lists every account on the platform (carrier-portal-upgrade G8).
+export const SRL_VERSION = "3.8.bqr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

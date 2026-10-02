@@ -2,9 +2,24 @@ import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { sendMessageSchema } from "../validators/message";
+import { isSrlStaffRole, SRL_STAFF_ROLES } from "../lib/documentTypes";
+
+// carrier-portal-upgrade G8 — a carrier or shipper talks to SRL, not to each
+// other. The user search returned every account on the platform (name, company,
+// email) and send accepted any receiver, so a carrier could list and message
+// other carriers and shippers. External callers now see and reach staff only;
+// staff are unchanged. Replies still work, because the other side of every
+// external conversation is staff.
 
 export async function sendMessage(req: AuthRequest, res: Response) {
   const data = sendMessageSchema.parse(req.body);
+  if (!isSrlStaffRole(req.user!.role)) {
+    const receiver = await prisma.user.findUnique({ where: { id: data.receiverId }, select: { role: true } });
+    if (!receiver || !isSrlStaffRole(receiver.role)) {
+      res.status(403).json({ error: "Messages can be sent to the SRL team only" });
+      return;
+    }
+  }
   const message = await prisma.message.create({
     data: { senderId: req.user!.id, ...data } as any,
     include: { sender: { select: { id: true, firstName: true, lastName: true } } },
@@ -86,6 +101,7 @@ export async function getUnreadCount(req: AuthRequest, res: Response) {
 export async function getUsers(req: AuthRequest, res: Response) {
   const search = req.query.search as string;
   const where: Record<string, unknown> = { id: { not: req.user!.id } };
+  if (!isSrlStaffRole(req.user!.role)) where.role = { in: [...SRL_STAFF_ROLES] };
   if (search) {
     where.OR = [
       { firstName: { contains: search, mode: "insensitive" } },
