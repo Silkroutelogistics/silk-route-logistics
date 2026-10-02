@@ -8,6 +8,7 @@ import multer from "multer";
 import { env } from "../config/env";
 import { UNSUPPORTED_FILE_TYPE } from "../config/upload";
 import { DuplicateInvoiceNumberError } from "../lib/invoiceNumber";
+import { FieldError } from "../lib/formCoerce";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -119,6 +120,14 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
   // can act on, not a server fault, so it names the invoice holding the number.
   if (err instanceof DuplicateInvoiceNumberError) {
     res.status(409).json({ error: err.message, code: err.code, heldBy: err.heldBy });
+    return;
+  }
+
+  // A form value that is not a number or not a date (lib/formCoerce): the
+  // caller's input, named, never a NaN or Invalid Date handed to Prisma.
+  if (err instanceof FieldError) {
+    logErrorToDb(err, _req, 400, "VALIDATION");
+    res.status(400).json({ error: err.message, field: err.field });
     return;
   }
 

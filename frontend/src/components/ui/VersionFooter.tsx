@@ -19604,7 +19604,10 @@
 // is flagged the next day instead of never. Pre-existing approximate nextRun values are corrected once.
 // v3.8.brd — a cron job whose own cron_registry row is disabled is skipped and recorded SKIPPED;
 // the toggle endpoint now does something. The AR reminder switch is a separate row and is unchanged.
-export const SRL_VERSION = "3.8.brd";
+// v3.8.bre — the AE carrier save no longer 500s on an empty date or writes NaN for an empty number
+// (coi-verify-email-fix C3): "" is null, a bad value is a 400 naming the field, unknown fields are refused,
+// and the carrier list returns the insurance agent so the edit form stops erasing it.
+export const SRL_VERSION = "3.8.bre";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

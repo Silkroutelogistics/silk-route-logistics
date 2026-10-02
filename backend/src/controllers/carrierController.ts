@@ -12,6 +12,7 @@ import { AuthRequest } from "../middleware/auth";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
 import { getBonusPercentage } from "../services/tierService";
 import { validateInsuranceCoverage, maybeSendInsuranceVerificationEmail, didInsuranceFieldsChange } from "../services/insuranceVerificationService";
+import { numOrNull, dateOrNull } from "../lib/formCoerce";
 import { log } from "../lib/logger";
 import { onCarrierApproved } from "../services/integrationService";
 import { uploadFile } from "../services/storageService";
@@ -1750,6 +1751,12 @@ export async function getAllCarriers(req: AuthRequest, res: Response) {
         additionalInsuredSRL: c.additionalInsuredSRL,
         waiverOfSubrogation: c.waiverOfSubrogation,
         thirtyDayCancellationNotice: c.thirtyDayCancellationNotice,
+        // The AE edit form loads these. Absent, it loaded "" and a save erased
+        // the stored agent (coi-verify-email-fix C3).
+        insuranceAgencyName: c.insuranceAgencyName,
+        insuranceAgentName: c.insuranceAgentName,
+        insuranceAgentEmail: c.insuranceAgentEmail,
+        insuranceAgentPhone: c.insuranceAgentPhone,
         completedLoads,
         activeLoads,
         totalRevenue: totalRevenue._sum.amount || 0,
@@ -1829,33 +1836,35 @@ export async function updateCarrier(req: AuthRequest, res: Response) {
     insuranceAgentName, insuranceAgentEmail, insuranceAgentPhone, insuranceAgencyName,
   } = req.body;
   const data: Record<string, unknown> = {};
-  if (safetyScore !== undefined) data.safetyScore = parseFloat(safetyScore);
+  // "" is null; NaN or an invalid date is a 400 naming the field (lib/formCoerce).
+  const put = (f: string, v: unknown) => { if (v !== undefined) data[f] = v; };
+  put("safetyScore", numOrNull("safetyScore", safetyScore));
   if (tier !== undefined) data.tier = tier;
-  if (numberOfTrucks !== undefined) data.numberOfTrucks = parseInt(numberOfTrucks);
-  if (insuranceExpiry !== undefined) data.insuranceExpiry = new Date(insuranceExpiry);
+  put("numberOfTrucks", numOrNull("numberOfTrucks", numberOfTrucks, { int: true }));
+  put("insuranceExpiry", dateOrNull("insuranceExpiry", insuranceExpiry));
   if (onboardingStatus !== undefined) data.onboardingStatus = onboardingStatus;
 
   // Extended insurance fields (v3.8.aiw — added *Effective pair)
   if (autoLiabilityProvider !== undefined) data.autoLiabilityProvider = autoLiabilityProvider;
-  if (autoLiabilityAmount !== undefined) data.autoLiabilityAmount = autoLiabilityAmount ? parseFloat(autoLiabilityAmount) : null;
+  put("autoLiabilityAmount", numOrNull("autoLiabilityAmount", autoLiabilityAmount));
   if (autoLiabilityPolicy !== undefined) data.autoLiabilityPolicy = autoLiabilityPolicy;
-  if (autoLiabilityEffective !== undefined) data.autoLiabilityEffective = autoLiabilityEffective ? new Date(autoLiabilityEffective) : null;
-  if (autoLiabilityExpiry !== undefined) data.autoLiabilityExpiry = autoLiabilityExpiry ? new Date(autoLiabilityExpiry) : null;
+  put("autoLiabilityEffective", dateOrNull("autoLiabilityEffective", autoLiabilityEffective));
+  put("autoLiabilityExpiry", dateOrNull("autoLiabilityExpiry", autoLiabilityExpiry));
   if (cargoInsuranceProvider !== undefined) data.cargoInsuranceProvider = cargoInsuranceProvider;
-  if (cargoInsuranceAmount !== undefined) data.cargoInsuranceAmount = cargoInsuranceAmount ? parseFloat(cargoInsuranceAmount) : null;
+  put("cargoInsuranceAmount", numOrNull("cargoInsuranceAmount", cargoInsuranceAmount));
   if (cargoInsurancePolicy !== undefined) data.cargoInsurancePolicy = cargoInsurancePolicy;
-  if (cargoInsuranceEffective !== undefined) data.cargoInsuranceEffective = cargoInsuranceEffective ? new Date(cargoInsuranceEffective) : null;
-  if (cargoInsuranceExpiry !== undefined) data.cargoInsuranceExpiry = cargoInsuranceExpiry ? new Date(cargoInsuranceExpiry) : null;
+  put("cargoInsuranceEffective", dateOrNull("cargoInsuranceEffective", cargoInsuranceEffective));
+  put("cargoInsuranceExpiry", dateOrNull("cargoInsuranceExpiry", cargoInsuranceExpiry));
   if (generalLiabilityProvider !== undefined) data.generalLiabilityProvider = generalLiabilityProvider;
-  if (generalLiabilityAmount !== undefined) data.generalLiabilityAmount = generalLiabilityAmount ? parseFloat(generalLiabilityAmount) : null;
+  put("generalLiabilityAmount", numOrNull("generalLiabilityAmount", generalLiabilityAmount));
   if (generalLiabilityPolicy !== undefined) data.generalLiabilityPolicy = generalLiabilityPolicy;
-  if (generalLiabilityEffective !== undefined) data.generalLiabilityEffective = generalLiabilityEffective ? new Date(generalLiabilityEffective) : null;
-  if (generalLiabilityExpiry !== undefined) data.generalLiabilityExpiry = generalLiabilityExpiry ? new Date(generalLiabilityExpiry) : null;
+  put("generalLiabilityEffective", dateOrNull("generalLiabilityEffective", generalLiabilityEffective));
+  put("generalLiabilityExpiry", dateOrNull("generalLiabilityExpiry", generalLiabilityExpiry));
   if (workersCompProvider !== undefined) data.workersCompProvider = workersCompProvider;
-  if (workersCompAmount !== undefined) data.workersCompAmount = workersCompAmount ? parseFloat(workersCompAmount) : null;
+  put("workersCompAmount", numOrNull("workersCompAmount", workersCompAmount));
   if (workersCompPolicy !== undefined) data.workersCompPolicy = workersCompPolicy;
-  if (workersCompEffective !== undefined) data.workersCompEffective = workersCompEffective ? new Date(workersCompEffective) : null;
-  if (workersCompExpiry !== undefined) data.workersCompExpiry = workersCompExpiry ? new Date(workersCompExpiry) : null;
+  put("workersCompEffective", dateOrNull("workersCompEffective", workersCompEffective));
+  put("workersCompExpiry", dateOrNull("workersCompExpiry", workersCompExpiry));
   if (additionalInsuredSRL !== undefined) data.additionalInsuredSRL = additionalInsuredSRL === true || additionalInsuredSRL === "true";
   if (waiverOfSubrogation !== undefined) data.waiverOfSubrogation = waiverOfSubrogation === true || waiverOfSubrogation === "true";
   if (thirtyDayCancellationNotice !== undefined) data.thirtyDayCancellationNotice = thirtyDayCancellationNotice === true || thirtyDayCancellationNotice === "true";

@@ -22,6 +22,7 @@ import { prisma } from "../config/database";
 import { upload } from "../config/upload";
 import { auditLog } from "../middleware/audit";
 import { validateBody } from "../middleware/validate";
+import { updateCarrierSchema } from "./carriers";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
 import { verifyCarrierWithFMCSA, lookupByMcNumber } from "../services/fmcsaService";
 import { uploadLimiter } from "../middleware/rateLimiters";
@@ -438,7 +439,7 @@ router.post("/admin-setup", authorize("ADMIN", "CEO"), setupAdminCarrierProfile)
 // Admin / Employee view
 router.get("/all", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getAllCarriers);
 router.get("/:id/detail", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getCarrierDetail);
-router.patch("/:id", authorize("ADMIN", "CEO"), auditLog("UPDATE", "Carrier"), updateCarrier);
+router.patch("/:id", authorize("ADMIN", "CEO"), validateBody(updateCarrierSchema), auditLog("UPDATE", "Carrier"), updateCarrier);
 
 // POST /carrier/:id/authority-grant-date — dedicated, reason-required,
 // audited admin endpoint that sets CarrierProfile.authorityGrantedDate

@@ -62,35 +62,40 @@ const carrierQuerySchema = z.object({
   limit: z.coerce.number().default(50),
 });
 
-const updateCarrierSchema = z.object({
-  safetyScore: z.number().min(0).max(100).optional(),
+// Form values arrive as strings: "" is null and a numeric string is its number,
+// so "abc" fails here by name instead of reaching Prisma as NaN. Strict: an
+// unknown field is a 400, not silently dropped. Shared with PATCH /carrier/:id.
+const formNum = (n: z.ZodNumber) =>
+  z.preprocess((v) => (v === "" ? null : typeof v === "string" ? Number(v) : v), n.nullable().optional());
+export const updateCarrierSchema = z.object({
+  safetyScore: formNum(z.number().min(0).max(100)),
   tier: z.enum(["PLATINUM", "GOLD", "SILVER", "GUEST", "NONE"]).optional(),
   status: z.enum(["NEW", "REVIEW", "APPROVED", "REJECTED", "SUSPENDED"]).optional(),
   // v3.8.ajd Sprint 1 — 6-state lifecycle.
   // REVIEWING merges legacy DOCUMENTS_SUBMITTED + UNDER_REVIEW.
   // INFO_REQUESTED added for v3.8.aje workflow.
   onboardingStatus: z.enum(["PENDING", "REVIEWING", "INFO_REQUESTED", "APPROVED", "REJECTED", "SUSPENDED"]).optional(),
-  insuranceExpiry: z.string().optional(),
+  insuranceExpiry: z.string().nullable().optional(),
   equipmentTypes: z.array(z.string()).optional(),
   operatingRegions: z.array(z.string()).optional(),
-  numberOfTrucks: z.number().int().positive().optional(),
-  numberOfDrivers: z.number().int().positive().optional(),
+  numberOfTrucks: formNum(z.number().int().positive()),
+  numberOfDrivers: formNum(z.number().int().positive()),
   notes: z.string().optional(),
   // Extended insurance
   autoLiabilityProvider: z.string().optional(),
-  autoLiabilityAmount: z.any().optional(),
+  autoLiabilityAmount: formNum(z.number().nonnegative()),
   autoLiabilityPolicy: z.string().optional(),
   autoLiabilityExpiry: z.string().nullable().optional(),
   cargoInsuranceProvider: z.string().optional(),
-  cargoInsuranceAmount: z.any().optional(),
+  cargoInsuranceAmount: formNum(z.number().nonnegative()),
   cargoInsurancePolicy: z.string().optional(),
   cargoInsuranceExpiry: z.string().nullable().optional(),
   generalLiabilityProvider: z.string().optional(),
-  generalLiabilityAmount: z.any().optional(),
+  generalLiabilityAmount: formNum(z.number().nonnegative()),
   generalLiabilityPolicy: z.string().optional(),
   generalLiabilityExpiry: z.string().nullable().optional(),
   workersCompProvider: z.string().optional(),
-  workersCompAmount: z.any().optional(),
+  workersCompAmount: formNum(z.number().nonnegative()),
   workersCompPolicy: z.string().optional(),
   workersCompExpiry: z.string().nullable().optional(),
   additionalInsuredSRL: z.any().optional(),
@@ -106,11 +111,11 @@ const updateCarrierSchema = z.object({
   // written at registration and never corrected afterwards. Quieter than the
   // reset-password case because no AE surface calls PUT /carriers/:id with them
   // today, but the handler reads them and the contract should say so.
-  autoLiabilityEffective: z.string().optional(),
-  cargoInsuranceEffective: z.string().optional(),
-  generalLiabilityEffective: z.string().optional(),
-  workersCompEffective: z.string().optional(),
-});
+  autoLiabilityEffective: z.string().nullable().optional(),
+  cargoInsuranceEffective: z.string().nullable().optional(),
+  generalLiabilityEffective: z.string().nullable().optional(),
+  workersCompEffective: z.string().nullable().optional(),
+}).strict();
 
 // Public: carrier self-registration (supports multipart/form-data for file uploads)
 router.post("/",
