@@ -65,7 +65,10 @@ export async function requireTotpEnrolled(req: AuthRequest, res: Response, next:
   if (!user?.totpEnabled) {
     res.status(403).json({
       error:
-        "Set up your authenticator app before using the carrier portal. This protects the bank details and load information on your account.",
+        // carrier-portal-upgrade G11 — this said the wall "protects the bank details" on
+        // the account. SRL stores no bank or routing data for a carrier, and the
+        // security page retired the same claim for that reason.
+        "Set up your authenticator app before using the carrier portal. This protects your loads, documents and payment records.",
       code: "TOTP_ENROLLMENT_REQUIRED",
       action: { href: "/carrier/dashboard/security" },
     });

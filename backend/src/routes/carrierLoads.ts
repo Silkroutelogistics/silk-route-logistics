@@ -858,6 +858,9 @@ router.post("/:id/check-call", validateBody(checkCallSchema), async (req: AuthRe
 // Carrier announces where they are and when they'll be available.
 // Stored on CarrierProfile.preferredLanes JSON field as capacity posts.
 router.post("/post-capacity", async (req: AuthRequest, res: Response) => {
+  // carrier-portal-upgrade G10 — a SUSPENDED carrier was refused every other
+  // write on this router (v3.8.ajx C4) but could still do this one.
+  if (!(await checkCarrierNotSuspended(req, res))) return;
   try {
     const { currentCity, currentState, availableDate, equipmentType, preferredDestStates, notes } = req.body;
     if (!currentCity || !currentState || !availableDate) {
@@ -949,6 +952,9 @@ router.post("/:id/driver-verify/confirm", validateBody(driverVerifyConfirmSchema
 // Carrier app sends periodic location pings; service auto-detects
 // arrival/departure at stops and triggers status changes.
 router.post("/gps-update", async (req: AuthRequest, res: Response) => {
+  // carrier-portal-upgrade G10 — a SUSPENDED carrier was refused every other
+  // write on this router (v3.8.ajx C4) but could still do this one, and a ping can move a load's status.
+  if (!(await checkCarrierNotSuspended(req, res))) return;
   try {
     const { latitude, longitude } = req.body;
     if (!latitude || !longitude) {

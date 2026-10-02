@@ -19578,7 +19578,9 @@
 // allowlisted carrier types, and a carrier's dispute notice opens Payments (carrier-portal-upgrade M2/G38/G39).
 // v3.8.bqt — carrier portal: load detail carries the SRL rep's phone and email again, for staff posters only
 // (carrier-portal-upgrade G40, correcting v3.8.bow).
-export const SRL_VERSION = "3.8.bqt";
+// v3.8.bqu — carrier portal: a suspended carrier can no longer post capacity or send GPS pings, and the 2FA
+// wall no longer claims SRL holds bank details (carrier-portal-upgrade G10/G11).
+export const SRL_VERSION = "3.8.bqu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
