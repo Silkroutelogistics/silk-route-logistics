@@ -448,13 +448,13 @@ export function startSchedulers() {
     await withLock("otp-cleanup", 5 * 60 * 1000, runOtpCleanup);
   });
 
-  // Phase C: Check-call automation: every 15 minutes
+  // Phase C: Check-call automation: at :00 and :30 (v3.8.arh wake window: was */15)
   cron.schedule("0,30 * * * *", async () => {
     log.info("[Scheduler] Running check-call automation...");
     await withLock("check-call-automation", 5 * 60 * 1000, processDueCheckCalls);
   });
 
-  // Phase C: Risk flagging: every 30 minutes at :05 and :35.
+  // Phase C: Risk flagging: at :00 and :30 (v3.8.arh wake window: was 5,35).
   // RE-ENABLED 2026-05-30 in v3.8.alj — §13.3 Item 192 full close. The
   // 2026-05-25 flood is fixed by three layered guards now in
   // runRiskFlagging: (1) once-per-load-per-level cadence (no hourly
@@ -469,7 +469,7 @@ export function startSchedulers() {
     await withLock("risk-flagging", 10 * 60 * 1000, runRiskFlagging);
   });
 
-  // Phase C: Email sequence processor: every hour at :10
+  // Phase C: Email sequence processor: hourly at :00 (v3.8.arh wake window: was :10)
   cron.schedule("0 * * * *", async () => {
     log.info("[Scheduler] Processing due email sequences...");
     await withLock("email-sequences", 5 * 60 * 1000, processDueSequences);
@@ -570,12 +570,12 @@ export function startSchedulers() {
   // Found by the cross-file guard written for the tender-expiry duplicate
   // (__tests__/unit/cron/noDuplicateSchedules.test.ts) — it reported this one
   // on its first run. The surviving registration is cron/index.ts's
-  // "cpp-weekly-recalc", which the boot inventory can see. Do not re-add it here.
+  // "compass-score-recalc" (it was "cpp-weekly-recalc"), which the boot inventory can see. Do not re-add it here.
   // §13.3 Item 221.4.
 
   // ─── AI Learning Loop Crons ────────────────────────────────────
 
-  // AI Queue Processor: every 10 minutes
+  // AI Queue Processor: at :00 and :30 (v3.8.arh wake window: was */10)
   cron.schedule("0,30 * * * *", async () => {
     log.info("[Scheduler] Processing AI learning queue...");
     await withLock("ai-queue-processor", 5 * 60 * 1000, async () => {
@@ -613,13 +613,13 @@ export function startSchedulers() {
 
   // ─── Track & Trace Phase 3 Crons ──────────────────────────────────
 
-  // Geofence scanner: every 5 minutes
+  // Geofence scanner: at :00 and :30 (v3.8.arh wake window: was */5; up to 30 min arrival latency, revisit when ELD connects)
   cron.schedule("0,30 * * * *", async () => {
     log.info("[Scheduler] Running geofence scanner...");
     await withLock("geofence-scanner", 4 * 60 * 1000, scanGeofences);
   });
 
-  // ELD GPS sync: every 15 minutes at :03, :18, :33, :48
+  // ELD GPS sync: at :00 and :30 (v3.8.arh wake window: was 3,18,33,48)
   cron.schedule("0,30 * * * *", async () => {
     log.info("[Scheduler] Running ELD GPS sync...");
     await withLock("eld-gps-sync", 10 * 60 * 1000, async () => {
@@ -636,7 +636,7 @@ export function startSchedulers() {
     });
   });
 
-  // Alert engine (ETA vs appointment): every 15 minutes at :07, :22, :37, :52
+  // Alert engine (ETA vs appointment): at :00 and :30 (v3.8.arh wake window: was 7,22,37,52)
   cron.schedule("0,30 * * * *", async () => {
     log.info("[Scheduler] Running track & trace alert engine...");
     await withLock("tt-alert-engine", 10 * 60 * 1000, runAlertScanner);
@@ -734,7 +734,7 @@ export function startSchedulers() {
     });
   });
 
-  // Gmail reply tracking: every 30 minutes at :25 and :55
+  // Gmail reply tracking: at :00 and :30 (v3.8.arh wake window: was 25,55)
   cron.schedule("0,30 * * * *", async () => {
     log.info("[Scheduler] Running Gmail reply checker...");
     await withLock("gmail-reply-checker", 5 * 60 * 1000, async () => {

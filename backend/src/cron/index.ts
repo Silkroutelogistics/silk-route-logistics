@@ -177,7 +177,7 @@ export async function cleanupStaleNotifications(now: number = Date.now()) {
 export function initCronJobs() {
   log.info("Initializing cron scheduled jobs");
 
-  // ─── Every 5 minutes: Check call reminders ───────────────────
+  // ─── At :00 and :30: Check call reminders (v3.8.arh wake window; was */5) ───
   // Eastern timezone per Item 185 — produces dispatcher Notifications.
   cron.schedule("0,30 * * * *", () => withGuard("check-call-reminders", async () => {
     try {

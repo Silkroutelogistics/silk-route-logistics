@@ -19596,7 +19596,10 @@
 // v3.8.bra — cron_registry stops seeding two names no job records under (daily-cpp-tiers,
 // cpp-weekly-recalc), and scripts/delete-orphan-cron-rows.ts removes their rows: dry run by default
 // as srl_readonly; --execute on owner go only, after this is deployed.
-export const SRL_VERSION = "3.8.bra";
+// v3.8.brb — schedule comments match their expressions: nine comments still promised the
+// offsets v3.8.arh retired to let Neon suspend (:00/:30 wake window); a test now fails on any such drift
+// and on any job sharing the health digest's minute.
+export const SRL_VERSION = "3.8.brb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
