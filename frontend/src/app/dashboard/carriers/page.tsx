@@ -7,6 +7,7 @@ import { IconTabs, type IconTabDef } from "@/components/ui/IconTabs";
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { INSURANCE_EDIT_FIELDS, PROFILE_EDIT_FIELDS, changedFields } from "./carrierEditFields";
 import { DOC_CATEGORIES, groupCarrierDocuments, isUncategorizedDocType } from "@/lib/carrierDocumentGroups";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { carrierArchiveReasonLabel } from "@shared/constants/carrierArchiveReasons";
@@ -347,9 +348,10 @@ function expiryColor(dateStr: string | null | undefined): string {
   return "text-green-400";
 }
 
+// UTC: an expiry is a calendar date stored at midnight UTC; local time showed it a day early.
 function formatExpiry(dateStr: string | null | undefined): string {
   if (!dateStr) return "N/A";
-  return new Date(dateStr).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric", timeZone: "UTC" });
 }
 
 function insuranceBadge(expiry: string | null) {
@@ -500,6 +502,9 @@ export default function CarrierPoolPage() {
   const [panelTab, setPanelTab] = useState<CarrierPanelTab>("profile");
   const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null);
   const [editingTab, setEditingTab] = useState<string | null>(null);
+  // What openEdit loaded, so a save sends only what the AE changed.
+  const [editBaseline, setEditBaseline] = useState<Record<string, unknown>>({});
+  const [editError, setEditError] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     safetyScore: "", tier: "", numberOfTrucks: "", insuranceExpiry: "",
     autoLiabilityProvider: "", autoLiabilityAmount: "", autoLiabilityPolicy: "", autoLiabilityExpiry: "",
@@ -943,7 +948,8 @@ export default function CarrierPoolPage() {
 
   function openEdit(c: Carrier) {
     setEditingCarrier(c);
-    setEditForm({
+    setEditError(null);
+    const form = {
       safetyScore: c.safetyScore?.toString() || "",
       tier: c.tier,
       numberOfTrucks: c.numberOfTrucks?.toString() || "",
@@ -971,7 +977,26 @@ export default function CarrierPoolPage() {
       insuranceAgentEmail: c.insuranceAgentEmail || "",
       insuranceAgentPhone: c.insuranceAgentPhone || "",
       insuranceAgencyName: c.insuranceAgencyName || "",
-    });
+    };
+    setEditForm(form);
+    setEditBaseline(form);
+  }
+
+  // Waits for the server. Closes (and the mutation refetches) only on success;
+  // on failure the form stays open with the server's reason.
+  async function saveEdit(keys: readonly string[]) {
+    if (!editingCarrier) return;
+    const body = changedFields(editBaseline, editForm, keys);
+    setEditError(null);
+    if (Object.keys(body).length === 0) { setEditingTab(null); return; }
+    try {
+      await updateCarrier.mutateAsync({ id: editingCarrier.id, data: body as Record<string, string> });
+      setEditingTab(null);
+    } catch (err: any) {
+      const d = err?.response?.data;
+      const fields = Array.isArray(d?.details) ? `: ${d.details.map((x: any) => x.field).join(", ")}` : "";
+      setEditError(`${d?.error || err?.message || "Save failed"}${fields}`);
+    }
   }
 
   async function runCompass(carrierId: string) {
@@ -1653,11 +1678,12 @@ export default function CarrierPoolPage() {
                             onChange={(e) => setEditForm({ ...editForm, numberOfTrucks: e.target.value })}
                             className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
                         </div>
-                        <button onClick={() => { updateCarrier.mutate({ id: selectedCarrier.id, data: editForm as any }); setEditingTab(null); }}
+                        <button onClick={() => saveEdit(PROFILE_EDIT_FIELDS)}
                           {...whenNotArchived(updateCarrier.isPending)}
                           className="w-full px-4 py-2 bg-[#C5A572] text-[#0A2540] rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
                           {updateCarrier.isPending ? "Saving..." : "Save Changes"}
                         </button>
+                        {editError && <p role="alert" className="text-xs text-red-700">{editError}</p>}
                       </div>
                     )}
                   </div>
@@ -1729,27 +1755,6 @@ export default function CarrierPoolPage() {
                           <button onClick={() => setEditingTab(null)} className="text-xs text-gray-700 hover:text-gray-600">Cancel</button>
                         </div>
                         <div>
-                          <label className="text-xs text-gray-500 mb-1 block">Tier</label>
-                          <select value={editForm.tier} onChange={(e) => setEditForm({ ...editForm, tier: e.target.value })}
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm">
-                            {["SILVER", "GOLD", "PLATINUM"].map((t) => <option key={t} value={t}>{t}</option>)}
-                          </select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-xs text-gray-500 mb-1 block">Safety Score (%)</label>
-                            <input type="number" min="0" max="100" value={editForm.safetyScore}
-                              onChange={(e) => setEditForm({ ...editForm, safetyScore: e.target.value })}
-                              className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-500 mb-1 block">Number of Trucks</label>
-                            <input type="number" min="1" value={editForm.numberOfTrucks}
-                              onChange={(e) => setEditForm({ ...editForm, numberOfTrucks: e.target.value })}
-                              className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
-                          </div>
-                        </div>
-                        <div>
                           <label className="text-xs text-gray-500 mb-1 block">Insurance Expiry</label>
                           <input type="date" value={editForm.insuranceExpiry}
                             onChange={(e) => setEditForm({ ...editForm, insuranceExpiry: e.target.value })}
@@ -1802,11 +1807,12 @@ export default function CarrierPoolPage() {
                               className="px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
                           </div>
                         </div>
-                        <button onClick={() => { updateCarrier.mutate({ id: selectedCarrier.id, data: editForm as any }); setEditingTab(null); }}
+                        <button onClick={() => saveEdit(INSURANCE_EDIT_FIELDS)}
                           {...whenNotArchived(updateCarrier.isPending)}
                           className="w-full px-4 py-2 bg-[#C5A572] text-[#0A2540] rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
                           {updateCarrier.isPending ? "Saving..." : "Save Changes"}
                         </button>
+                        {editError && <p role="alert" className="text-xs text-red-700">{editError}</p>}
                       </div>
                     )}
                   </div>

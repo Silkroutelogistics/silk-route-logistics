@@ -19607,7 +19607,10 @@
 // v3.8.bre — the AE carrier save no longer 500s on an empty date or writes NaN for an empty number
 // (coi-verify-email-fix C3): "" is null, a bad value is a 400 naming the field, unknown fields are refused,
 // and the carrier list returns the insurance agent so the edit form stops erasing it.
-export const SRL_VERSION = "3.8.bre";
+// v3.8.brf — the AE Insurance tab sends only what the AE changed and waits for the answer
+// (coi-verify-email-fix C3): no tier / safety score / trucks, no blank agent; a failed save stays open
+// with the server's reason; expiry dates render as their calendar day (UTC).
+export const SRL_VERSION = "3.8.brf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
