@@ -19555,7 +19555,10 @@
 // v3.8.bot — the monthly re-vet raises an AE alert for a CRITICAL score and never suspends
 // (carrier-unsuspend arc): its 2026-10-01 run suspended six authorized, insured carriers whose
 // scores were CRITICAL at approval. No carrier status write and no carrier notice remain.
-export const SRL_VERSION = "3.8.bot";
+// v3.8.bqh — the COI agent email passes a per-carrier hold and a 14-day cooldown on every path
+// (coi-verify-email-fix C1a): JETEX is held after the 2026-10-02 cron sent McGriff stale policy
+// data. The body no longer says the carrier operates under SRL's brokerage authority.
+export const SRL_VERSION = "3.8.bqh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -151,8 +151,50 @@ export async function maybeSendInsuranceVerificationEmail(
     return { sent: false, reason: `agent fields missing on post-write record: ${missing.join(", ")}` };
   }
 
-  await sendInsuranceVerificationEmail(carrierId);
-  return { sent: true };
+  const out = await sendInsuranceVerificationEmail(carrierId);
+  return out?.sent ? { sent: true } : { sent: false, reason: out?.reason ?? "RESEND_API_KEY not set" };
+}
+
+// ─── Agent-Email Hold + Cooldown ────────────────────────
+//
+// coi-verify-email-fix C1. Every send path — registration, cron, AE action —
+// goes through sendInsuranceVerificationEmail, so both checks live there.
+//
+// HOLD: a carrier listed here receives no agent email from any path until its
+// entry is removed in a reviewed commit. Keyed by CarrierProfile.id.
+export const AGENT_EMAIL_HOLD: ReadonlyMap<string, string> = new Map([
+  // JETEX FREIGHT LLC, MC 585393. On 2026-10-02 the expiry cron sent McGriff a
+  // request carrying stale policy numbers and false endorsement flags, and
+  // was set to send again on 2026-10-25. Held until the record is corrected.
+  ["cmublocyz00flh02dhyvwqwky", "JETEX FREIGHT LLC — 2026-10-02 incorrect COI request"],
+]);
+
+// COOLDOWN: one agent email per carrier per 14 days, whichever path asks.
+export const AGENT_EMAIL_COOLDOWN_DAYS = 14;
+
+export async function agentEmailBlockReason(carrierId: string, agentEmail: string): Promise<string | null> {
+  const held = AGENT_EMAIL_HOLD.get(carrierId);
+  if (held) return `agent email on hold: ${held}`;
+
+  const since = new Date(Date.now() - AGENT_EMAIL_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
+  const recent = await prisma.communication.findFirst({
+    where: {
+      entityType: "CARRIER",
+      entityId: carrierId,
+      direction: "OUTBOUND",
+      createdAt: { gte: since },
+      OR: [
+        { metadata: { path: ["source"], equals: "InsuranceVerification" } },
+        { to: { equals: agentEmail, mode: "insensitive" } },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
+  });
+  if (recent) {
+    return `agent emailed ${recent.createdAt.toISOString()}; ${AGENT_EMAIL_COOLDOWN_DAYS}-day cooldown`;
+  }
+  return null;
 }
 
 // ─── Send Verification Email to Insurance Agent ─────────
@@ -165,6 +207,12 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
 
   if (!carrier) throw new Error("Carrier not found");
   if (!carrier.insuranceAgentEmail) throw new Error("No insurance agent email on file");
+
+  const blocked = await agentEmailBlockReason(carrierId, carrier.insuranceAgentEmail);
+  if (blocked) {
+    log.info({ carrierId, reason: blocked }, "[InsVerify] Agent email blocked");
+    return { sent: false as const, reason: blocked };
+  }
   if (!RESEND_API_KEY) { log.warn("[InsVerify] RESEND_API_KEY not set, skipping email"); return null; }
 
   // v3.8.avk — the agent's name still identifies WHO was contacted in the audit
@@ -212,7 +260,7 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
         <p style="color:#374151;font-size:14px;line-height:1.6">${salutation}</p>
 
         <p style="color:#374151;font-size:14px;line-height:1.6">
-          We are writing to verify the insurance coverage for the following motor carrier that operates under our brokerage authority:
+          We are writing to verify the insurance coverage for the following motor carrier:
         </p>
 
         <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:6px;padding:16px;margin:16px 0">
@@ -322,7 +370,7 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
   }
 
   log.info({ carrierId, agentEmail: carrier.insuranceAgentEmail, issues: validation.issues.length }, "[InsVerify] Verification email sent");
-  return { sent: true, emailId: (emailResult as any).id, validation };
+  return { sent: true as const, emailId: (emailResult as any).id, validation };
 }
 
 // ─── Check Expiring Insurance (Cron) ────────────────────
@@ -372,8 +420,8 @@ export async function checkExpiringInsurance() {
     // Send email to agent if we have their email
     if (carrier.insuranceAgentEmail && (daysUntil === 60 || daysUntil === 30 || daysUntil === 7)) {
       try {
-        await sendInsuranceVerificationEmail(carrier.id);
-        remindersSent++;
+        const out = await sendInsuranceVerificationEmail(carrier.id);
+        if (out?.sent) remindersSent++;
       } catch (err) {
         log.error({ err, carrierId: carrier.id }, "[InsVerify] Expiry reminder failed");
       }
