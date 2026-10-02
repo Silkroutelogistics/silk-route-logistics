@@ -19659,7 +19659,8 @@
 // v3.8.bsd — carrier portal: the 2FA enrollment screen uses AA buttons and a 44px named copy control, and its
 // copy carries no em dash (carrier-portal-upgrade F2/M5).
 // v3.8.bse — carrier portal: Messages is open again, reaches SRL staff only, and stacks below md with named 44px controls (FINISH-2 G3)
-export const SRL_VERSION = "3.8.bse";
+// v3.8.bsf — messages: a carrier's message notifies the SRL rep it was sent to in-app, or the active operations team when that rep is inactive (carrier-portal-upgrade R1, G26)
+export const SRL_VERSION = "3.8.bsf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

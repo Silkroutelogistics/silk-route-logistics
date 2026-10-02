@@ -1,8 +1,10 @@
 import { Response } from "express";
+import type { UserRole } from "@prisma/client";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { sendMessageSchema } from "../validators/message";
 import { isSrlStaffRole, SRL_STAFF_ROLES } from "../lib/documentTypes";
+import { log } from "../lib/logger";
 
 // carrier-portal-upgrade G8 — a carrier or shipper talks to SRL, not to each
 // other. The user search returned every account on the platform (name, company,
@@ -24,7 +26,47 @@ export async function sendMessage(req: AuthRequest, res: Response) {
     data: { senderId: req.user!.id, ...data } as any,
     include: { sender: { select: { id: true, firstName: true, lastName: true } } },
   });
+  if (req.user!.role === "CARRIER") {
+    // A notice that fails must not fail the message, which is already saved.
+    await notifyStaffOfCarrierMessage(req.user!.id, data.receiverId, data.content).catch((err) =>
+      log.error({ err, senderId: req.user!.id }, "[Messages] staff notification failed"),
+    );
+  }
   res.status(201).json(message);
+}
+
+// carrier-portal-upgrade R1 (G26, staff side) — a carrier's message notified
+// nobody, so it sat unread until the rep happened to open Messages. The rep is
+// the SRL staff member the carrier wrote to (the gate above makes that staff).
+// When the rep is inactive, the operations team is told instead: no on-call
+// roster exists, so "on call" is every active OPERATIONS and DISPATCH user.
+// Every recipient is staff by construction, never another carrier.
+const ON_CALL_ROLES: UserRole[] = ["OPERATIONS", "DISPATCH"];
+
+async function notifyStaffOfCarrierMessage(senderId: string, receiverId: string, content: string) {
+  const [sender, rep] = await Promise.all([
+    prisma.user.findUnique({ where: { id: senderId }, select: { firstName: true, lastName: true, company: true } }),
+    prisma.user.findUnique({ where: { id: receiverId }, select: { id: true, role: true, isActive: true } }),
+  ]);
+  const recipients =
+    rep && rep.isActive !== false && isSrlStaffRole(rep.role)
+      ? [rep.id]
+      : (await prisma.user.findMany({ where: { isActive: true, role: { in: ON_CALL_ROLES } }, select: { id: true } })).map((u: { id: string }) => u.id);
+  if (recipients.length === 0) {
+    log.warn({ senderId, receiverId }, "[Messages] no active rep or on-call staff to notify");
+    return;
+  }
+  const who = sender?.company || [sender?.firstName, sender?.lastName].filter(Boolean).join(" ") || "a carrier";
+  const preview = content.length > 140 ? `${content.slice(0, 137)}...` : content;
+  await prisma.notification.createMany({
+    data: recipients.map((userId: string) => ({
+      userId,
+      type: "MESSAGE_RECEIVED",
+      title: `New message from ${who}`,
+      message: preview,
+      link: "/dashboard/messages",
+    })),
+  });
 }
 
 export async function getConversation(req: AuthRequest, res: Response) {
