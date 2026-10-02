@@ -107,10 +107,12 @@ export default function ScorecardPage() {
   });
 
   if (isLoading) return (
-    <div className="flex items-center justify-center h-64 text-gray-700 text-sm">Loading scorecard...</div>
+    <div role="status" aria-label="Loading scorecard" className="space-y-3">
+      {[0, 1, 2].map((i) => <div key={i} className="h-28 rounded-lg bg-[#F5EEE0] animate-pulse motion-reduce:animate-none" />)}
+    </div>
   );
   if (!data) return (
-    <div className="flex items-center justify-center h-64 text-gray-700 text-sm">No scorecard data available.</div>
+    <div className="flex items-center justify-center h-64 px-4 text-center text-[#3A4A5F] text-sm">No scorecard yet. Your scorecard appears after your first completed load.</div>
   );
 
   // pointsToNextTier / nextTierThreshold are still returned by the API but are
@@ -148,7 +150,7 @@ export default function ScorecardPage() {
         <Trophy className="w-6 h-6 text-[#BA7517]" />
         <div>
           <h1 className="font-serif font-bold text-2xl text-[#0A2540]">Performance Scorecard</h1>
-          <p className="text-[13px] text-gray-500">Track your metrics, tier status, milestones, and bonus earnings</p>
+          <p className="text-[13px] text-[#5B6B7D]">Track your metrics, tier status, milestones, and bonus earnings</p>
         </div>
         <span className={`ml-auto px-3 py-1 rounded-full text-xs font-semibold border ${TIER_COLORS[currentTier] || TIER_COLORS.SILVER}`}>
           {currentTier}
@@ -166,9 +168,9 @@ export default function ScorecardPage() {
           </svg>
           <div className="text-center -mt-[94px] mb-8">
             <span className={`text-4xl font-bold ${scoreColor(currentScore)}`}>{currentScore}</span>
-            <span className="text-gray-700 text-sm">/100</span>
+            <span className="text-[#3A4A5F] text-sm">/100</span>
           </div>
-          <p className="text-sm text-gray-500 mt-1">{currentTier} Tier &middot; {bonusPercentage}% Bonus Rate</p>
+          <p className="text-sm text-[#5B6B7D] mt-1">{currentTier} Tier &middot; {bonusPercentage}% Bonus Rate</p>
         </CarrierCard>
 
         {/* Pay ladder. Not a score bar: score does not move a carrier between
@@ -182,18 +184,18 @@ export default function ScorecardPage() {
             {TIERS.map((t) => (
               <div key={t}
                 className={`rounded-lg border px-2 py-2.5 text-center ${
-                  t === currentTier ? TIER_COLORS[t] : "bg-[#F5EEE0] text-gray-500 border-[#EFE6D3]"
+                  t === currentTier ? TIER_COLORS[t] : "bg-[#F5EEE0] text-[#5B6B7D] border-[#EFE6D3]"
                 }`}>
                 <div className="text-[11px] font-bold">{t}</div>
-                <div className="text-[10px] mt-0.5 whitespace-nowrap">{TIER_PAY[t]}</div>
+                <div className="text-[11px] mt-0.5 break-words">{TIER_PAY[t]}</div>
               </div>
             ))}
           </div>
-          <p className="text-xs text-gray-600 leading-relaxed">
+          <p className="text-xs text-[#3A4A5F] leading-relaxed">
             For carriers in the Quick Pay pilot, same-day is available on any load at every tier, at your tier fee plus 2%.
           </p>
           <div className="mt-3 pt-3 border-t border-[#F5EEE0]">
-            <p className="text-xs text-gray-600 leading-relaxed">
+            <p className="text-xs text-[#3A4A5F] leading-relaxed">
               Your Compass Score measures service quality. It does not move your tier on its own.
               Tiers advance on completed loads, on-time percentage, and time with SRL. The exact
               gate is below.
@@ -220,7 +222,7 @@ export default function ScorecardPage() {
             </div>
             <div>
               <div className="text-sm font-bold text-[#0A2540]">{currentMilestone.name}</div>
-              <div className="text-xs text-gray-500">{currentMilestone.description}</div>
+              <div className="text-xs text-[#5B6B7D]">{currentMilestone.description}</div>
             </div>
           </div>
         </div>
@@ -230,13 +232,13 @@ export default function ScorecardPage() {
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs font-semibold text-[#0A2540]">Progress to {nextMilestoneObj.badge}</span>
-              <span className="text-[11px] text-gray-700">{milestoneLoads}/{nextMilestoneObj.loadsRequired} loads</span>
+              <span className="text-[11px] text-[#3A4A5F]">{milestoneLoads}/{nextMilestoneObj.loadsRequired} loads</span>
             </div>
             <div className="h-3 bg-[#F5EEE0] rounded-full overflow-hidden">
               <div className="h-full bg-[#BA7517] rounded-full transition-all duration-700"
                 style={{ width: `${loadsProgress}%` }} />
             </div>
-            <p className="text-[11px] text-gray-700 mt-1">{loadsToNext} more load{loadsToNext !== 1 ? "s" : ""} needed</p>
+            <p className="text-[11px] text-[#3A4A5F] mt-1">{loadsToNext} more load{loadsToNext !== 1 ? "s" : ""} needed</p>
           </div>
         )}
 
@@ -244,15 +246,15 @@ export default function ScorecardPage() {
         {nextMilestoneObj && (
           <div className="mb-4">
             <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#BA7517] mb-2">Requirements for {nextMilestoneObj.badge}</h3>
-            <p className="text-[11px] text-gray-600 mb-2 leading-relaxed">All three are required. Loads count from the day you joined.</p>
+            <p className="text-[11px] text-[#3A4A5F] mb-2 leading-relaxed">All three are required. Loads count from the day you joined.</p>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 {milestoneLoads >= nextMilestoneObj.loadsRequired ? (
                   <CheckCircle2 size={16} className="text-[#2F7A4F] flex-shrink-0" />
                 ) : (
-                  <Circle size={16} className="text-gray-500 flex-shrink-0" />
+                  <Circle size={16} className="text-[#5B6B7D] flex-shrink-0" />
                 )}
-                <span className={`text-xs ${milestoneLoads >= nextMilestoneObj.loadsRequired ? "text-[#2F7A4F]" : "text-gray-600"}`}>
+                <span className={`text-xs ${milestoneLoads >= nextMilestoneObj.loadsRequired ? "text-[#2F7A4F]" : "text-[#3A4A5F]"}`}>
                   {nextMilestoneObj.loadsRequired} completed loads ({milestoneLoads} done)
                 </span>
               </div>
@@ -260,9 +262,9 @@ export default function ScorecardPage() {
                 {milestoneOnTimePct >= nextMilestoneObj.onTimePctRequired ? (
                   <CheckCircle2 size={16} className="text-[#2F7A4F] flex-shrink-0" />
                 ) : (
-                  <Circle size={16} className="text-gray-500 flex-shrink-0" />
+                  <Circle size={16} className="text-[#5B6B7D] flex-shrink-0" />
                 )}
-                <span className={`text-xs ${milestoneOnTimePct >= nextMilestoneObj.onTimePctRequired ? "text-[#2F7A4F]" : "text-gray-600"}`}>
+                <span className={`text-xs ${milestoneOnTimePct >= nextMilestoneObj.onTimePctRequired ? "text-[#2F7A4F]" : "text-[#3A4A5F]"}`}>
                   {nextMilestoneObj.onTimePctRequired}%+ on-time delivery (currently {milestoneOnTimePct.toFixed(1)}%)
                 </span>
               </div>
@@ -270,9 +272,9 @@ export default function ScorecardPage() {
                 {milestoneDaysActive >= nextMilestoneObj.daysRequired ? (
                   <CheckCircle2 size={16} className="text-[#2F7A4F] flex-shrink-0" />
                 ) : (
-                  <Circle size={16} className="text-gray-500 flex-shrink-0" />
+                  <Circle size={16} className="text-[#5B6B7D] flex-shrink-0" />
                 )}
-                <span className={`text-xs ${milestoneDaysActive >= nextMilestoneObj.daysRequired ? "text-[#2F7A4F]" : "text-gray-600"}`}>
+                <span className={`text-xs ${milestoneDaysActive >= nextMilestoneObj.daysRequired ? "text-[#2F7A4F]" : "text-[#3A4A5F]"}`}>
                   {nextMilestoneObj.daysRequired} days active ({milestoneDaysActive} days so far)
                 </span>
               </div>
@@ -303,11 +305,11 @@ export default function ScorecardPage() {
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold border-2 ${
                     isCompleted ? "bg-[#BA7517] border-[#C5A572] text-[#FBF7F0]" :
                     isCurrent ? "bg-white border-[#C5A572] text-[#BA7517]" :
-                    "bg-gray-50 border-[#EFE6D3] text-gray-400"
+                    "bg-gray-50 border-[#EFE6D3] text-[#5B6B7D]"
                   }`}>
                     {i + 1}
                   </div>
-                  <span className={`text-[9px] mt-1 text-center leading-tight ${isCurrent ? "font-bold text-[#0A2540]" : "text-gray-400"}`}>
+                  <span className={`text-[9px] mt-1 text-center leading-tight ${isCurrent ? "font-bold text-[#0A2540]" : "text-[#5B6B7D]"}`}>
                     {m.badge}
                   </span>
                 </div>
@@ -327,15 +329,15 @@ export default function ScorecardPage() {
           if (key === "gpsCompliancePct" && trackingMeasured === false) {
             return (
               <CarrierCard key={key} padding="p-4">
-                <p className="text-[11px] text-gray-500 mb-1 truncate">{label}</p>
+                <p className="text-[11px] text-[#5B6B7D] mb-1 truncate">{label}</p>
                 <p className="text-sm font-semibold text-[#0A2540]">Not measured</p>
-                <p className="text-[11px] text-gray-500 mt-1">Measured once a location source is connected.</p>
+                <p className="text-[11px] text-[#5B6B7D] mt-1">Measured once a location source is connected.</p>
               </CarrierCard>
             );
           }
           return (
             <CarrierCard key={key} padding="p-4">
-              <p className="text-[11px] text-gray-500 mb-1 truncate">{label}</p>
+              <p className="text-[11px] text-[#5B6B7D] mb-1 truncate">{label}</p>
               <p className="text-xl font-bold text-[#0A2540]">{typeof val === "number" ? val.toFixed(1) : val}%</p>
               <div className="h-1.5 bg-[#F5EEE0] rounded-full mt-2 overflow-hidden">
                 <div className={`h-full rounded-full transition-all ${barColor(val, isInverted)}`}
@@ -373,9 +375,9 @@ export default function ScorecardPage() {
         <CarrierCard>
           <h2 className="font-semibold text-[#0A2540] text-sm mb-3">Bonus Tracker</h2>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-[11px] text-gray-700 uppercase border-b border-[#F5EEE0]">
+            <table className="w-full text-sm block md:table">
+              <thead className="hidden md:table-header-group">
+                <tr className="text-[11px] text-[#3A4A5F] uppercase border-b border-[#F5EEE0]">
                   <th className="text-left py-2 font-medium">Period</th>
                   <th className="text-left py-2 font-medium">Type</th>
                   <th className="text-right py-2 font-medium">Amount</th>
@@ -383,24 +385,24 @@ export default function ScorecardPage() {
                   <th className="text-left py-2 font-medium">Description</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="block md:table-row-group">
                 {bonuses.map((b: { period: string; type: string; amount: number; status: string; description: string }, i: number) => (
-                  <tr key={i} className="border-b border-[#F5EEE0]">
-                    <td className="py-2 text-gray-600">{b.period}</td>
-                    <td className="py-2 text-[#0A2540] font-medium">{b.type}</td>
-                    <td className="py-2 text-right font-semibold text-[#0A2540]">${b.amount.toLocaleString()}</td>
-                    <td className="py-2 text-center">
+                  <tr key={i} className="block md:table-row py-2 md:py-0 border-b border-[#F5EEE0]">
+                    <td data-label="Period" className="block md:table-cell py-1 md:py-2 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none text-[#3A4A5F]">{b.period}</td>
+                    <td data-label="Type" className="block md:table-cell py-1 md:py-2 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none text-[#0A2540] font-medium">{b.type}</td>
+                    <td data-label="Amount" className="block md:table-cell py-1 md:py-2 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none md:text-right font-semibold text-[#0A2540]">${b.amount.toLocaleString()}</td>
+                    <td data-label="Status" className="block md:table-cell py-1 md:py-2 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none md:text-center">
                       <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                        b.status === "PAID" ? "bg-[#E6F0E9] text-[#2F7A4F]" : "bg-[#FBEFD4] text-[#B07A1A]"
+                        b.status === "PAID" ? "bg-[#E6F0E9] text-[#256340]" : "bg-[#FBEFD4] text-[#854F0B]"
                       }`}>{b.status}</span>
                     </td>
-                    <td className="py-2 text-gray-500 text-xs">{b.description}</td>
+                    <td data-label="Description" className="block md:table-cell py-1 md:py-2 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none text-[#3A4A5F] text-xs">{b.description}</td>
                   </tr>
                 ))}
-                <tr className="font-semibold">
-                  <td className="py-2 text-[#0A2540]" colSpan={2}>Total</td>
-                  <td className="py-2 text-right text-[#BA7517]">${totalBonus.toLocaleString()}</td>
-                  <td colSpan={2} />
+                <tr className="flex md:table-row justify-between py-2 md:py-0 font-semibold">
+                  <td className="md:table-cell py-2 text-[#0A2540]" colSpan={2}>Total</td>
+                  <td className="md:table-cell py-2 md:text-right text-[#854F0B]">${totalBonus.toLocaleString()}</td>
+                  <td className="hidden md:table-cell" colSpan={2} />
                 </tr>
               </tbody>
             </table>
