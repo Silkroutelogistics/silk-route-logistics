@@ -73,12 +73,38 @@ export function expectedIntervalMs(expr: string): number | null {
 }
 
 /**
- * Stale: enabled, has run at least once, and its last START is more than 1.5
- * of its own interval ago. Covers a job that started and never ended too: a
- * stuck run holds its guard, later fires skip, and lastRun stops moving.
+ * Rows that never record under their own name, by design, so "never ran" is
+ * not evidence of anything. Owner ruling 2026-09-27 (v3.8.bnn) keeps this row's
+ * name and text; the credit block it describes records as the value.
  */
-export function isStale(row: { enabled: boolean; schedule: string; lastRun: Date | null }, now: Date): boolean {
-  if (!row.enabled || !row.lastRun) return false;
+export const RECORDS_ELSEWHERE: Record<string, string> = {
+  "ar-reminders-daily": "overdue-credit-block-daily",
+};
+
+/** How far past its first expected fire a never-run job may be: half its interval, at most a day. */
+export const firstRunGraceMs = (intervalMs: number) => Math.min(intervalMs / 2, DAY_MS);
+
+/**
+ * Stale, for a job that has run: its last START is more than 1.5 of its own
+ * interval ago. Covers a job that started and never ended too: a stuck run
+ * holds its guard, later fires skip, and lastRun stops moving.
+ *
+ * Stale, for a job that has NEVER run: its seeded nextRun is past by more than
+ * firstRunGraceMs. A missed first fire (monthly-carrier-revet on 2026-11-01)
+ * is otherwise invisible: a null lastRun has nothing to age. nextRun is set
+ * when the row is created and is not refreshed at boot, so a restart after a
+ * missed fire cannot roll it forward and forget the miss.
+ */
+export function isStale(
+  row: { jobName?: string; enabled: boolean; schedule: string; lastRun: Date | null; nextRun?: Date | null },
+  now: Date,
+): boolean {
+  if (!row.enabled) return false;
   const interval = expectedIntervalMs(row.schedule);
-  return interval !== null && now.getTime() - row.lastRun.getTime() > 1.5 * interval;
+  if (interval === null) return false;
+  if (!row.lastRun) {
+    if (!row.nextRun || (row.jobName !== undefined && row.jobName in RECORDS_ELSEWHERE)) return false;
+    return now.getTime() > row.nextRun.getTime() + firstRunGraceMs(interval);
+  }
+  return now.getTime() - row.lastRun.getTime() > 1.5 * interval;
 }

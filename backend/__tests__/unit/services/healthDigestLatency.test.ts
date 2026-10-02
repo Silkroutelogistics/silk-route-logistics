@@ -75,6 +75,11 @@ describe("judgeCrons", () => {
     expect(r.component.status).toBe("degraded");
   });
 
+  it("a never-run job past its seeded nextRun plus grace is stale in the digest (C2)", () => {
+    const r = judgeCrons([{ ...row("monthly-carrier-revet", "0 7 1 * *", null, null), nextRun: new Date("2026-10-01T07:00:00.000Z") }], NOW);
+    expect(r.staleCrons.map((c) => c.jobName)).toEqual(["monthly-carrier-revet"]);
+  });
+
   it("counts cron failures in the last 24h apart from web errors, and never-run rows without judging them", () => {
     const r = judgeCrons([
       row("ofac-rescan", "0 4 * * 1", hoursAgo(2), "FAILED"),

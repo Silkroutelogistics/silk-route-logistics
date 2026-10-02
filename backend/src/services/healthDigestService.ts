@@ -65,7 +65,7 @@ export async function measureDbLatency(
   };
 }
 
-type CronRow = { jobName: string; schedule: string; enabled: boolean; lastRun: Date | null; lastStatus: string | null };
+type CronRow = { jobName: string; schedule: string; enabled: boolean; lastRun: Date | null; lastStatus: string | null; nextRun?: Date | null };
 
 /**
  * Every scheduled run is recorded by lib/cronRun.ts. Staleness is per job, from

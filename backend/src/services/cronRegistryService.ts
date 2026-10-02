@@ -31,6 +31,9 @@ export async function getAllCronJobs() {
   return prisma.cronRegistry.findMany({ orderBy: { jobName: "asc" } });
 }
 
+/** nextRun values written before the health-digest arc's code came from an approximation. */
+export const NEXT_RUN_TRUSTED_FROM = new Date("2026-10-04T00:00:00.000Z");
+
 /**
  * Next run, evaluated in UTC. Replaces an approximation that treated every
  * fixed-hour expression as daily, so a monthly job read "tomorrow".
@@ -82,6 +85,20 @@ export async function seedCronRegistry() {
       update: { schedule: job.schedule, description: job.description },
       create: { ...job, enabled, nextRun: getNextRunTime(job.schedule) },
     }).catch(err => log.error({ err: err }, '[CronRegistry] Error:'));
+    // ONE-TIME correction. Rows created before this code carry a nextRun from
+    // the old daily-only approximation (or none), and the digest now judges a
+    // never-run row by its nextRun (lib/cronSchedule.ts isStale). Only values
+    // older than NEXT_RUN_TRUSTED_FROM are rewritten, so once corrected the
+    // condition is false for good — a restart after a missed fire must not roll
+    // nextRun forward and forget the miss.
+    try {
+      await prisma.cronRegistry.updateMany({
+        where: { jobName: job.jobName, lastRun: null, OR: [{ nextRun: null }, { nextRun: { lt: NEXT_RUN_TRUSTED_FROM } }] },
+        data: { nextRun: getNextRunTime(job.schedule) },
+      });
+    } catch (err) {
+      log.error({ err }, "[CronRegistry] nextRun correction failed");
+    }
   }
 
   log.info(`[CronRegistry] Seeded ${jobs.length} cron jobs into registry`);

@@ -19599,7 +19599,10 @@
 // v3.8.brb — schedule comments match their expressions: nine comments still promised the
 // offsets v3.8.arh retired to let Neon suspend (:00/:30 wake window); a test now fails on any such drift
 // and on any job sharing the health digest's minute.
-export const SRL_VERSION = "3.8.brb";
+// v3.8.brc — the health digest judges a cron job that has NEVER run by its seeded next run plus a
+// grace (half its interval, at most a day), so a missed first fire (the monthly re-vet, 2026-11-01)
+// is flagged the next day instead of never. Pre-existing approximate nextRun values are corrected once.
+export const SRL_VERSION = "3.8.brc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
