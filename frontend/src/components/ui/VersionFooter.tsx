@@ -19564,7 +19564,9 @@
 // agent email, behind the same hold and 14-day cooldown. A refusal shows its reason and clear date.
 // v3.8.bqm — carrier portal: the unscoped POST /carrier-loads/:id/decline is removed (carrier-portal-upgrade
 // G1). It could decline another carrier's tender; the portal declines through /tenders/:id/decline.
-export const SRL_VERSION = "3.8.bqm";
+// v3.8.bqn — carrier portal: /load-tracking/:loadId/* is scoped to the load (carrier-portal-upgrade G2/G7). A carrier
+// could confirm another carrier's load LOADED or DELIVERED, and any role could read any load's timeline.
+export const SRL_VERSION = "3.8.bqn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

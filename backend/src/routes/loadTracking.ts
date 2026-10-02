@@ -4,9 +4,40 @@ import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
 import { broadcastSSE } from "./trackTraceSSE";
 import { log } from "../lib/logger";
+import { isSrlStaffRole } from "../lib/documentTypes";
 
 const router = Router();
 router.use(authenticate);
+
+// carrier-portal-upgrade G2/G7 — one ownership gate for every route here, since
+// every route takes :loadId. confirm-loaded and confirm-delivered admitted any
+// CARRIER and never compared load.carrierId, so one carrier could mark another
+// carrier's load LOADED or DELIVERED and write its detention; the GETs had no
+// role gate at all, so any signed-in user could read any load's timeline,
+// breadcrumbs and dwell. Staff pass. A carrier passes only for its own load
+// (Load.carrierId is a User.id). Every other role is refused: no shipper or
+// factor surface calls this router.
+router.param("loadId", async (req: AuthRequest, res: Response, next, loadId: string) => {
+  try {
+    if (isSrlStaffRole(req.user?.role)) return next();
+    if (req.user?.role !== "CARRIER") {
+      res.status(403).json({ error: "Not authorized for this load" });
+      return;
+    }
+    const load = await prisma.load.findUnique({ where: { id: loadId }, select: { carrierId: true } });
+    if (!load) {
+      res.status(404).json({ error: "Load not found" });
+      return;
+    }
+    if (load.carrierId !== req.user.id) {
+      res.status(403).json({ error: "Not authorized for this load" });
+      return;
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ─── Canonical detention rates (v3.8.arn) ───
 // 2h free at EACH stop (independent, non-cumulative), then $40/hr, capped at
