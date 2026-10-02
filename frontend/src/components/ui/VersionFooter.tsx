@@ -19632,7 +19632,9 @@
 // mile and status in words. All 15 carrier pages now pass at 380 and 1280 (carrier-portal-upgrade M4/M5).
 // v3.8.brq — carrier portal: tender cards show rate per mile, copy the load number, stack their actions on a
 // phone with 44px targets, and decline reasons carry no contractions (carrier-portal-upgrade M4/M5/G35).
-export const SRL_VERSION = "3.8.brq";
+// v3.8.brr — carrier portal: the driver roster reads as cards on a phone, and its row actions are named 44px
+// buttons a screen reader can announce (carrier-portal-upgrade G30/M4/M5).
+export const SRL_VERSION = "3.8.brr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

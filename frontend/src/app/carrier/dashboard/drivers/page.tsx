@@ -70,11 +70,11 @@ function fmtPhone(p: string | null): string {
 
 // Expiry tone: red past-due, amber inside 30 days, default otherwise
 function expiryTone(dateStr: string | null): string {
-  if (!dateStr) return "text-gray-400";
+  if (!dateStr) return "text-[#5B6B7D]";
   const days = (new Date(dateStr).getTime() - Date.now()) / 86_400_000;
   if (days < 0) return "text-[#9B2C2C] font-semibold";
   if (days < 30) return "text-[#B07A1A] font-semibold";
-  return "text-gray-600";
+  return "text-[#3A4A5F]";
 }
 
 function fmtDate(dateStr: string | null): string {
@@ -185,7 +185,7 @@ export default function CarrierDriversPage() {
       setCopiedId(id);
       setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 2000);
     } catch {
-      setRowError("Couldn't copy automatically — select and copy the link manually.");
+      setRowError("Could not copy automatically. Select and copy the link manually.");
     }
   };
 
@@ -219,7 +219,7 @@ export default function CarrierDriversPage() {
       <div className="flex justify-between items-start mb-6">
         <div>
           <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Drivers</h1>
-          <p className="text-[13px] text-gray-500">
+          <p className="text-[13px] text-[#5B6B7D]">
             Your driver roster. Drivers added here get access to SRL Driver Academy training.
           </p>
         </div>
@@ -236,7 +236,7 @@ export default function CarrierDriversPage() {
         <span className="px-2.5 py-1 rounded-full bg-[#E6F0E9] border border-[#2F7A4F]/30 text-[#2F7A4F] text-xs font-medium">
           {activeCount} active
         </span>
-        <span className="px-2.5 py-1 rounded-full bg-gray-50 border border-[#EFE6D3] text-gray-500 text-xs font-medium">
+        <span className="px-2.5 py-1 rounded-full bg-gray-50 border border-[#EFE6D3] text-[#5B6B7D] text-xs font-medium">
           {inactiveCount} inactive
         </span>
       </div>
@@ -248,7 +248,7 @@ export default function CarrierDriversPage() {
             <h3 className="text-sm font-bold text-[#0A2540] flex items-center gap-2">
               <Users size={16} className="text-[#BA7517]" /> {editingId ? "Edit Driver" : "Add Driver"}
             </h3>
-            <button onClick={closeForm} className="text-gray-700 hover:text-gray-600">
+            <button onClick={closeForm} className="text-gray-700 hover:text-[#3A4A5F]">
               <X size={16} />
             </button>
           </div>
@@ -265,12 +265,12 @@ export default function CarrierDriversPage() {
             <div>
               <label className={labelCls}>Mobile Phone *</label>
               <input className={inputCls} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(269) 555-0123" />
-              <p className="text-[10px] text-gray-400 mt-0.5">Training login invites go to this number</p>
+              <p className="text-[10px] text-[#5B6B7D] mt-0.5">Training login invites go to this number</p>
             </div>
             <div>
               <label className={labelCls}>Email *</label>
               <input className={inputCls} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="driver@email.com" />
-              <p className="text-[10px] text-gray-400 mt-0.5">Used to verify the driver at login</p>
+              <p className="text-[10px] text-[#5B6B7D] mt-0.5">Used to verify the driver at login</p>
             </div>
             <div>
               <label className={labelCls}>License Type</label>
@@ -315,7 +315,7 @@ export default function CarrierDriversPage() {
               {saveMutation.isPending && <Loader2 size={13} className="animate-spin" />}
               {editingId ? "Save Changes" : "Add to Roster"}
             </button>
-            <button onClick={closeForm} className="px-4 py-2 text-xs text-gray-500 hover:text-gray-700">
+            <button onClick={closeForm} className="px-4 py-2 text-xs text-[#5B6B7D] hover:text-gray-700">
               Cancel
             </button>
           </div>
@@ -331,8 +331,8 @@ export default function CarrierDriversPage() {
       {/* Roster */}
       {isLoading ? (
         <CarrierCard padding="p-8">
-          <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
-            <Loader2 size={16} className="animate-spin" /> Loading roster...
+          <div role="status" aria-label="Loading roster" className="space-y-2">
+            {[0, 1, 2].map((k) => <div key={k} className="h-10 rounded bg-[#F5EEE0] animate-pulse motion-reduce:animate-none" />)}
           </div>
         </CarrierCard>
       ) : drivers.length === 0 ? (
@@ -340,9 +340,9 @@ export default function CarrierDriversPage() {
           <div className="text-center">
             <GraduationCap size={32} className="mx-auto text-[#BA7517] mb-3" />
             <h3 className="text-sm font-bold text-[#0A2540] mb-1">No drivers on your roster yet</h3>
-            <p className="text-xs text-gray-500 max-w-md mx-auto">
+            <p className="text-xs text-[#5B6B7D] max-w-md mx-auto">
               Add your drivers to build your roster. Each driver will get their own SRL Driver
-              Academy login for training on IRP, IFTA, ELD, HOS, and more — with completion
+              Academy login for training on IRP, IFTA, ELD, HOS, and more, with completion
               certificates you can track here.
             </p>
           </div>
@@ -350,9 +350,9 @@ export default function CarrierDriversPage() {
       ) : (
         <CarrierCard padding="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-[#F5EEE0] text-[11px] uppercase tracking-wide text-gray-400">
+            <table className="w-full text-left block md:table">
+              <thead className="hidden md:table-header-group">
+                <tr className="border-b border-[#F5EEE0] text-[11px] uppercase tracking-wide text-[#5B6B7D]">
                   <th className="px-4 py-3 font-medium">Driver</th>
                   <th className="px-4 py-3 font-medium">Phone</th>
                   <th className="px-4 py-3 font-medium">License</th>
@@ -363,26 +363,26 @@ export default function CarrierDriversPage() {
                   <th className="px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="block md:table-row-group">
                 {drivers.map((d) => {
                   const inactive = INACTIVE_STATUSES.includes(d.status);
                   const tState = trainingState(d);
                   const result = inviteResult[d.id];
                   return (
                     <Fragment key={d.id}>
-                    <tr className={`border-b border-gray-50 ${result ? "" : "last:border-0"} ${inactive ? "opacity-50" : ""}`}>
-                      <td className="px-4 py-3">
+                    <tr className={`block md:table-row p-3 md:p-0 border-b border-[#F5EEE0] ${result ? "" : "last:border-0"} ${inactive ? "opacity-60" : ""}`}>
+                      <td data-label="Driver" className="block md:table-cell px-0 py-1 md:px-4 md:py-3 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none">
                         <div className="text-[13px] font-semibold text-[#0A2540]">
                           {d.firstName} {d.lastName}
                         </div>
-                        {d.email && <div className="text-[11px] text-gray-400">{d.email}</div>}
+                        {d.email && <div className="text-[11px] text-[#5B6B7D]">{d.email}</div>}
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-600">
+                      <td data-label="Phone" className="block md:table-cell px-0 py-1 md:px-4 md:py-3 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none text-xs text-[#3A4A5F]">
                         <span className="flex items-center gap-1.5">
                           <Phone size={12} className="text-gray-300" /> {fmtPhone(d.phone)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-600">
+                      <td data-label="License" className="block md:table-cell px-0 py-1 md:px-4 md:py-3 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none text-xs text-[#3A4A5F]">
                         <span className="flex items-center gap-1.5">
                           <IdCard size={12} className="text-gray-300" />
                           {d.licenseType}
@@ -390,41 +390,41 @@ export default function CarrierDriversPage() {
                           {d.licenseState ? ` (${d.licenseState})` : ""}
                         </span>
                       </td>
-                      <td className={`px-4 py-3 text-xs ${expiryTone(d.licenseExpiry)}`}>{fmtDate(d.licenseExpiry)}</td>
-                      <td className={`px-4 py-3 text-xs ${expiryTone(d.medicalCardExpiry)}`}>{fmtDate(d.medicalCardExpiry)}</td>
-                      <td className="px-4 py-3">
+                      <td data-label="License expiry" className={`block md:table-cell px-0 py-1 md:px-4 md:py-3 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none text-xs ${expiryTone(d.licenseExpiry)}`}>{fmtDate(d.licenseExpiry)}</td>
+                      <td data-label="Medical card" className={`block md:table-cell px-0 py-1 md:px-4 md:py-3 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none text-xs ${expiryTone(d.medicalCardExpiry)}`}>{fmtDate(d.medicalCardExpiry)}</td>
+                      <td data-label="Training" className="block md:table-cell px-0 py-1 md:px-4 md:py-3 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none">
                         <span
                           className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
                             tState === "activated"
                               ? "bg-[#E6F0E9] text-[#2F7A4F] border border-[#2F7A4F]/30"
                               : tState === "invited"
                                 ? "bg-[#FBEFD4] text-[#B07A1A] border border-[#B07A1A]/30"
-                                : "bg-gray-100 text-gray-500"
+                                : "bg-gray-100 text-[#5B6B7D]"
                           }`}
                         >
                           {tState === "activated" ? "Activated" : tState === "invited" ? "Invited" : "Not invited"}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td data-label="Status" className="block md:table-cell px-0 py-1 md:px-4 md:py-3 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none">
                         <span
                           className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
                             inactive
-                              ? "bg-gray-100 text-gray-500"
+                              ? "bg-gray-100 text-[#5B6B7D]"
                               : "bg-[#E6F0E9] text-[#2F7A4F] border border-[#2F7A4F]/30"
                           }`}
                         >
                           {inactive ? "Inactive" : "Active"}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
+                      <td data-label="Actions" className="block md:table-cell px-0 py-1 md:px-4 md:py-3 before:content-[attr(data-label)] before:block before:text-[10px] before:uppercase before:tracking-wide before:text-[#5B6B7D] md:before:content-none">
+                        <div className="flex flex-wrap items-center md:justify-end gap-1">
                           {/* Training invite — only for active drivers */}
                           {!inactive && tState !== "activated" && (
                             <button
                               onClick={() => inviteMutation.mutate({ id: d.id })}
                               disabled={inviteMutation.isPending}
                               title={tState === "invited" ? "Resend training invite" : "Send training invite"}
-                              className="px-2 py-1.5 flex items-center gap-1 text-[11px] font-medium text-[#BA7517] hover:bg-[#BA7517]/10 rounded transition-colors"
+                              className="min-h-[44px] px-2 flex items-center gap-1 text-[12px] font-medium text-[#854F0B] hover:bg-[#BA7517]/10 rounded transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]"
                             >
                               <Send size={13} /> {tState === "invited" ? "Resend" : "Invite"}
                             </button>
@@ -432,13 +432,14 @@ export default function CarrierDriversPage() {
                           {!inactive && tState === "activated" && (
                             <button
                               onClick={() => {
-                                if (confirm(`Reset ${d.firstName}'s training PIN? They'll get a fresh setup link and must choose a new PIN.`)) {
+                                if (confirm(`Reset ${d.firstName}'s training PIN? They will get a fresh setup link and must choose a new PIN.`)) {
                                   inviteMutation.mutate({ id: d.id, reset: true });
                                 }
                               }}
                               disabled={inviteMutation.isPending}
                               title="Reset PIN & re-invite"
-                              className="p-1.5 text-gray-400 hover:text-[#BA7517] hover:bg-[#BA7517]/10 rounded transition-colors"
+                              aria-label="Reset PIN & re-invite"
+                              className="inline-flex h-11 w-11 items-center justify-center text-[#5B6B7D] rounded transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] hover:text-[#854F0B] hover:bg-[#BA7517]/10"
                             >
                               <KeyRound size={14} />
                             </button>
@@ -446,7 +447,8 @@ export default function CarrierDriversPage() {
                           <button
                             onClick={() => startEdit(d)}
                             title="Edit driver"
-                            className="p-1.5 text-gray-400 hover:text-[#BA7517] hover:bg-[#BA7517]/10 rounded transition-colors"
+                            aria-label="Edit driver"
+                            className="inline-flex h-11 w-11 items-center justify-center text-[#5B6B7D] rounded transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] hover:text-[#854F0B] hover:bg-[#BA7517]/10"
                           >
                             <Pencil size={14} />
                           </button>
@@ -455,7 +457,8 @@ export default function CarrierDriversPage() {
                               onClick={() => statusMutation.mutate({ id: d.id, action: "reactivate" })}
                               disabled={statusMutation.isPending}
                               title="Reactivate driver"
-                              className="p-1.5 text-gray-400 hover:text-[#2F7A4F] hover:bg-[#E6F0E9] rounded transition-colors"
+                              aria-label="Reactivate driver"
+                              className="inline-flex h-11 w-11 items-center justify-center text-[#5B6B7D] rounded transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] hover:text-[#2F7A4F] hover:bg-[#E6F0E9]"
                             >
                               <UserCheck size={14} />
                             </button>
@@ -468,20 +471,22 @@ export default function CarrierDriversPage() {
                               }}
                               disabled={statusMutation.isPending}
                               title="Deactivate driver"
-                              className="p-1.5 text-gray-400 hover:text-[#9B2C2C] hover:bg-[#F6E3E3] rounded transition-colors"
+                              aria-label="Deactivate driver"
+                              className="inline-flex h-11 w-11 items-center justify-center text-[#5B6B7D] rounded transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] hover:text-[#9B2C2C] hover:bg-[#F6E3E3]"
                             >
                               <UserX size={14} />
                             </button>
                           )}
                           <button
                             onClick={() => {
-                              if (confirm(`Delete ${d.firstName} ${d.lastName} from your roster? This permanently removes the driver. It only works if they have no training or load history — otherwise deactivate them instead.`)) {
+                              if (confirm(`Delete ${d.firstName} ${d.lastName} from your roster? This permanently removes the driver. It only works if they have no training or load history. Otherwise deactivate them instead.`)) {
                                 deleteMutation.mutate(d.id);
                               }
                             }}
                             disabled={deleteMutation.isPending}
                             title="Delete driver"
-                            className="p-1.5 text-gray-400 hover:text-[#9B2C2C] hover:bg-[#F6E3E3] rounded transition-colors"
+                            aria-label="Delete driver"
+                            className="inline-flex h-11 w-11 items-center justify-center text-[#5B6B7D] rounded transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517] hover:text-[#9B2C2C] hover:bg-[#F6E3E3]"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -489,13 +494,13 @@ export default function CarrierDriversPage() {
                       </td>
                     </tr>
                     {result && (
-                      <tr className="border-b border-gray-50 last:border-0 bg-[#BA7517]/5">
-                        <td colSpan={8} className="px-4 py-3">
+                      <tr className="block md:table-row border-b border-[#F5EEE0] last:border-0 bg-[#BA7517]/5">
+                        <td colSpan={8} className="block md:table-cell px-3 md:px-4 py-3">
                           <div className="flex flex-wrap items-center gap-3">
                             <span className="text-[11px] font-semibold text-[#0A2540]">
-                              {result.smsSent ? "✓ Texted the setup link to the driver." : "Setup link ready — text or share it with the driver:"}
+                              {result.smsSent ? "✓ Texted the setup link to the driver." : "Setup link ready. Text or share it with the driver:"}
                             </span>
-                            <code className="flex-1 min-w-[200px] text-[11px] text-gray-600 bg-white border border-[#EFE6D3] rounded px-2 py-1 truncate">
+                            <code className="flex-1 min-w-[200px] text-[11px] text-[#3A4A5F] bg-white border border-[#EFE6D3] rounded px-2 py-1 truncate">
                               {result.url}
                             </code>
                             <button
@@ -507,7 +512,7 @@ export default function CarrierDriversPage() {
                           </div>
                           {!result.smsSent && (
                             <p className="text-[10px] text-[#B07A1A] mt-1.5">
-                              Text couldn&apos;t send to this number{result.smsError ? <> — <span className="text-gray-500">{result.smsError}</span></> : ""}. The copy link above still works — share it with the driver.
+                              The text could not be sent to this number{result.smsError ? <>: <span className="text-[#5B6B7D]">{result.smsError}</span></> : ""}. The copy link above still works. Share it with the driver.
                             </p>
                           )}
                         </td>
@@ -527,10 +532,10 @@ export default function CarrierDriversPage() {
         <a href="/carrier/dashboard/training"
           className="mt-5 px-4 py-3 bg-[#BA7517]/5 border border-[#C5A572]/20 rounded-lg flex items-center gap-3 hover:bg-[#BA7517]/10 transition-colors">
           <GraduationCap size={18} className="text-[#BA7517] shrink-0" />
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-[#3A4A5F]">
             <span className="font-semibold text-[#0A2540]">SRL Driver Academy is live.</span>{" "}
             Invite drivers above, then track completion across IRP, IFTA, ELD &amp; HOS, inspections,
-            detention documentation, and fraud awareness — with downloadable certificates.{" "}
+            detention documentation, and fraud awareness, with downloadable certificates.{" "}
             <span className="font-semibold text-[#BA7517]">View the Training dashboard →</span>
           </p>
         </a>
