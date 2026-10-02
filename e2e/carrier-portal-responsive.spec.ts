@@ -39,6 +39,7 @@ const COVERED = [
   "carrier/dashboard/loadboard",
   "carrier/dashboard/my-loads",
   "carrier/dashboard/available-loads",
+  "carrier/dashboard/messaging",
 ];
 const PAGES: string[] = (process.env.CARRIER_PORTAL_PAGES || COVERED.join(","))
   .split(",")
@@ -48,6 +49,8 @@ const PAGES: string[] = (process.env.CARRIER_PORTAL_PAGES || COVERED.join(","))
   // conversion), so accept the pages without one and add it here.
   .map((p) => "/" + p.slice(Math.max(0, p.indexOf("carrier/"))));
 
+// Mobile first and ascending (owner ruling, FINISH-2 G3): each page's fresh load
+// is at WIDTHS[0], the phone width carriers use, and it then resizes up.
 const WIDTHS = [380, 1280] as const;
 
 // One token and one tour-complete for the whole worker. /api/auth and
@@ -73,64 +76,90 @@ async function signInAsCarrier(page: Page) {
   }
 }
 
-for (const width of WIDTHS) {
-  test.describe(`carrier portal at ${width}px`, () => {
-    test.use({ viewport: { width, height: 800 } });
+// Each visit costs two reads on that same limiter (/carrier-auth/me and
+// /carrier-auth/activation-status, both real; nothing here caches them). One
+// visit per page per width emptied it at about 40 visits, and the lifecycle
+// shipper mint got 429 (FINISH-2 G3, measured: ratelimit-policy 100;w=900,
+// remaining 0). So each page is loaded ONCE and measured at every width by
+// resizing. The carrier portal's responsiveness is CSS only (no JS reads the
+// width), so a resize lays the page out as a fresh load at that width would.
+for (const path of PAGES) {
+  test(`${path} at ${WIDTHS.join(", ")}px`, async ({ page }) => {
+    // The fresh load lands on the phone width; the larger widths are resizes.
+    expect(WIDTHS[0], "the first width is the phone width").toBe(380);
+    expect([...WIDTHS], "widths ascend").toEqual([...WIDTHS].sort((a, b) => a - b));
+    await page.setViewportSize({ width: WIDTHS[0], height: 800 });
+    await signInAsCarrier(page);
+    await page.goto(path);
+    await page.waitForLoadState("networkidle");
+    await expect(page).toHaveURL(new RegExp(path.replace(/\//g, "\\/") + "$"));
 
-    for (const path of PAGES) {
-      test(`${path}`, async ({ page }) => {
-        await signInAsCarrier(page);
-        await page.goto(path);
-        await page.waitForLoadState("networkidle");
-        await expect(page).toHaveURL(new RegExp(path.replace(/\//g, "\\/") + "$"));
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: 800 });
+      // Settled, by condition: every CSS transition the resize started has finished.
+      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
 
-        const name = `${width}-${path.split("/").filter(Boolean).slice(2).join("-") || "dashboard"}`;
-        await page.screenshot({ path: `test-results/carrier-portal/${name}.png`, fullPage: true });
+      const name = `${width}-${path.split("/").filter(Boolean).slice(2).join("-") || "dashboard"}`;
+      await page.screenshot({ path: `test-results/carrier-portal/${name}.png`, fullPage: true });
 
-        // The layout is an overflow-hidden shell whose <main> scrolls, so the
-        // DOCUMENT never scrolls sideways and measuring it alone passed every page
-        // in the first run while content overflowed inside <main>. Both are measured.
-        const overflow = await page.evaluate(() => {
-          const doc = document.scrollingElement || document.documentElement;
-          const main = document.querySelector("main");
-          return {
-            doc: doc.scrollWidth - window.innerWidth,
-            main: main ? main.scrollWidth - main.clientWidth : 0,
-          };
-        });
-        expect(overflow.doc, `document wider than the viewport on ${path} at ${width}px`).toBeLessThanOrEqual(1);
-        expect(overflow.main, `horizontal scroll inside <main> on ${path} at ${width}px`).toBeLessThanOrEqual(1);
-
-        const bell = page.getByRole("button", { name: /^Notifications/ });
-        await expect(bell).toBeVisible();
-        const onTop = await bell.evaluate((b) => {
-          const r = b.getBoundingClientRect();
-          const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-          return !!hit && b.contains(hit);
-        });
-        expect(onTop, `something is painted over the bell on ${path} at ${width}px`).toBe(true);
+      // The layout is an overflow-hidden shell whose <main> scrolls, so the
+      // DOCUMENT never scrolls sideways and measuring it alone passed every page
+      // in the first run while content overflowed inside <main>. Both are measured.
+      const overflow = await page.evaluate(() => {
+        const doc = document.scrollingElement || document.documentElement;
+        const main = document.querySelector("main");
+        return {
+          doc: doc.scrollWidth - window.innerWidth,
+          main: main ? main.scrollWidth - main.clientWidth : 0,
+        };
       });
+      expect(overflow.doc, `document wider than the viewport on ${path} at ${width}px`).toBeLessThanOrEqual(1);
+      expect(overflow.main, `horizontal scroll inside <main> on ${path} at ${width}px`).toBeLessThanOrEqual(1);
+
+      const bell = page.getByRole("button", { name: /^Notifications/ });
+      await expect(bell).toBeVisible();
+      const onTop = await bell.evaluate((b) => {
+        const r = b.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return !!hit && b.contains(hit);
+      });
+      expect(onTop, `something is painted over the bell on ${path} at ${width}px`).toBe(true);
     }
   });
 }
 
-// M1 — a locked page. Messages is locked by owner ruling: its sidebar entry
-// shows a lock and the route sends the carrier to the Dashboard.
+// FINISH-2 G3 — Messages, unlocked. (M1 locked it; the redirect itself is held by
+// lockedFeatures.test.tsx with a mocked route.) A carrier reaches SRL staff only
+// (the staff-only messaging fix, messageScope.test.ts): the seeded shipper's company name finds nobody, and "silk" finds
+// staff and nothing else. Through the page, not the API, so the page is what is proven.
+const SRL_STAFF_ROLES = ["ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING", "AE", "ACCOUNT_EXECUTIVE"];
 for (const width of WIDTHS) {
-  test.describe(`a locked page at ${width}px`, () => {
+  test.describe(`Messages at ${width}px`, () => {
     test.use({ viewport: { width, height: 800 } });
 
-    test("Messages redirects to the Dashboard and reads as locked", async ({ page }) => {
+    test("is open, and its search finds SRL staff only", async ({ page }) => {
       await signInAsCarrier(page);
       await page.goto("/carrier/dashboard/messaging");
-      await expect(page).toHaveURL(/\/carrier\/dashboard$/);
-      if (width < 1024) await page.getByRole("button", { name: "Open menu" }).click();
-      const item = page.getByRole("button", { name: /Messages: Available soon/ });
-      await expect(item).toBeVisible();
-      // aria-disabled: Playwright will not click it (actionability), a finger will.
-      await item.dispatchEvent("click");
-      await expect(page.getByText(/Messages are not open yet/)).toBeVisible();
-      await page.screenshot({ path: `test-results/carrier-portal/${width}-messages-locked.png` });
+      await expect(page).toHaveURL(/\/carrier\/dashboard\/messaging$/);
+      await page.getByRole("button", { name: "New message" }).click();
+      const search = page.getByRole("textbox", { name: "Search SRL staff" });
+
+      const searchFor = async (term: string) => {
+        const res = page.waitForResponse((r) => r.url().includes(`/messages/users?search=${term}`) && r.request().method() === "GET");
+        await search.fill(term);
+        const r = await res;
+        expect(r.ok(), `user search "${term}": ${r.status()}`).toBeTruthy();
+        return (await r.json()) as { role: string; email: string }[];
+      };
+
+      const shipperSide = await searchFor("acmemfg");
+      expect(shipperSide.map((u) => u.email), "a carrier must not find a shipper").toEqual([]);
+
+      const staff = await searchFor("silk");
+      expect(staff.length, "a carrier must find the SRL team").toBeGreaterThan(0);
+      for (const u of staff) expect(SRL_STAFF_ROLES, `${u.email} is ${u.role}`).toContain(u.role);
+      await expect(page.getByRole("button", { name: new RegExp(staff[0].email.replace(/[.@]/g, "\\$&")) })).toBeVisible();
+      await page.screenshot({ path: `test-results/carrier-portal/${width}-messages.png` });
     });
   });
 }
@@ -175,7 +204,8 @@ for (const width of WIDTHS) {
         const firstCourse = page.locator("thead th").nth(1);
         const courseBefore = (await firstCourse.boundingBox())!;
         await scroller.evaluate((el) => el.scrollBy({ left: 220 }));
-        await page.waitForTimeout(100);
+        // By condition, not a fixed delay: the scroll has landed.
+        await expect.poll(() => scroller.evaluate((el) => el.scrollLeft)).toBeGreaterThan(100);
         const after = (await sticky.boundingBox())!;
         const courseAfter = (await firstCourse.boundingBox())!;
         expect(Math.round(after.x), "the sticky column stays put").toBe(Math.round(before.x));

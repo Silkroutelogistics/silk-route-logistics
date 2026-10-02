@@ -38,11 +38,12 @@ export const CARRIER_PORTAL_FEATURES = {
     enabled: false,
     reason: "Notification choices cannot be saved yet. You receive every carrier notice for now.",
   },
-  // Owner ruling (F2, 2026-10-02): Messages is locked. The A11 walk found it
-  // working end to end, and v3.8.boz limited it to SRL staff; the owner's M1
-  // ruling named it among the features to lock. Unlocking is `enabled: true`.
+  // Owner ruling (F2, 2026-10-02) locked Messages; FINISH-2 G3 unlocked it. The
+  // A11 walk found it working end to end, and the staff-only messaging fix
+  // limits a carrier to SRL staff (messageScope.test.ts). The reason stays for
+  // a future re-lock.
   messaging: {
-    enabled: false,
+    enabled: true,
     route: "/carrier/dashboard/messaging",
     reason: "Messages are not open yet. Call your SRL rep; the number is on every load, or call (269) 220-6760.",
   },

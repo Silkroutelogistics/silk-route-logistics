@@ -41,7 +41,7 @@ vi.mock("@/components/ui/AuthRefreshBanner", () => ({ AuthRefreshBanner: () => n
 vi.mock("@/components/MarcoPolo", () => ({ MarcoPolo: () => null }));
 vi.mock("@/lib/carrierPortalFeatures", async (orig) => {
   const actual = (await orig()) as any;
-  const locked = { enabled: false, reason: "Not built yet.", route: "/carrier/dashboard/messaging" };
+  const locked = { enabled: false, reason: "Not built yet.", route: "/carrier/dashboard/locked-example" };
   return {
     ...actual,
     lockedFeatureForPath: (p: string) => (p === locked.route || p?.startsWith(`${locked.route}/`) ? locked : actual.lockedFeatureForPath(p)),
@@ -70,9 +70,9 @@ describe("the flag file", () => {
   });
 });
 
-describe("Messages (owner ruling F2)", () => {
-  it("is locked as a whole page, with a route and a reason", () => {
-    expect(isFeatureEnabled("messaging")).toBe(false);
+describe("Messages (locked F2, unlocked FINISH-2 G3)", () => {
+  it("is open, and keeps its route and reason for a future re-lock", () => {
+    expect(isFeatureEnabled("messaging")).toBe(true);
     expect(CARRIER_PORTAL_FEATURES.messaging.route).toBe("/carrier/dashboard/messaging");
     expect(CARRIER_PORTAL_FEATURES.messaging.reason).toMatch(/SRL rep/);
   });
@@ -91,7 +91,7 @@ describe("the header search", () => {
 
 describe("a locked page", () => {
   it("sends the carrier to the Dashboard", async () => {
-    pathname.value = "/carrier/dashboard/messaging";
+    pathname.value = "/carrier/dashboard/locked-example";
     await mount();
     expect(replace).toHaveBeenCalledWith("/carrier/dashboard");
   });
@@ -101,6 +101,13 @@ describe("a locked page", () => {
     await mount();
     expect(replace).not.toHaveBeenCalledWith("/carrier/dashboard");
     expect(lockedFeatureForPath("/carrier/dashboard/my-loads")).toBeNull();
+  });
+
+  it("leaves Messages alone now that it is open (G3)", async () => {
+    pathname.value = "/carrier/dashboard/messaging";
+    await mount();
+    expect(replace).not.toHaveBeenCalledWith("/carrier/dashboard");
+    expect(lockedFeatureForPath("/carrier/dashboard/messaging")).toBeNull();
   });
 });
 

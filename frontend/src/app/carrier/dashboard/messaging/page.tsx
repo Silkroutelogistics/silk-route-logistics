@@ -6,6 +6,7 @@ import { Send, Search, Plus, MessageSquare, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { CarrierCard } from "@/components/carrier";
+import { BTN } from "@/lib/carrierUi";
 
 interface Conversation {
   partner: { id: string; firstName: string; lastName: string; company: string | null; role: string; email?: string };
@@ -90,14 +91,17 @@ export default function CarrierMessagingPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-[300px_1fr] gap-4" style={{ height: "calc(100vh - 12rem)" }}>
+      {/* FINISH-2 G3: one column below md (list, then thread); two at md and up. */}
+      <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4 md:h-[calc(100vh-12rem)]">
         {/* Conversation List */}
-        <CarrierCard padding="p-0" className="flex flex-col overflow-hidden">
+        <CarrierCard padding="p-0" className="flex flex-col overflow-hidden max-h-[60vh] md:max-h-none">
           <div className="p-3.5 border-b border-[#F5EEE0] flex items-center justify-between">
             <span className="text-[13px] font-bold text-[#0A2540]">Conversations</span>
             <button
               onClick={() => setShowNewMsg(!showNewMsg)}
-              className="w-7 h-7 rounded-md bg-[#BA7517]/10 text-[#BA7517] flex items-center justify-center hover:bg-[#BA7517]/20"
+              aria-label="New message"
+              aria-expanded={showNewMsg}
+              className="w-11 h-11 rounded-md bg-[#BA7517]/10 text-[#854F0B] flex items-center justify-center hover:bg-[#BA7517]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BA7517]"
             >
               <Plus size={14} />
             </button>
@@ -110,7 +114,8 @@ export default function CarrierMessagingPage() {
                 <input
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
-                  placeholder="Search users..."
+                  aria-label="Search SRL staff"
+                  placeholder="Search SRL staff by name"
                   className="w-full pl-9 pr-3 py-2 border border-[#EFE6D3] rounded-md text-xs focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
                 />
               </div>
@@ -170,7 +175,7 @@ export default function CarrierMessagingPage() {
         </CarrierCard>
 
         {/* Message Thread */}
-        <CarrierCard padding="p-0" className="flex flex-col overflow-hidden">
+        <CarrierCard padding="p-0" className="flex flex-col overflow-hidden min-h-[24rem] md:min-h-0">
           {selectedUserId ? (
             <>
               <div className="px-5 py-3.5 border-b border-[#F5EEE0] flex items-center gap-3">
@@ -191,7 +196,7 @@ export default function CarrierMessagingPage() {
                       <div className={`text-[10px] mt-1 text-right ${
                         msg.senderId === user?.id ? "text-gray-400" : "text-gray-400"
                       }`}>
-                        {msg.sender.firstName} — {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        {msg.sender.firstName}, {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </div>
                     </div>
                   </div>
@@ -211,13 +216,15 @@ export default function CarrierMessagingPage() {
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && newMessage.trim() && sendMsg.mutate()}
-                  placeholder="Type a message..."
-                  className="flex-1 px-3.5 py-2.5 border border-[#EFE6D3] rounded-lg text-[13px] outline-none focus:border-[#BA7517] focus:ring-[#BA7517]/15"
+                  aria-label="Message"
+                  placeholder="Type a message"
+                  className="flex-1 min-w-0 px-3.5 py-2.5 border border-[#EFE6D3] rounded-lg text-[13px] outline-none focus:border-[#BA7517] focus:ring-[#BA7517]/15"
                 />
                 <button
                   onClick={() => newMessage.trim() && sendMsg.mutate()}
                   disabled={!newMessage.trim() || sendMsg.isPending}
-                  className="px-4 py-2.5 bg-[#BA7517] text-[#FBF7F0] text-sm rounded-lg disabled:opacity-50"
+                  aria-label="Send message"
+                  className={BTN.primary}
                 >
                   <Send size={16} />
                 </button>
