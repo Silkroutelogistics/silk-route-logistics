@@ -85,7 +85,7 @@ function extractError(err: unknown, fallback: string): string {
 }
 
 function fmtDate(dateStr: string | null): string {
-  if (!dateStr) return "—";
+  if (!dateStr) return "Not set";
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
@@ -145,7 +145,7 @@ export default function CarrierActivationPage() {
       setBcaError(null);
       queryClient.invalidateQueries({ queryKey: ["carrier-activation"] });
     },
-    onError: (err) => setBcaError(extractError(err, "Couldn't record your signature. Please try again.")),
+    onError: (err) => setBcaError(extractError(err, "Could not record your signature. Please try again.")),
   });
 
   // Quick Pay election — v3.8.aqi: enabling requires a typed-name e-signature
@@ -190,7 +190,7 @@ export default function CarrierActivationPage() {
       setQpTitle("");
       queryClient.invalidateQueries({ queryKey: ["carrier-activation"] });
     },
-    onError: (err) => setQpError(extractError(err, "Couldn't update Quick Pay. Please try again.")),
+    onError: (err) => setQpError(extractError(err, "Could not update Quick Pay. Please try again.")),
   });
 
   // v3.8 — ask to join the Quick Pay pilot from the portal.
@@ -212,7 +212,7 @@ export default function CarrierActivationPage() {
       // double tap is not an error.
       queryClient.invalidateQueries({ queryKey: ["carrier-activation"] });
     },
-    onError: (err) => setPilotError(extractError(err, "Couldn't send your request. Please try again.")),
+    onError: (err) => setPilotError(extractError(err, "Could not send your request. Please try again.")),
   });
 
   // Open the branded agreement PDF in a new tab (review copy pre-sign, executed
@@ -228,7 +228,7 @@ export default function CarrierActivationPage() {
       window.open(url, "_blank");
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
-      setErr(extractError(err, "Couldn't open the agreement PDF."));
+      setErr(extractError(err, "Could not open the agreement PDF."));
     }
   };
   const viewAgreementPdf = () => openAgreementPdf("broker-carrier", setPdfError);
@@ -305,7 +305,7 @@ export default function CarrierActivationPage() {
   // no branch reads as a penalty.
   const standardTermsLine = (
     <p className="text-[12px] text-gray-500">
-      Your standard tier pay terms are unchanged and always free — Silver Net-30, Gold Net-21, Platinum Net-14. Quick Pay
+      Your standard tier pay terms are unchanged and always free: Silver Net-30, Gold Net-21, Platinum Net-14. Quick Pay
       is never required to haul and has no effect on your tier, your Compass Score, or the loads you are offered.
     </p>
   );
@@ -322,7 +322,7 @@ export default function CarrierActivationPage() {
       <div className="mb-6">
         <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Activate your account</h1>
         <p className="text-[13px] text-gray-500">
-          You&apos;re approved. Sign your Broker-Carrier Agreement to start hauling, and choose whether you want Quick Pay.
+          You are approved. Sign your Broker-Carrier Agreement to start hauling, and choose whether you want Quick Pay.
         </p>
       </div>
 
@@ -332,7 +332,7 @@ export default function CarrierActivationPage() {
           <div className="flex items-center gap-2.5">
             <CheckCircle2 size={18} className="text-[#2F7A4F] shrink-0" />
             <p className="text-[13px] text-[#0A2540]">
-              <span className="font-semibold">You&apos;re activated and cleared to haul.</span> Your dashboard is open and you can receive load tenders.
+              <span className="font-semibold">You are activated and cleared to haul.</span> Your dashboard is open and you can receive load tenders.
             </p>
           </div>
         </CarrierCard>
@@ -601,7 +601,7 @@ export default function CarrierActivationPage() {
                   <button onClick={() => setShowQpEnable(true)} className={goldCta}>
                     <Zap size={13} /> Review and sign
                   </button>
-                  <span className="text-xs text-gray-400">or stay on standard terms — nothing to do.</span>
+                  <span className="text-xs text-gray-400">or stay on standard terms. There is nothing to do.</span>
                 </div>
               ) : null
             ) : (

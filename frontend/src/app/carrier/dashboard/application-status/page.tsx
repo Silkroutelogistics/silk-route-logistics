@@ -82,11 +82,11 @@ const STATUS_META: Record<
 };
 
 function formatDate(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "Not set";
   try {
     return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   } catch {
-    return "—";
+    return "Not set";
   }
 }
 
@@ -128,7 +128,7 @@ export default function ApplicationStatusPage() {
   if (isError || !data) {
     return (
       <div className="max-w-3xl mx-auto py-16 px-4 text-center">
-        <p className="text-sm text-[#9B2C2C]">We couldn&apos;t load your application status right now. Please try again in a moment.</p>
+        <p className="text-sm text-[#9B2C2C]">We could not load your application status right now. Please try again in a moment.</p>
       </div>
     );
   }
@@ -260,7 +260,7 @@ function PendingSection() {
       </h2>
       <p className="text-sm text-[#3A4A5F] leading-relaxed">
         We received your application and it&apos;s queued for our compliance team. Most applications are picked up within one
-        business day. You&apos;ll receive an email when a compliance reviewer begins your review — and another email when
+        business day. You will receive an email when a compliance reviewer begins your review, and another email when
         we approve you or need additional information.
       </p>
       <div className="mt-5 bg-[#FBF7F0] border border-[rgba(186,117,23,0.20)] rounded-lg p-4">
@@ -268,7 +268,7 @@ function PendingSection() {
         <ol className="text-xs text-[#3A4A5F] space-y-1.5 list-decimal list-inside">
           <li>Compliance reviewer opens your application (status changes to &ldquo;Under Review&rdquo;).</li>
           <li>FMCSA authority, insurance, and identity checks complete automatically.</li>
-          <li>You&apos;re approved to operate — or we email you for additional details.</li>
+          <li>You are approved to operate, or we email you for additional details.</li>
         </ol>
       </div>
     </div>
@@ -282,9 +282,9 @@ function ReviewingSection() {
         A reviewer is on your application
       </h2>
       <p className="text-sm text-[#3A4A5F] leading-relaxed">
-        Your application is being actively reviewed. We&apos;re verifying your FMCSA authority, insurance certificates, and
-        identity. If everything clears, you&apos;ll be approved and onboarded onto the Caravan Partner Program. If we need
-        anything additional, you&apos;ll receive an email with specifics — please respond on this page when you do.
+        Your application is being actively reviewed. We are verifying your FMCSA authority, insurance certificates, and
+        identity. If everything clears, you will be approved and onboarded onto the Caravan Partner Program. If we need
+        anything additional, you will receive an email with specifics. Please respond on this page when you do.
       </p>
       <div className="mt-5 bg-[#E2EAF2] border border-[rgba(42,91,139,0.20)] rounded-lg p-4">
         <p className="text-xs text-[#2A5B8B] leading-relaxed">
@@ -342,7 +342,7 @@ function InfoRequestedSection() {
       {isError && (
         <div className="mt-5 bg-[#F6E3E3] border border-[#9B2C2C]/40 rounded-lg p-4">
           <p className="text-xs text-[#9B2C2C]">
-            We couldn&apos;t load your open requests right now. Please refresh the page in a moment, or email{" "}
+            We could not load your open requests right now. Please refresh the page in a moment, or email{" "}
             <a href="mailto:compliance@silkroutelogistics.ai" className="font-semibold hover:underline">
               compliance@silkroutelogistics.ai
             </a>
@@ -354,8 +354,8 @@ function InfoRequestedSection() {
       {data && data.requests.length === 0 && (
         <div className="mt-5 bg-[#E6F0E9] border border-[#2F7A4F]/40 rounded-lg p-4">
           <p className="text-xs text-[#2F7A4F]">
-            <strong className="font-semibold">All caught up.</strong> You&apos;ve responded to every open request. Your
-            application is back in active review — we&apos;ll email you when the status changes.
+            <strong className="font-semibold">All caught up.</strong> You have responded to every open request. Your
+            application is back in active review. We will email you when the status changes.
           </p>
         </div>
       )}
@@ -485,7 +485,7 @@ function InfoRequestCard({ request, onResolved }: { request: InfoRequest; onReso
           <label className="block text-xs font-semibold text-[#3A4A5F] uppercase tracking-wider mb-1.5">
             Attach documents{" "}
             {request.requiresAttachment ? (
-              <span className="font-normal normal-case text-[#9B2C2C]">(required — this request needs the document itself; up to {MAX_FILES} files, 25 MB each)</span>
+              <span className="font-normal normal-case text-[#9B2C2C]">(required: this request needs the document itself; up to {MAX_FILES} files, 25 MB each)</span>
             ) : (
               <span className="font-normal normal-case text-[#6B7685]">(optional, up to {MAX_FILES} files, 25 MB each)</span>
             )}
@@ -629,7 +629,7 @@ function RejectedSection({ data }: { data: StatusResponse }) {
             <span className="text-[#6B7685]"> ({daysUntilReapply} day{daysUntilReapply === 1 ? "" : "s"} from now)</span>.
           </p>
           <p className="mt-2 text-xs text-[#6B7685]">
-            We&apos;ll send you a reminder email when you&apos;re eligible to reapply.
+            We will send you a reminder email when you are eligible to reapply.
           </p>
         </div>
       )}
@@ -659,10 +659,10 @@ function ApprovedSection() {
   return (
     <div>
       <h2 className="text-lg font-bold text-[#0A2540] mb-3 font-serif">
-        You&apos;re approved
+        You are approved
       </h2>
       <p className="text-sm text-[#3A4A5F] leading-relaxed">
-        Welcome to the Caravan Partner Program. You&apos;ll be redirected to your carrier dashboard in a moment.
+        Welcome to the Caravan Partner Program. You will be redirected to your carrier dashboard in a moment.
       </p>
     </div>
   );

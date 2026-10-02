@@ -19642,7 +19642,9 @@
 // invoices read as cards on a phone (carrier-portal-upgrade G14/G15/M4).
 // v3.8.brv — carrier portal: installs to a phone's home screen as its own app opening on the dashboard, and
 // links the terms and privacy policy from its sidebar (carrier-portal-upgrade G42/G44).
-export const SRL_VERSION = "3.8.brv";
+// v3.8.brw — carrier portal: activation and application-status copy carries no contraction or em dash, and a
+// census keeps every swept carrier file that way (carrier-portal-upgrade G35).
+export const SRL_VERSION = "3.8.brw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
