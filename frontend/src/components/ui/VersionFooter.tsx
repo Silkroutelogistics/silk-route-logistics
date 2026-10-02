@@ -19620,7 +19620,9 @@
 // mark read and mark all read, items linked to their page, fetched on load and focus with no polling (M2).
 // v3.8.brk — carrier portal: the welcome tour is a bottom sheet on a phone, with 44px controls above the
 // assistant button, and covers only unlocked pages (carrier-portal-upgrade M3).
-export const SRL_VERSION = "3.8.brk";
+// v3.8.brl — carrier portal: one status mapper derived from the DB enums labels every load, pay and tender
+// status (DISPUTED and REJECTED pay in red, TONU named); tender history shows pickup on the right day and stacks on a phone.
+export const SRL_VERSION = "3.8.brl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

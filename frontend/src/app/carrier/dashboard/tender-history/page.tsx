@@ -17,12 +17,20 @@
  * Read-only, deliberately. Everything here is settled or is already actionable
  * on the Tenders page; a second place to act on a live offer is a second place
  * for the two to disagree about what state it is in.
+ *
+ * carrier-portal-upgrade: colours come from lib/carrierStatus (G20); the pickup
+ * date goes through formatStopDate, because it is a calendar date stored as UTC
+ * midnight and an unzoned render showed the day before west of UTC (G16, the
+ * SRL-121497 class); under 768px each row is a card, not a table (M4).
  */
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard } from "@/components/carrier/CarrierCard";
 import { carrierTenderLabel } from "@/lib/loadDerivedStatus";
+import { formatStopDate } from "@/lib/stopDate";
+import { TONE_CLASSES, statusDisplay } from "@/lib/carrierStatus";
+import { BTN } from "@/lib/carrierUi";
 
 interface HistoryRow {
   id: string;
@@ -47,34 +55,50 @@ interface HistoryRow {
   } | null;
 }
 
-/**
- * Tone by outcome, not by status name.
- *
- * A withdrawal and a decline are both "the load went elsewhere" from a
- * carrier's point of view, but only one of them is something they did — and
- * colouring SRL's own withdrawal like a refusal would undo in the palette
- * exactly what the wording is there to fix.
- */
-const TONE: Record<string, string> = {
-  ACCEPTED: "bg-[#E6F0E9] text-[#256340] border border-[#2F7A4F]/25",
-  CONFIRMED: "bg-[#E6F0E9] text-[#256340] border border-[#2F7A4F]/25",
-  RC_SENT: "bg-[#FBEFD4] text-[#854F0B]",
-  OFFERED: "bg-[#E2EAF2] text-[#2A5B8B]",
-  COUNTERED: "bg-[#FBEFD4] text-[#854F0B]",
-  DECLINED: "bg-slate-200 text-slate-700",
-  WITHDRAWN: "bg-slate-200 text-slate-700",
-  EXPIRED: "bg-slate-200 text-slate-700",
-  RELEASED: "bg-[#F6E3E3] text-[#9B2C2C]",
-};
+const NOT_SET = "Not set";
 
 const money = (n: number | null) =>
-  n === null || n === undefined ? "—" : `$${Math.round(n).toLocaleString()}`;
+  n === null || n === undefined ? NOT_SET : `$${Math.round(n).toLocaleString()}`;
 
-const when = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
+/** `at` is an instant (when the outcome happened), so the viewer's own zone is right for it. */
+const onDay = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : NOT_SET;
+
+function Outcome({ t }: { t: HistoryRow }) {
+  const c = TONE_CLASSES[statusDisplay("tender", t.status).tone];
+  return (
+    <>
+      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${c.bg} ${c.text}`}>
+        {carrierTenderLabel(t.status, t.statusReason)}
+      </span>
+      {/* A carrier's own decline shows the reason they gave. SRL's withdrawal
+          does not get a second line explaining itself, because the label
+          already says what happened. */}
+      {t.status === "DECLINED" && t.declineReason && (
+        <span className="block text-[11px] text-[#5B6B7D] mt-0.5">{t.declineReason}</span>
+      )}
+    </>
+  );
+}
+
+function Rate({ t }: { t: HistoryRow }) {
+  return (
+    <>
+      {money(t.tenderRate)}
+      {t.counterRate !== null && t.counterRate !== undefined && (
+        <span className="block text-[11px] text-[#5B6B7D]">your counter, offered {money(t.offeredRate)}</span>
+      )}
+    </>
+  );
+}
+
+const loadName = (t: HistoryRow) => t.load?.loadNumber ?? t.load?.referenceNumber ?? NOT_SET;
+const lane = (t: HistoryRow) =>
+  t.load ? `${t.load.originCity}, ${t.load.originState} to ${t.load.destCity}, ${t.load.destState}` : NOT_SET;
+const pickup = (t: HistoryRow) => formatStopDate(t.load?.pickupDate) ?? NOT_SET;
 
 export default function TenderHistoryPage() {
-  const { data, isLoading } = useQuery<{ tenders: HistoryRow[] }>({
+  const { data, isLoading, isError, refetch } = useQuery<{ tenders: HistoryRow[] }>({
     queryKey: ["carrier-tender-history"],
     queryFn: async () => (await api.get("/carrier-tenders/history")).data,
   });
@@ -92,59 +116,63 @@ export default function TenderHistoryPage() {
 
       <CarrierCard>
         {isLoading ? (
-          <p className="text-sm text-[#6B7685] p-4">Loading…</p>
+          <div role="status" aria-label="Loading tender history" className="space-y-2 p-4">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-10 rounded bg-[#F5EEE0] animate-pulse motion-reduce:animate-none" />
+            ))}
+          </div>
+        ) : isError ? (
+          <div role="alert" className="p-4 text-sm text-[#9B2C2C]">
+            Tender history could not be loaded.{" "}
+            <button type="button" onClick={() => refetch()} className={BTN.ghost}>Try again</button>
+          </div>
         ) : rows.length === 0 ? (
-          <p className="text-sm text-[#6B7685] p-4">
+          <p className="text-sm text-[#5B6B7D] p-4">
             No tenders yet. Loads offered to you will appear here.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-[#6B7685] border-b border-[#EFE6D3]">
-                  <th className="px-3 py-2">Load</th>
-                  <th className="px-3 py-2">Lane</th>
-                  <th className="px-3 py-2">Pickup</th>
-                  <th className="px-3 py-2 text-right">Rate</th>
-                  <th className="px-3 py-2">Outcome</th>
-                  <th className="px-3 py-2">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((t) => (
-                  <tr key={t.id} className="border-b border-[#F5EEE0] last:border-0">
-                    <td className="px-3 py-2.5 font-medium text-[#0A2540] whitespace-nowrap">
-                      {t.load?.loadNumber ?? t.load?.referenceNumber ?? "—"}
-                    </td>
-                    <td className="px-3 py-2.5 text-[#3A4A5F] whitespace-nowrap">
-                      {t.load?.originCity}, {t.load?.originState} &rarr; {t.load?.destCity}, {t.load?.destState}
-                    </td>
-                    <td className="px-3 py-2.5 text-[#6B7685] whitespace-nowrap">{when(t.load?.pickupDate ?? null)}</td>
-                    <td className="px-3 py-2.5 text-right text-[#0A2540] whitespace-nowrap">
-                      {money(t.tenderRate)}
-                      {t.counterRate !== null && t.counterRate !== undefined && (
-                        <span className="block text-[11px] text-[#6B7685]">
-                          your counter · offered {money(t.offeredRate)}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${TONE[t.status] ?? "bg-slate-200 text-slate-700"}`}>
-                        {carrierTenderLabel(t.status, t.statusReason)}
-                      </span>
-                      {/* A carrier's own decline shows the reason they gave. SRL's
-                          withdrawal does not get a second line explaining itself,
-                          because the label already says what happened. */}
-                      {t.status === "DECLINED" && t.declineReason && (
-                        <span className="block text-[11px] text-[#6B7685] mt-0.5">{t.declineReason}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5 text-[#6B7685] whitespace-nowrap">{when(t.at)}</td>
+          <>
+            {/* M4: cards under 768px. */}
+            <ul className="md:hidden divide-y divide-[#F5EEE0]" data-testid="tender-history-cards">
+              {rows.map((t) => (
+                <li key={t.id} className="p-3 space-y-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-medium text-[#0A2540] break-all">{loadName(t)}</span>
+                    <span className="text-right text-sm text-[#0A2540]"><Rate t={t} /></span>
+                  </div>
+                  <div className="text-sm text-[#3A4A5F]">{lane(t)}</div>
+                  <div className="text-xs text-[#5B6B7D]">Pickup {pickup(t)}. Outcome {onDay(t.at)}.</div>
+                  <div><Outcome t={t} /></div>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-wide text-[#5B6B7D] border-b border-[#EFE6D3]">
+                    <th className="px-3 py-2">Load</th>
+                    <th className="px-3 py-2">Lane</th>
+                    <th className="px-3 py-2">Pickup</th>
+                    <th className="px-3 py-2 text-right">Rate</th>
+                    <th className="px-3 py-2">Outcome</th>
+                    <th className="px-3 py-2">Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {rows.map((t) => (
+                    <tr key={t.id} className="border-b border-[#F5EEE0] last:border-0">
+                      <td className="px-3 py-2.5 font-medium text-[#0A2540] whitespace-nowrap">{loadName(t)}</td>
+                      <td className="px-3 py-2.5 text-[#3A4A5F] whitespace-nowrap">{lane(t)}</td>
+                      <td className="px-3 py-2.5 text-[#5B6B7D] whitespace-nowrap">{pickup(t)}</td>
+                      <td className="px-3 py-2.5 text-right text-[#0A2540] whitespace-nowrap"><Rate t={t} /></td>
+                      <td className="px-3 py-2.5"><Outcome t={t} /></td>
+                      <td className="px-3 py-2.5 text-[#5B6B7D] whitespace-nowrap">{onDay(t.at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </CarrierCard>
     </div>
