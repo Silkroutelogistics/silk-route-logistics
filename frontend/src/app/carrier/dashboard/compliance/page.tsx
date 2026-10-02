@@ -8,6 +8,10 @@ import { useStepUp } from "@/hooks/useStepUp";
 import { StepUpPrompt } from "@/components/carrier";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
 import { mcDigits } from "@/lib/mcNumber";
+// carrier-portal-upgrade G32 — expiry dates are calendar dates stored at UTC
+// midnight; an unzoned render showed the day before for a carrier west of UTC
+// (the SRL-121497 class lib/stopDate exists for). Instants keep the local zone.
+import { formatStopDate } from "@/lib/stopDate";
 
 const scoreLabels: Record<string, string> = {
   unsafeDriving: "Unsafe Driving",
@@ -304,7 +308,7 @@ export default function CarrierCompliancePage() {
           <div className="space-y-2 text-xs">
             <div className="flex justify-between">
               <span className="text-gray-700">Tier</span>
-              {carrier?.tier ? <CarrierBadge status={carrier.tier} /> : <span>—</span>}
+              {carrier?.tier ? <CarrierBadge kind="tier" status={carrier.tier} /> : <span>Not set</span>}
             </div>
             <div className="flex justify-between">
               <span className="text-gray-700">Safety Score</span>
@@ -322,11 +326,11 @@ export default function CarrierCompliancePage() {
             <div className="space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-gray-700">Status</span>
-                {insurance?.status ? <CarrierBadge status={insurance.status} /> : <span>—</span>}
+                {insurance?.status ? <CarrierBadge kind="compliance" status={insurance.status} /> : <span>Not on file</span>}
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-700">Expires</span>
-                <span>{insurance?.expiry ? new Date(insurance.expiry).toLocaleDateString() : "—"}</span>
+                <span>{formatStopDate(insurance?.expiry) ?? "Not on file"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-700">Cargo</span>
@@ -402,7 +406,7 @@ export default function CarrierCompliancePage() {
                   <span className="text-xs font-medium text-[#0A2540]">{line.amount ? `$${Number(line.amount).toLocaleString()}` : "—"}</span>
                   {line.expiry ? (
                     <span className={`text-xs ${insuranceExpiryColor(line.expiry)}`}>
-                      {new Date(line.expiry).toLocaleDateString()} {insuranceDaysLabel(line.expiry)}
+                      {formatStopDate(line.expiry)} {insuranceDaysLabel(line.expiry)}
                     </span>
                   ) : (
                     <span className="text-xs text-gray-700">No expiry set</span>
@@ -534,8 +538,8 @@ export default function CarrierCompliancePage() {
                     <span className="text-xs text-gray-700">{exp.type}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">{new Date(exp.date).toLocaleDateString()}</span>
-                    <CarrierBadge status={exp.status} />
+                    <span className="text-xs text-[#5B6B7D]">{formatStopDate(exp.date)}</span>
+                    <CarrierBadge kind="compliance" status={exp.status} />
                   </div>
                 </div>
               ))}

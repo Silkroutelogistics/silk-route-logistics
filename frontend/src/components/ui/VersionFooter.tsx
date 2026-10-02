@@ -19636,7 +19636,9 @@
 // buttons a screen reader can announce (carrier-portal-upgrade G30/M4/M5).
 // v3.8.brs — carrier portal: Payments reads as cards on a phone, has chips for on-hold, disputed and rejected
 // pay, names each status in words, and carries no contraction (carrier-portal-upgrade G11/M4/M5).
-export const SRL_VERSION = "3.8.brs";
+// v3.8.brt — carrier portal: insurance and expiry dates on Compliance show their own day west of UTC, and its
+// badges name tier and insurance status in words (carrier-portal-upgrade G32).
+export const SRL_VERSION = "3.8.brt";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
