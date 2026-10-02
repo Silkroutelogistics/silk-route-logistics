@@ -19644,7 +19644,9 @@
 // links the terms and privacy policy from its sidebar (carrier-portal-upgrade G42/G44).
 // v3.8.brw — carrier portal: activation and application-status copy carries no contraction or em dash, and a
 // census keeps every swept carrier file that way (carrier-portal-upgrade G35).
-export const SRL_VERSION = "3.8.brw";
+// v3.8.brx — carrier portal: Available Loads looks each facility up once per page instead of twice per load
+// (carrier-portal-upgrade G33).
+export const SRL_VERSION = "3.8.brx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

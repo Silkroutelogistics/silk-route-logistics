@@ -163,10 +163,21 @@ router.get("/available", async (req: AuthRequest, res: Response) => {
 
   // Enrich loads with facility detention warnings
   const { getFacilityDetentionWarning } = await import("../services/detentionTrackingService");
+  // carrier-portal-upgrade G33 — this looked up two facilities per load, so a
+  // page of 20 cost 40 extra queries, most of them repeats: loads share
+  // origins and destinations. One lookup per distinct city and state now, shared
+  // by every load on the page. The response is unchanged. (No client in this
+  // repo reads detentionWarnings; whether to keep it is an open decision.)
+  const warningByPlace = new Map<string, ReturnType<typeof getFacilityDetentionWarning>>();
+  const warningFor = (city: string, state: string) => {
+    const key = `${city}|${state}`;
+    if (!warningByPlace.has(key)) warningByPlace.set(key, getFacilityDetentionWarning("", city, state));
+    return warningByPlace.get(key)!;
+  };
   const enrichedLoads = await Promise.all(
     loads.map(async (load) => {
-      const pickupWarning = await getFacilityDetentionWarning("", load.originCity, load.originState);
-      const deliveryWarning = await getFacilityDetentionWarning("", load.destCity, load.destState);
+      const pickupWarning = await warningFor(load.originCity, load.originState);
+      const deliveryWarning = await warningFor(load.destCity, load.destState);
       return {
         ...load,
         detentionWarnings: {
