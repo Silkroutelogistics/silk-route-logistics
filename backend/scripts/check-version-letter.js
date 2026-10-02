@@ -181,7 +181,10 @@ const claim = (letter, ref, hash, subject) => {
 for (const c of versionedCommitsIn(originRef, 40)) claim(c.letter, originRef, c.hash, c.subject);
 const originFooter = footerLetterAt(originRef);
 if (originFooter) claim(originFooter, `${originRef} footer`, null, FOOTER);
-const otherOriginRefs = sh("git for-each-ref --format=%(refname:short) refs/remotes/origin")
+// The format is QUOTED: unquoted, "(" is a syntax error in a POSIX shell, sh()
+// swallowed it as "", and on Linux/macOS (CI included) the guard saw no origin
+// ref but main. cmd.exe accepted it, so it passed on every Windows run.
+const otherOriginRefs = sh(`git for-each-ref "--format=%(refname:short)" refs/remotes/origin`)
   .split("\n")
   .map((r) => r.trim())
   .filter((r) => r && r !== originRef && r !== "origin/HEAD");
