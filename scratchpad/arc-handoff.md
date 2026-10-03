@@ -2,6 +2,61 @@
 
 Each section is one arc's findings that were deliberately NOT built in it.
 Nothing below is a regression introduced by the arc it sits under.
+
+## Owner walkthrough findings (carrier-portal-upgrade @ 4f7579d2, local env :4120/:3120, 2026-10-02). Investigated read-only; nothing fixed yet.
+
+**OPEN decisions 1-13: rulings (owner, "APPLY OPEN RULINGS", 2026-10-02).** Each is the recommendation as printed
+to the owner, except where R1-R3 say otherwise. R1-R3 are built in this arc; the rest are recorded, not built.
+1. G36 remit and bank change: its own arc, in the proposed shape (step-up, 72h hold, alerts, AuditTrail). Schema and money, so a `hold/` branch.
+2. G12 phone edit: next small build (endpoint, step-up, AuditTrail, notice); then flip `contactPhoneEdit`.
+3. G13 notification preferences: deferred; pair with the notifications arc.
+4. G41 session revocation: first among these, a dedicated auth arc with the full E2E.
+5. G10 rest (suspended carrier GETs): bundled into the G41 auth arc.
+6. G17 Quick Pay fee preview: next payments arc, tested against the backend's own figure.
+7. G23/G24: **R2** links Revenue from the carrier nav. Loadboard stays unlinked; the redesign arc folds it into Available Loads.
+8. G45 accessorial request UI: after G36, under the money-claim rules (AE approval stays the gate).
+9. G46 multi-user carriers: deferred until a carrier asks (schema, wide blast radius).
+10. G26/G27: **R1** builds G26 staff side now (a carrier message notifies the SRL rep in-app). G27 (password-change email) soon, as a security email.
+    - Built: 6a865f0d brg. The rep is the staff member the carrier wrote to.
+    - Fallback when that rep is inactive: active OPERATIONS + DISPATCH (**confirmed by owner, 2026-10-02**).
+    - No assigned-rep field and no on-call roster exist in the schema.
+    - Also built: R2 19346b71 brh (Revenue in nav), R3 a46586af bri (detentionWarnings deleted).
+11. G43/G47/M5: closed as shipped (bpx; Training, Scorecard and Security; Messaging stacked in bqv). The Activation table goes to the redesign arc.
+12. G48: fixed on this branch by F1 (25c759b9); closes when this branch merges.
+13. Housekeeping:
+    - re-letter at release, contiguous from origin;
+    - **R3** deletes `detentionWarnings`;
+    - Toast contrast goes with the accessible-gold token work;
+    - consent text and load 5003 stay with their owners.
+
+**Walkthrough rulings (owner, 2026-10-02):**
+- **W1 KEEP #854F0B as is. No edits in this arc.** The owner will make it a canonical accessible-gold token,
+  and the redesign arc consolidates the 87 raw uses into that one token. Until then, do not "fix" #854F0B to
+  #BA7517 anywhere: that brings back the 3.72:1 AA failure.
+- **W2 CLOSED, not reproduced.** Likely a separate installed app window. Reopen only if the owner reproduces it.
+
+- **W1 Primary buttons use #854F0B, not an SRL brand token.** The skill's tokens.md lists navy #0A2540,
+  gold #C5A572, gold-dark #BA7517 and cream #FBF7F0, with no #854F0B. CLAUDE.md §2 calls #854F0B "dark gold",
+  which contradicts the skill (the skill is canonical); that line needs correcting with the fix.
+  - Usage: 87 occurrences in 37 frontend/src files at the branch tip, 48 in 25 files already on origin/main.
+  - Branch-added lines: 34 `text-`, 8 `hover:text-`, 2 `bg-`, 2 `hover:bg-` (BTN.primary in lib/carrierUi.ts,
+    used by 7 pages).
+  - Why it was used: white on #BA7517 is 3.72:1 (fails AA 4.5:1 for normal text); white on #854F0B is 6.73:1.
+    For text, #BA7517 on cream is 3.48:1 (fails); #854F0B on cream is 6.30:1.
+  - Options using approved tokens only (WCAG 2 ratios):
+    - Navy buttons: cream on navy, 14.55:1 (AAA); white on navy, 15.54:1.
+    - Gold buttons: navy on #C5A572, 6.66:1 (AA, and AAA at large sizes).
+    - Navy on #BA7517 is 4.18:1, which fails AA for normal text.
+    - Gold-dark text and icons: #BA7517 at 3.48:1 passes only for large text (24px, or 18.66px bold) and
+      non-text accents (3:1). Small text goes navy (14.55:1).
+- **W2 Second "Carrier Sign In" box over the Sign In button (owner screenshot).** NOT reproduced.
+  - Repro: 1670x657, fresh context, failed sign-in. One heading only (`app/carrier/login/page.tsx:258`) and
+    zero fixed or sticky elements in the DOM.
+  - Branch impact: the login page is untouched by this branch. Its only change in that tree is
+    `app/carrier/layout.tsx` (c3ae5633 bps, G42), which adds the /carrier PWA manifest and renders nothing.
+  - Likely a separate window over the browser, e.g. an installed "SRL Carrier" app window (the manifest makes
+    /carrier installable) or an OS preview. Needs: does it move with the browser window; is "SRL Carrier"
+    installed (chrome://apps).
 ## carrier-portal-upgrade FINISH (F1-F5, 2026-10-02). Branch carrier-portal-upgrade, UNPUSHED, not merged.
 
 ```
