@@ -46,7 +46,7 @@ type CarrierLoadView<T> = Omit<T, (typeof CARRIER_HIDDEN_LOAD_FIELDS)[number]>;
 /**
  * The load with the customer side removed, and the poster reduced to a contact.
  *
- * G40 (correcting v3.8.bow): the poster is the carrier's rep, and a carrier on
+ * G40 (correcting v3.8.bqo): the poster is the carrier's rep, and a carrier on
  * the road needs a number to call. Phone and email are kept when the poster is
  * SRL staff, and dropped otherwise, so a load some other role posted can never
  * hand a carrier that person's details. The role itself is not sent.

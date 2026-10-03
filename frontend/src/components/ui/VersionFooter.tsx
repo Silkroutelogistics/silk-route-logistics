@@ -19577,7 +19577,7 @@
 // v3.8.bqs — notifications: a user can mark only their own notification read, a carrier's bell shows only
 // allowlisted carrier types, and a carrier's dispute notice opens Payments (carrier-portal-upgrade M2/G38/G39).
 // v3.8.bqt — carrier portal: load detail carries the SRL rep's phone and email again, for staff posters only
-// (carrier-portal-upgrade G40, correcting v3.8.bow).
+// (carrier-portal-upgrade G40, correcting v3.8.bqo).
 // v3.8.bqu — carrier portal: a suspended carrier can no longer post capacity or send GPS pings, and the 2FA
 // wall no longer claims SRL holds bank details (carrier-portal-upgrade G10/G11).
 // v3.8.bqv — the health digest stops crying wolf (health-digest arc B1): a warm-up query, then
