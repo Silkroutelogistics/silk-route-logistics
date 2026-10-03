@@ -11,6 +11,8 @@ export const INSURANCE_EDIT_FIELDS: readonly string[] = [
   ...POLICIES.flatMap((p) => [`${p}Provider`, `${p}Policy`, `${p}Amount`, `${p}Expiry`]),
   "additionalInsuredSRL", "waiverOfSubrogation", "thirtyDayCancellationNotice",
   "insuranceAgencyName", "insuranceAgentName", "insuranceAgentEmail", "insuranceAgentPhone",
+  ...POLICIES.flatMap((p) => [`${p}InsurerName`, `${p}InsurerNaic`]),
+  "workersCompStatutory", "workersCompElEachAccident", "workersCompElDiseaseEachEmployee", "workersCompElDiseasePolicyLimit",
 ];
 
 export const PROFILE_EDIT_FIELDS: readonly string[] = ["tier", "safetyScore", "numberOfTrucks"];
@@ -23,4 +25,13 @@ export function changedFields(
   const out: Record<string, unknown> = {};
   for (const k of keys) if (form[k] !== baseline[k]) out[k] = form[k];
   return out;
+}
+
+// true = confirmed on the COI; false = the AE found it absent; null = not stated.
+export function endorsementState(v: boolean | null | undefined): string {
+  return v === true ? "Confirmed" : v === false ? "Not provided" : "Not stated";
+}
+
+export function insurerLabel(name?: string | null, naic?: string | null): string {
+  return name ? `${name}${naic ? ` (NAIC ${naic})` : ""}` : "Not stated";
 }

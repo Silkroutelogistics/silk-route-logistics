@@ -30,7 +30,8 @@ const JETEX = {
   cargoInsuranceProvider: "McGriff", cargoInsurancePolicy: "IM6079611149", cargoInsuranceAmount: 100000, cargoInsuranceExpiry: "2026-11-01T00:00:00.000Z",
   generalLiabilityProvider: "McGriff", generalLiabilityPolicy: "VBB188673", generalLiabilityAmount: 1000000, generalLiabilityExpiry: "2027-08-29T00:00:00.000Z",
   workersCompProvider: "McGriff", workersCompPolicy: "0002116633", workersCompAmount: 1000000, workersCompExpiry: "2027-09-01T00:00:00.000Z",
-  additionalInsuredSRL: false, waiverOfSubrogation: false, thirtyDayCancellationNotice: false,
+  additionalInsuredSRL: true, waiverOfSubrogation: false, thirtyDayCancellationNotice: null,
+  workersCompStatutory: true, workersCompElEachAccident: 1000000, workersCompElDiseaseEachEmployee: 1000000, workersCompElDiseasePolicyLimit: 1000000,
   insuranceAgencyName: "McGriff Insurance Services", insuranceAgentName: "Kayla",
   insuranceAgentEmail: "Texarkana@mcgriff.com", insuranceAgentPhone: "(903) 336-6400",
   completedLoads: 0, activeLoads: 0, totalRevenue: 0, tendersAccepted: 0, tendersTotal: 0,
@@ -89,5 +90,39 @@ describe("Insurance tab save", () => {
     await openInsuranceEdit();
     expect(screen.getAllByText(/09\/01\/2027/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/08\/31\/2027/)).toBeNull();
+  });
+});
+
+// coi-verify-email-fix C2b-2: three-state endorsements, insurer per policy, WC statutory + EL.
+describe("Insurance tab, three-state", () => {
+  it("shows Confirmed / Not provided / Not stated, never a bare tick or cross", async () => {
+    await openInsuranceEdit();
+    expect(screen.getByText(/Additional Insured: Confirmed/)).toBeTruthy();
+    expect(screen.getByText(/Waiver of Subrogation: Not provided/)).toBeTruthy();
+    expect(screen.getByText(/30-Day Notice: Not stated/)).toBeTruthy();
+  });
+
+  it("the three-way control sends null for Not stated, not false", async () => {
+    vi.mocked(api.patch).mockResolvedValue({ data: { ...JETEX } } as any);
+    await openInsuranceEdit();
+    fireEvent.change(screen.getByLabelText("SRL as Additional Insured"), { target: { value: "" } });
+    await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(api.patch).mock.calls[0][1]).toEqual({ additionalInsuredSRL: null });
+  });
+
+  it("an insurer joins the changed-only save", async () => {
+    vi.mocked(api.patch).mockResolvedValue({ data: { ...JETEX } } as any);
+    await openInsuranceEdit();
+    fireEvent.change(screen.getAllByPlaceholderText("Insurer")[0], { target: { value: "MS Transverse" } });
+    fireEvent.change(screen.getAllByPlaceholderText("NAIC")[0], { target: { value: "21075" } });
+    await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(api.patch).mock.calls[0][1]).toEqual({ autoLiabilityInsurerName: "MS Transverse", autoLiabilityInsurerNaic: "21075" });
+  });
+
+  it("shows workers comp as Statutory plus its EL limits", async () => {
+    await openInsuranceEdit();
+    expect(screen.getByText("Statutory · EL $1,000,000 / $1,000,000 / $1,000,000")).toBeTruthy();
   });
 });

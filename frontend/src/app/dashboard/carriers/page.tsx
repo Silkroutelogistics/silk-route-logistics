@@ -7,7 +7,7 @@ import { IconTabs, type IconTabDef } from "@/components/ui/IconTabs";
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { INSURANCE_EDIT_FIELDS, PROFILE_EDIT_FIELDS, changedFields } from "./carrierEditFields";
+import { INSURANCE_EDIT_FIELDS, PROFILE_EDIT_FIELDS, changedFields, endorsementState, insurerLabel } from "./carrierEditFields";
 import { DOC_CATEGORIES, groupCarrierDocuments, isUncategorizedDocType } from "@/lib/carrierDocumentGroups";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { carrierArchiveReasonLabel } from "@shared/constants/carrierArchiveReasons";
@@ -110,9 +110,16 @@ interface Carrier {
   workersCompAmount?: number | null;
   workersCompPolicy?: string | null;
   workersCompExpiry?: string | null;
-  additionalInsuredSRL?: boolean;
-  waiverOfSubrogation?: boolean;
-  thirtyDayCancellationNotice?: boolean;
+  // Three-state: true confirmed, false not provided, null not stated.
+  additionalInsuredSRL?: boolean | null;
+  waiverOfSubrogation?: boolean | null;
+  thirtyDayCancellationNotice?: boolean | null;
+  autoLiabilityInsurerName?: string | null; autoLiabilityInsurerNaic?: string | null;
+  cargoInsuranceInsurerName?: string | null; cargoInsuranceInsurerNaic?: string | null;
+  generalLiabilityInsurerName?: string | null; generalLiabilityInsurerNaic?: string | null;
+  workersCompInsurerName?: string | null; workersCompInsurerNaic?: string | null;
+  workersCompStatutory?: boolean | null;
+  workersCompElEachAccident?: number | null; workersCompElDiseaseEachEmployee?: number | null; workersCompElDiseasePolicyLimit?: number | null;
   insuranceAgentName?: string | null;
   insuranceAgentEmail?: string | null;
   insuranceAgentPhone?: string | null;
@@ -386,8 +393,24 @@ function SendVerificationButton({ carrierId }: { carrierId: string }) {
   );
 }
 
-function InsuranceBlock({ title, provider, policy, amount, expiry }: {
-  title: string; provider?: string | null; policy?: string | null; amount?: number | null; expiry?: string | null;
+// Three-way, because "not provided" (the AE checked the COI) and "not stated" are
+// different findings and a checkbox can only say one of them.
+function TriSelect({ label, value, onChange, yes = "Confirmed", no = "Not provided" }: {
+  label: string; value: boolean | null; onChange: (v: boolean | null) => void; yes?: string; no?: string;
+}) {
+  return (
+    <label className="flex items-center justify-between gap-2 text-xs text-gray-700">{label}
+      <select aria-label={label} value={value === true ? "true" : value === false ? "false" : ""}
+        onChange={(e) => onChange(e.target.value === "" ? null : e.target.value === "true")}
+        className="px-2 py-1 bg-white border border-gray-200 rounded text-xs">
+        <option value="">Not stated</option><option value="true">{yes}</option><option value="false">{no}</option>
+      </select>
+    </label>
+  );
+}
+
+function InsuranceBlock({ title, provider, policy, amount, expiry, insurer, amountText }: {
+  title: string; provider?: string | null; policy?: string | null; amount?: number | null; expiry?: string | null; insurer?: string; amountText?: string;
 }) {
   const days = daysUntil(expiry);
   const hasData = provider || policy || amount || expiry;
@@ -397,8 +420,9 @@ function InsuranceBlock({ title, provider, policy, amount, expiry }: {
       {hasData ? (
         <div className="space-y-0.5">
           <InfoRow label="Provider" value={provider || "—"} />
+          <InfoRow label="Insurer" value={insurer ?? "Not stated"} />
           <InfoRow label="Policy" value={policy || "—"} />
-          <InfoRow label="Amount" value={amount ? `$${Number(amount).toLocaleString()}` : "—"} />
+          <InfoRow label="Amount" value={amountText ?? (amount ? `${Number(amount).toLocaleString()}` : "—")} />
           <div className="flex justify-between py-1.5 border-b border-gray-200 last:border-0">
             <span className="text-xs text-slate-500">Expiry</span>
             <span className={`text-xs font-medium ${expiryColor(expiry)}`}>
@@ -511,7 +535,12 @@ export default function CarrierPoolPage() {
     cargoInsuranceProvider: "", cargoInsuranceAmount: "", cargoInsurancePolicy: "", cargoInsuranceExpiry: "",
     generalLiabilityProvider: "", generalLiabilityAmount: "", generalLiabilityPolicy: "", generalLiabilityExpiry: "",
     workersCompProvider: "", workersCompAmount: "", workersCompPolicy: "", workersCompExpiry: "",
-    additionalInsuredSRL: false, waiverOfSubrogation: false, thirtyDayCancellationNotice: false,
+    additionalInsuredSRL: null as boolean | null, waiverOfSubrogation: null as boolean | null, thirtyDayCancellationNotice: null as boolean | null,
+    autoLiabilityInsurerName: "", autoLiabilityInsurerNaic: "",
+    cargoInsuranceInsurerName: "", cargoInsuranceInsurerNaic: "",
+    generalLiabilityInsurerName: "", generalLiabilityInsurerNaic: "",
+    workersCompInsurerName: "", workersCompInsurerNaic: "",
+    workersCompStatutory: null as boolean | null, workersCompElEachAccident: "", workersCompElDiseaseEachEmployee: "", workersCompElDiseasePolicyLimit: "",
     insuranceAgentName: "", insuranceAgentEmail: "", insuranceAgentPhone: "", insuranceAgencyName: "",
   });
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: string; company: string } | null>(null);
@@ -970,9 +999,16 @@ export default function CarrierPoolPage() {
       workersCompAmount: c.workersCompAmount?.toString() || "",
       workersCompPolicy: c.workersCompPolicy || "",
       workersCompExpiry: c.workersCompExpiry ? new Date(c.workersCompExpiry).toISOString().split("T")[0] : "",
-      additionalInsuredSRL: c.additionalInsuredSRL ?? false,
-      waiverOfSubrogation: c.waiverOfSubrogation ?? false,
-      thirtyDayCancellationNotice: c.thirtyDayCancellationNotice ?? false,
+      additionalInsuredSRL: c.additionalInsuredSRL ?? null,
+      waiverOfSubrogation: c.waiverOfSubrogation ?? null,
+      thirtyDayCancellationNotice: c.thirtyDayCancellationNotice ?? null,
+      autoLiabilityInsurerName: c.autoLiabilityInsurerName || "", autoLiabilityInsurerNaic: c.autoLiabilityInsurerNaic || "",
+      cargoInsuranceInsurerName: c.cargoInsuranceInsurerName || "", cargoInsuranceInsurerNaic: c.cargoInsuranceInsurerNaic || "",
+      generalLiabilityInsurerName: c.generalLiabilityInsurerName || "", generalLiabilityInsurerNaic: c.generalLiabilityInsurerNaic || "",
+      workersCompInsurerName: c.workersCompInsurerName || "", workersCompInsurerNaic: c.workersCompInsurerNaic || "",
+      workersCompStatutory: c.workersCompStatutory ?? null,
+      workersCompElEachAccident: c.workersCompElEachAccident?.toString() || "", workersCompElDiseaseEachEmployee: c.workersCompElDiseaseEachEmployee?.toString() || "",
+      workersCompElDiseasePolicyLimit: c.workersCompElDiseasePolicyLimit?.toString() || "",
       insuranceAgentName: c.insuranceAgentName || "",
       insuranceAgentEmail: c.insuranceAgentEmail || "",
       insuranceAgentPhone: c.insuranceAgentPhone || "",
@@ -1692,10 +1728,10 @@ export default function CarrierPoolPage() {
                 {/* ===== INSURANCE TAB ===== */}
                 {panelTab === "insurance" && (
                   <div className="space-y-4">
-                    <InsuranceBlock title="AUTO LIABILITY" provider={selectedCarrier.autoLiabilityProvider} policy={selectedCarrier.autoLiabilityPolicy} amount={selectedCarrier.autoLiabilityAmount} expiry={selectedCarrier.autoLiabilityExpiry} />
-                    <InsuranceBlock title="CARGO INSURANCE" provider={selectedCarrier.cargoInsuranceProvider} policy={selectedCarrier.cargoInsurancePolicy} amount={selectedCarrier.cargoInsuranceAmount} expiry={selectedCarrier.cargoInsuranceExpiry} />
-                    <InsuranceBlock title="GENERAL LIABILITY" provider={selectedCarrier.generalLiabilityProvider} policy={selectedCarrier.generalLiabilityPolicy} amount={selectedCarrier.generalLiabilityAmount} expiry={selectedCarrier.generalLiabilityExpiry} />
-                    <InsuranceBlock title="WORKERS COMPENSATION" provider={selectedCarrier.workersCompProvider} policy={selectedCarrier.workersCompPolicy} amount={selectedCarrier.workersCompAmount} expiry={selectedCarrier.workersCompExpiry} />
+                    <InsuranceBlock title="AUTO LIABILITY" provider={selectedCarrier.autoLiabilityProvider} policy={selectedCarrier.autoLiabilityPolicy} amount={selectedCarrier.autoLiabilityAmount} expiry={selectedCarrier.autoLiabilityExpiry} insurer={insurerLabel(selectedCarrier.autoLiabilityInsurerName, selectedCarrier.autoLiabilityInsurerNaic)} />
+                    <InsuranceBlock title="CARGO INSURANCE" provider={selectedCarrier.cargoInsuranceProvider} policy={selectedCarrier.cargoInsurancePolicy} amount={selectedCarrier.cargoInsuranceAmount} expiry={selectedCarrier.cargoInsuranceExpiry} insurer={insurerLabel(selectedCarrier.cargoInsuranceInsurerName, selectedCarrier.cargoInsuranceInsurerNaic)} />
+                    <InsuranceBlock title="GENERAL LIABILITY" provider={selectedCarrier.generalLiabilityProvider} policy={selectedCarrier.generalLiabilityPolicy} amount={selectedCarrier.generalLiabilityAmount} expiry={selectedCarrier.generalLiabilityExpiry} insurer={insurerLabel(selectedCarrier.generalLiabilityInsurerName, selectedCarrier.generalLiabilityInsurerNaic)} />
+                    <InsuranceBlock title="WORKERS COMPENSATION" provider={selectedCarrier.workersCompProvider} policy={selectedCarrier.workersCompPolicy} amount={selectedCarrier.workersCompAmount} expiry={selectedCarrier.workersCompExpiry} insurer={insurerLabel(selectedCarrier.workersCompInsurerName, selectedCarrier.workersCompInsurerNaic)} amountText={selectedCarrier.workersCompStatutory ? `Statutory · EL ${selectedCarrier.workersCompElEachAccident ? "$" + Number(selectedCarrier.workersCompElEachAccident).toLocaleString() : "—"} / ${selectedCarrier.workersCompElDiseaseEachEmployee ? "$" + Number(selectedCarrier.workersCompElDiseaseEachEmployee).toLocaleString() : "—"} / ${selectedCarrier.workersCompElDiseasePolicyLimit ? "$" + Number(selectedCarrier.workersCompElDiseasePolicyLimit).toLocaleString() : "—"}` : undefined} />
                     <SendVerificationButton carrierId={selectedCarrier.id} />
 
                     {/* v3.8.awh — what the parser read, beside what was typed.
@@ -1718,15 +1754,11 @@ export default function CarrierPoolPage() {
                     />
 
                     <div className="flex items-center gap-4 pt-3 border-t border-gray-200">
-                      <span className={`text-xs flex items-center gap-1 ${selectedCarrier.additionalInsuredSRL ? "text-green-400" : "text-slate-600"}`}>
-                        {selectedCarrier.additionalInsuredSRL ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />} Additional Insured
-                      </span>
-                      <span className={`text-xs flex items-center gap-1 ${selectedCarrier.waiverOfSubrogation ? "text-green-400" : "text-slate-600"}`}>
-                        {selectedCarrier.waiverOfSubrogation ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />} Waiver of Subrogation
-                      </span>
-                      <span className={`text-xs flex items-center gap-1 ${selectedCarrier.thirtyDayCancellationNotice ? "text-green-400" : "text-slate-600"}`}>
-                        {selectedCarrier.thirtyDayCancellationNotice ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />} 30-Day Notice
-                      </span>
+                      {([["Additional Insured", selectedCarrier.additionalInsuredSRL], ["Waiver of Subrogation", selectedCarrier.waiverOfSubrogation], ["30-Day Notice", selectedCarrier.thirtyDayCancellationNotice]] as const).map(([label, v]) => (
+                        <span key={label} className={`text-xs flex items-center gap-1 ${v === true ? "text-green-400" : v === false ? "text-red-700" : "text-slate-600"}`}>
+                          {v === true ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />} {label}: {endorsementState(v)}
+                        </span>
+                      ))}
                     </div>
 
                     {/* Insurance Agent */}
@@ -1777,22 +1809,24 @@ export default function CarrierPoolPage() {
                                 className="px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
                               <input type="date" value={(editForm as any)[`${prefix}Expiry`]} onChange={(e) => setEditForm({ ...editForm, [`${prefix}Expiry`]: e.target.value })}
                                 className="px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
+                              <input placeholder="Insurer" value={(editForm as any)[`${prefix}InsurerName`]} onChange={(e) => setEditForm({ ...editForm, [`${prefix}InsurerName`]: e.target.value })}
+                                className="px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
+                              <input placeholder="NAIC" value={(editForm as any)[`${prefix}InsurerNaic`]} onChange={(e) => setEditForm({ ...editForm, [`${prefix}InsurerNaic`]: e.target.value })}
+                                className="px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
                             </div>
                           </div>
                         ))}
                         <div className="space-y-2">
-                          <label className="flex items-center gap-2 text-xs text-gray-700">
-                            <input type="checkbox" checked={editForm.additionalInsuredSRL as boolean} onChange={(e) => setEditForm({ ...editForm, additionalInsuredSRL: e.target.checked })} className="rounded" />
-                            SRL listed as Additional Insured
-                          </label>
-                          <label className="flex items-center gap-2 text-xs text-gray-700">
-                            <input type="checkbox" checked={editForm.waiverOfSubrogation as boolean} onChange={(e) => setEditForm({ ...editForm, waiverOfSubrogation: e.target.checked })} className="rounded" />
-                            Waiver of Subrogation
-                          </label>
-                          <label className="flex items-center gap-2 text-xs text-gray-700">
-                            <input type="checkbox" checked={editForm.thirtyDayCancellationNotice as boolean} onChange={(e) => setEditForm({ ...editForm, thirtyDayCancellationNotice: e.target.checked })} className="rounded" />
-                            30-day cancellation notice
-                          </label>
+                          <TriSelect label="SRL as Additional Insured" value={editForm.additionalInsuredSRL} onChange={(v) => setEditForm({ ...editForm, additionalInsuredSRL: v })} />
+                          <TriSelect label="Waiver of Subrogation" value={editForm.waiverOfSubrogation} onChange={(v) => setEditForm({ ...editForm, waiverOfSubrogation: v })} />
+                          <TriSelect label="30-day cancellation notice" value={editForm.thirtyDayCancellationNotice} onChange={(v) => setEditForm({ ...editForm, thirtyDayCancellationNotice: v })} />
+                          <TriSelect label="Workers' comp statutory" yes="Statutory" no="Not statutory" value={editForm.workersCompStatutory} onChange={(v) => setEditForm({ ...editForm, workersCompStatutory: v })} />
+                          <div className="grid grid-cols-3 gap-2">
+                            {([["workersCompElEachAccident", "EL each accident $"], ["workersCompElDiseaseEachEmployee", "EL disease each employee $"], ["workersCompElDiseasePolicyLimit", "EL disease policy limit $"]] as const).map(([k, ph]) => (
+                              <input key={k} placeholder={ph} aria-label={ph} value={editForm[k]} onChange={(e) => setEditForm({ ...editForm, [k]: e.target.value })}
+                                className="px-2 py-1.5 bg-white border border-gray-200 rounded text-xs" />
+                            ))}
+                          </div>
                         </div>
                         <div>
                           <p className="text-xs font-semibold text-gray-700 mb-1">Insurance Agent Contact</p>

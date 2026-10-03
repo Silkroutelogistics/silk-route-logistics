@@ -19668,7 +19668,10 @@
 // v3.8.bsj — the insurance save keeps endorsements three-state and takes insurer, NAIC and workers comp EL
 // limits; the agent email names the insurer, writes Confirmed / Not provided / Not stated, and shows workers
 // comp as Statutory plus EL (coi-verify-email-fix C2b-1).
-export const SRL_VERSION = "3.8.bsj";
+// v3.8.bsk — the AE Insurance tab shows Confirmed / Not provided / Not stated and edits each endorsement
+// with a three-way control; each policy shows and edits its insurer and NAIC; workers comp shows Statutory
+// plus EL limits (coi-verify-email-fix C2b-2).
+export const SRL_VERSION = "3.8.bsk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
