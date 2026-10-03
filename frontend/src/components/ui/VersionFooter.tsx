@@ -19674,7 +19674,9 @@
 // v3.8.bsl — the agent email is refused until an AE has reviewed the insurance record since the newest COI;
 // a carrier change clears the review; registration no longer emails the agent; the hold is a column
 // (coi-verify-email-fix C2c).
-export const SRL_VERSION = "3.8.bsl";
+// v3.8.bsm — each policy within 30 days of expiry is flagged on the AE carriers page and in the agent
+// email; the email prints expiries as calendar dates (UTC) (coi-verify-email-fix C2d).
+export const SRL_VERSION = "3.8.bsm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

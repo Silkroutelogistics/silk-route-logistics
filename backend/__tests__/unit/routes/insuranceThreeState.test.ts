@@ -3,7 +3,7 @@
  * insurer / NAIC / workers' comp fields save through the strict schema, and the
  * agent email shows the insurer, the three states and WC as statutory + EL.
  */
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from "vitest";
 import express from "express";
 import "express-async-errors";
 import request from "supertest";
@@ -173,5 +173,35 @@ describe("insuranceReviewedAt", () => {
   it("a carrier re-save of identical values leaves the review alone", async () => {
     await carrierSave({ cargoInsurancePolicy: "IM6079611149" }, { cargoInsurancePolicy: "IM6079611149" });
     expect(written()).not.toHaveProperty("insuranceReviewedAt");
+  });
+});
+
+// coi-verify-email-fix C2d (D5): the agent email flags a policy inside 30 days and
+// prints expiries as calendar dates. The zone is pinned to a US one: under UTC (CI)
+// the day-early render cannot occur, so the date check would pass vacuously.
+describe("agent email expiry", () => {
+  const priorTz = process.env.TZ;
+  beforeAll(() => { process.env.TZ = "America/Detroit"; });
+  afterAll(() => { if (priorTz === undefined) delete process.env.TZ; else process.env.TZ = priorTz; });
+
+  async function html(over: Record<string, unknown>) {
+    p.carrierProfile.findUnique.mockResolvedValue({
+      id: "cp-1", companyName: "Acme", mcNumber: "1", insuranceAgentEmail: "agent@broker.test", insuranceAgencyName: "Agency",
+      insuranceReviewedAt: new Date(), user: { firstName: "A", lastName: "B", email: "c@acme.test" }, ...over,
+    });
+    p.document = { findFirst: vi.fn().mockResolvedValue(null) };
+    await sendInsuranceVerificationEmail("cp-1");
+    return JSON.parse(fetchSpy.mock.calls[0][1].body).html as string;
+  }
+
+  it("flags the one policy inside 30 days", async () => {
+    const h = await html({ cargoInsuranceExpiry: new Date(Date.now() + 10 * 86_400_000), autoLiabilityExpiry: new Date(Date.now() + 200 * 86_400_000) });
+    expect(h.match(/expires within 30 days/g)).toHaveLength(1);
+  });
+
+  it("prints 2027-09-01 as 9/1/2027, not a day early", async () => {
+    const h = await html({ autoLiabilityExpiry: new Date("2027-09-01T00:00:00.000Z") });
+    expect(h).toContain("9/1/2027");
+    expect(h).not.toContain("8/31/2027");
   });
 });

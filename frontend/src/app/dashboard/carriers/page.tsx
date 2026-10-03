@@ -429,6 +429,8 @@ function InsuranceBlock({ title, provider, policy, amount, expiry, insurer, amou
               {formatExpiry(expiry)} {days !== null && days >= 0 ? `(${days} days)` : days !== null ? "(Expired)" : ""}
             </span>
           </div>
+          {/* Per-policy flag (coi-verify-email-fix C2d): renewal is due before the next COI cycle. */}
+          {days !== null && days >= 0 && days <= 30 && <p role="status" className="text-xs font-semibold text-red-700 pt-1">Expires within 30 days</p>}
         </div>
       ) : (
         <span className="text-xs text-red-700">Not on file</span>

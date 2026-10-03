@@ -11,6 +11,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // A US timezone, whatever the runner uses: in UTC (CI) the day-early render
 // cannot appear, so the expiry test would pass with or without the fix.
 vi.hoisted(() => { process.env.TZ = "America/Detroit"; });
+
+// The full carriers page compiles cold in the first test (~1.3s alone) and timed out at
+// vitest's 5s default under full-suite load. Scoped to this file (O2, 2026-10-03).
+vi.setConfig({ testTimeout: 20_000 });
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -124,5 +128,19 @@ describe("Insurance tab, three-state", () => {
   it("shows workers comp as Statutory plus its EL limits", async () => {
     await openInsuranceEdit();
     expect(screen.getByText("Statutory · EL $1,000,000 / $1,000,000 / $1,000,000")).toBeTruthy();
+  });
+});
+
+// coi-verify-email-fix C2d: a policy expiring within 30 days is flagged on its own block.
+describe("per-policy 30-day expiry flag", () => {
+  afterEach(() => { vi.useRealTimers(); });
+
+  it("flags only the policy inside 30 days (cargo, 11/1, seen on 10/15)", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
+    await openInsuranceEdit();
+    const flags = screen.getAllByText("Expires within 30 days");
+    expect(flags).toHaveLength(1);
+    expect(flags[0].closest("div.bg-gray-100")?.textContent).toContain("CARGO INSURANCE");
   });
 });

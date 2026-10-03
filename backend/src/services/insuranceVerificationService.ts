@@ -178,13 +178,18 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
       expiry: carrier.workersCompExpiry },
   ];
 
+  // An expiry is a calendar date stored at midnight UTC; any other zone shows it a day early.
+  // Within 30 days it is flagged per policy (coi-verify-email-fix C2d, D5).
+  const expiryCell = (d: Date) => d.toLocaleDateString("en-US", { timeZone: "UTC" }) +
+    (d.getTime() - Date.now() <= 30 * 24 * 60 * 60 * 1000 && d.getTime() >= Date.now() ? ' <strong style="color:#9B2C2C">· expires within 30 days</strong>' : "");
+
   const tableRows = insuranceTable.map((ins) =>
     `<tr>
       <td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#374151">${ins.type}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#374151">${ins.insurer}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#374151">${ins.policy || "—"}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#374151">${ins.amount}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#374151">${ins.expiry ? new Date(ins.expiry).toLocaleDateString() : "—"}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#374151">${ins.expiry ? expiryCell(new Date(ins.expiry)) : "—"}</td>
     </tr>`
   ).join("");
 
