@@ -41,9 +41,9 @@ export function validateInsuranceCoverage(carrier: {
   cargoInsuranceExpiry?: Date | null;
   generalLiabilityExpiry?: Date | null;
   workersCompExpiry?: Date | null;
-  additionalInsuredSRL?: boolean;
-  waiverOfSubrogation?: boolean;
-  thirtyDayCancellationNotice?: boolean;
+  additionalInsuredSRL?: boolean | null;
+  waiverOfSubrogation?: boolean | null;
+  thirtyDayCancellationNotice?: boolean | null;
 }): InsuranceCoverageResult {
   const issues: string[] = [];
   const warnings: string[] = [];

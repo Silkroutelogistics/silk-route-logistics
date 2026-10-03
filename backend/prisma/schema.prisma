@@ -1116,9 +1116,33 @@ model CarrierProfile {
   workersCompPolicy           String?
   workersCompEffective        DateTime?
   workersCompExpiry           DateTime?
-  additionalInsuredSRL        Boolean   @default(false)
-  waiverOfSubrogation         Boolean   @default(false)
-  thirtyDayCancellationNotice Boolean   @default(false)
+  // coi-verify-email-fix C2. Endorsements are three-state: true = confirmed on
+  // the COI, false = recorded as not provided, null = not stated. The old
+  // default(false) asserted "not provided" for every carrier nobody had checked.
+  additionalInsuredSRL        Boolean?
+  waiverOfSubrogation         Boolean?
+  thirtyDayCancellationNotice Boolean?
+  // The insurer that writes each policy and its NAIC code. *Provider holds the
+  // producer (agency) as entered, and stays that way.
+  autoLiabilityInsurerName    String?
+  autoLiabilityInsurerNaic    String?
+  generalLiabilityInsurerName String?
+  generalLiabilityInsurerNaic String?
+  cargoInsuranceInsurerName   String?
+  cargoInsuranceInsurerNaic   String?
+  workersCompInsurerName      String?
+  workersCompInsurerNaic      String?
+  // Workers' comp is statutory; its dollar limits are employer's liability.
+  workersCompStatutory              Boolean?
+  workersCompElEachAccident         Float?
+  workersCompElDiseaseEachEmployee  Float?
+  workersCompElDiseasePolicyLimit   Float?
+  // Last AE review of the insurance record: set by an AE insurance save, cleared
+  // (null) by a carrier save that changes it. The agent email is refused while this
+  // is null or older than the newest COI upload.
+  insuranceReviewedAt         DateTime?
+  // No agent email of any kind before this moment (replaces the code hold list).
+  agentEmailHoldUntil         DateTime?
 
   // v3.8.aja — BCA click-wrap audit trail (Sprint E). Captures the
   // legal evidence required to defend the click-through agreement

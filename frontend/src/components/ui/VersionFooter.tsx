@@ -19662,7 +19662,10 @@
 // v3.8.bsf — messages: a carrier's message notifies the SRL rep it was sent to in-app, or the active operations team when that rep is inactive (carrier-portal-upgrade R1, G26)
 // v3.8.bsg — carrier portal: Revenue is linked from the carrier nav, after Payments; Loadboard stays unlinked (carrier-portal-upgrade R2, G24)
 // v3.8.bsh — carrier portal: the available-loads response drops the unread detentionWarnings field and its facility lookups; the service function is deleted (carrier-portal-upgrade R3)
-export const SRL_VERSION = "3.8.bsh";
+// v3.8.bsi — endorsements become three-state and the insurance record gets insurer, NAIC, workers comp
+// statutory + EL limits, an AE review time and an agent-email hold column (coi-verify-email-fix C2a, migration
+// 20261003120000). Every stored false becomes null: the old default asserted "not provided" for everyone.
+export const SRL_VERSION = "3.8.bsi";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
