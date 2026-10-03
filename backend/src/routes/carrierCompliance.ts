@@ -272,9 +272,11 @@ router.patch("/insurance", requireStepUp("insurance-update"), async (req: AuthRe
   if (workersCompAmount !== undefined) data.workersCompAmount = numOrNull("workersCompAmount", workersCompAmount);
   if (workersCompPolicy !== undefined) data.workersCompPolicy = workersCompPolicy;
   if (workersCompExpiry !== undefined) data.workersCompExpiry = dateOrNull("workersCompExpiry", workersCompExpiry);
-  if (additionalInsuredSRL !== undefined) data.additionalInsuredSRL = additionalInsuredSRL === true || additionalInsuredSRL === "true";
-  if (waiverOfSubrogation !== undefined) data.waiverOfSubrogation = waiverOfSubrogation === true || waiverOfSubrogation === "true";
-  if (thirtyDayCancellationNotice !== undefined) data.thirtyDayCancellationNotice = thirtyDayCancellationNotice === true || thirtyDayCancellationNotice === "true";
+  // A carrier may confirm an endorsement; only an AE records one as not provided,
+  // and an unticked box here must not erase an AE's finding (coi-verify-email-fix C2).
+  if (additionalInsuredSRL === true || additionalInsuredSRL === "true") data.additionalInsuredSRL = true;
+  if (waiverOfSubrogation === true || waiverOfSubrogation === "true") data.waiverOfSubrogation = true;
+  if (thirtyDayCancellationNotice === true || thirtyDayCancellationNotice === "true") data.thirtyDayCancellationNotice = true;
 
   if (Object.keys(data).length === 0) {
     res.status(400).json({ error: "No insurance fields to update" });

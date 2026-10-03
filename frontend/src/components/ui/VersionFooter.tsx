@@ -19665,7 +19665,10 @@
 // v3.8.bsi — endorsements become three-state and the insurance record gets insurer, NAIC, workers comp
 // statutory + EL limits, an AE review time and an agent-email hold column (coi-verify-email-fix C2a, migration
 // 20261003120000). Every stored false becomes null: the old default asserted "not provided" for everyone.
-export const SRL_VERSION = "3.8.bsi";
+// v3.8.bsj — the insurance save keeps endorsements three-state and takes insurer, NAIC and workers comp EL
+// limits; the agent email names the insurer, writes Confirmed / Not provided / Not stated, and shows workers
+// comp as Statutory plus EL (coi-verify-email-fix C2b-1).
+export const SRL_VERSION = "3.8.bsj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

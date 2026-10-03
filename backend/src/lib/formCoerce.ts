@@ -27,3 +27,12 @@ export function dateOrNull(field: string, v: unknown): Date | null | undefined {
   if (Number.isNaN(d.getTime())) throw new FieldError(field, "must be a valid date");
   return d;
 }
+
+// Three-state: "" or null is null (not stated), never collapsed to false.
+export function boolOrNull(field: string, v: unknown): boolean | null | undefined {
+  if (v === undefined) return undefined;
+  if (blank(v)) return null;
+  if (v === true || v === "true") return true;
+  if (v === false || v === "false") return false;
+  throw new FieldError(field, "must be true, false or null");
+}

@@ -12,7 +12,8 @@ import { AuthRequest } from "../middleware/auth";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
 import { getBonusPercentage } from "../services/tierService";
 import { validateInsuranceCoverage, maybeSendInsuranceVerificationEmail, didInsuranceFieldsChange } from "../services/insuranceVerificationService";
-import { numOrNull, dateOrNull } from "../lib/formCoerce";
+import { numOrNull, dateOrNull, boolOrNull } from "../lib/formCoerce";
+import { INSURER_FIELDS, WC_EL_FIELDS } from "../lib/insuranceFields";
 import { log } from "../lib/logger";
 import { onCarrierApproved } from "../services/integrationService";
 import { uploadFile } from "../services/storageService";
@@ -351,9 +352,9 @@ export async function registerCarrier(req: Request, res: Response) {
           workersCompPolicy: data.workersCompPolicy,
           workersCompEffective: data.workersCompEffective ? new Date(data.workersCompEffective) : undefined,
           workersCompExpiry: data.workersCompExpiry ? new Date(data.workersCompExpiry) : undefined,
-          additionalInsuredSRL: data.additionalInsuredSRL ?? false,
-          waiverOfSubrogation: data.waiverOfSubrogation ?? false,
-          thirtyDayCancellationNotice: data.thirtyDayCancellationNotice ?? false,
+          additionalInsuredSRL: data.additionalInsuredSRL === true ? true : null, // an unticked box says nothing
+          waiverOfSubrogation: data.waiverOfSubrogation === true ? true : null, // an unticked box says nothing
+          thirtyDayCancellationNotice: data.thirtyDayCancellationNotice === true ? true : null, // an unticked box says nothing
           insuranceAgentName: data.insuranceAgentName,
           insuranceAgentEmail: data.insuranceAgentEmail || undefined,
           insuranceAgentPhone: data.insuranceAgentPhone,
@@ -1751,6 +1752,7 @@ export async function getAllCarriers(req: AuthRequest, res: Response) {
         additionalInsuredSRL: c.additionalInsuredSRL,
         waiverOfSubrogation: c.waiverOfSubrogation,
         thirtyDayCancellationNotice: c.thirtyDayCancellationNotice,
+        ...Object.fromEntries([...INSURER_FIELDS, "workersCompStatutory", ...WC_EL_FIELDS].map((k) => [k, (c as Record<string, unknown>)[k]])),
         // The AE edit form loads these. Absent, it loaded "" and a save erased
         // the stored agent (coi-verify-email-fix C3).
         insuranceAgencyName: c.insuranceAgencyName,
@@ -1865,9 +1867,12 @@ export async function updateCarrier(req: AuthRequest, res: Response) {
   if (workersCompPolicy !== undefined) data.workersCompPolicy = workersCompPolicy;
   put("workersCompEffective", dateOrNull("workersCompEffective", workersCompEffective));
   put("workersCompExpiry", dateOrNull("workersCompExpiry", workersCompExpiry));
-  if (additionalInsuredSRL !== undefined) data.additionalInsuredSRL = additionalInsuredSRL === true || additionalInsuredSRL === "true";
-  if (waiverOfSubrogation !== undefined) data.waiverOfSubrogation = waiverOfSubrogation === true || waiverOfSubrogation === "true";
-  if (thirtyDayCancellationNotice !== undefined) data.thirtyDayCancellationNotice = thirtyDayCancellationNotice === true || thirtyDayCancellationNotice === "true";
+  put("additionalInsuredSRL", boolOrNull("additionalInsuredSRL", additionalInsuredSRL));
+  put("waiverOfSubrogation", boolOrNull("waiverOfSubrogation", waiverOfSubrogation));
+  put("thirtyDayCancellationNotice", boolOrNull("thirtyDayCancellationNotice", thirtyDayCancellationNotice));
+  for (const f of INSURER_FIELDS) if (req.body[f] !== undefined) data[f] = req.body[f] || null;
+  put("workersCompStatutory", boolOrNull("workersCompStatutory", req.body.workersCompStatutory));
+  for (const f of WC_EL_FIELDS) put(f, numOrNull(f, req.body[f]));
 
   // Insurance agent contact
   if (insuranceAgentName !== undefined) data.insuranceAgentName = insuranceAgentName || null;

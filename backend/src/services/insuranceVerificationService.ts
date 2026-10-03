@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { INSURANCE_MINIMUMS } from "../lib/insurancePolicy";
+import { endorsementState } from "../lib/insuranceFields";
 import { log } from "../lib/logger";
 import { mcDigits } from "../lib/mcNumber";
 import { monitoredCarrierWhere } from "../lib/carrierOperational";
@@ -231,27 +232,32 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
   const carrierName = carrier.companyName || `${carrier.user.firstName} ${carrier.user.lastName}`;
   const validation = validateInsuranceCoverage(carrier);
 
+  const money = (n: number | null | undefined) => (n ? `$${n.toLocaleString()}` : "—");
+  const insurer = (name: string | null, naic: string | null) => (name ? `${name}${naic ? ` (NAIC ${naic})` : ""}` : "Not stated");
   const insuranceTable = [
-    { type: "Auto Liability", provider: carrier.autoLiabilityProvider, policy: carrier.autoLiabilityPolicy, amount: carrier.autoLiabilityAmount, expiry: carrier.autoLiabilityExpiry },
-    { type: "Motor Cargo", provider: carrier.cargoInsuranceProvider, policy: carrier.cargoInsurancePolicy, amount: carrier.cargoInsuranceAmount, expiry: carrier.cargoInsuranceExpiry },
-    { type: "General Liability", provider: carrier.generalLiabilityProvider, policy: carrier.generalLiabilityPolicy, amount: carrier.generalLiabilityAmount, expiry: carrier.generalLiabilityExpiry },
-    { type: "Workers' Comp", provider: carrier.workersCompProvider, policy: carrier.workersCompPolicy, amount: carrier.workersCompAmount, expiry: carrier.workersCompExpiry },
+    { type: "Auto Liability", insurer: insurer(carrier.autoLiabilityInsurerName, carrier.autoLiabilityInsurerNaic), policy: carrier.autoLiabilityPolicy, amount: money(carrier.autoLiabilityAmount), expiry: carrier.autoLiabilityExpiry },
+    { type: "Motor Cargo", insurer: insurer(carrier.cargoInsuranceInsurerName, carrier.cargoInsuranceInsurerNaic), policy: carrier.cargoInsurancePolicy, amount: money(carrier.cargoInsuranceAmount), expiry: carrier.cargoInsuranceExpiry },
+    { type: "General Liability", insurer: insurer(carrier.generalLiabilityInsurerName, carrier.generalLiabilityInsurerNaic), policy: carrier.generalLiabilityPolicy, amount: money(carrier.generalLiabilityAmount), expiry: carrier.generalLiabilityExpiry },
+    // Workers' comp is statutory; its dollar limits are employer's liability.
+    { type: "Workers' Comp", insurer: insurer(carrier.workersCompInsurerName, carrier.workersCompInsurerNaic), policy: carrier.workersCompPolicy,
+      amount: carrier.workersCompStatutory ? `Statutory · EL ${money(carrier.workersCompElEachAccident)} / ${money(carrier.workersCompElDiseaseEachEmployee)} / ${money(carrier.workersCompElDiseasePolicyLimit)}` : money(carrier.workersCompAmount),
+      expiry: carrier.workersCompExpiry },
   ];
 
   const tableRows = insuranceTable.map((ins) =>
     `<tr>
       <td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#374151">${ins.type}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#374151">${ins.provider || "—"}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#374151">${ins.insurer}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#374151">${ins.policy || "—"}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#374151">${ins.amount ? `$${ins.amount.toLocaleString()}` : "—"}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#374151">${ins.amount}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;font-size:13px;color:#374151">${ins.expiry ? new Date(ins.expiry).toLocaleDateString() : "—"}</td>
     </tr>`
   ).join("");
 
   const endorsements = [
-    carrier.additionalInsuredSRL ? "✅ SRL listed as Additional Insured" : "❌ SRL NOT listed as Additional Insured",
-    carrier.waiverOfSubrogation ? "✅ Waiver of Subrogation" : "❌ Waiver of Subrogation not on file",
-    carrier.thirtyDayCancellationNotice ? "✅ 30-day Cancellation Notice" : "❌ 30-day Cancellation Notice not confirmed",
+    `SRL as Additional Insured: ${endorsementState(carrier.additionalInsuredSRL)}`,
+    `Waiver of Subrogation: ${endorsementState(carrier.waiverOfSubrogation)}`,
+    `30-day Cancellation Notice: ${endorsementState(carrier.thirtyDayCancellationNotice)}`,
   ].join("<br/>");
 
   const html = `
@@ -283,7 +289,7 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
           <thead>
             <tr style="background:#F3F4F6">
               <th style="padding:10px 12px;text-align:left;font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.5px">Type</th>
-              <th style="padding:10px 12px;text-align:left;font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.5px">Provider</th>
+              <th style="padding:10px 12px;text-align:left;font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.5px">Insurer</th>
               <th style="padding:10px 12px;text-align:left;font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.5px">Policy #</th>
               <th style="padding:10px 12px;text-align:left;font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.5px">Amount</th>
               <th style="padding:10px 12px;text-align:left;font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.5px">Expiry</th>
