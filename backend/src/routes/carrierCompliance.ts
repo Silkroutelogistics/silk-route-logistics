@@ -283,6 +283,12 @@ router.patch("/insurance", requireStepUp("insurance-update"), async (req: AuthRe
     return;
   }
 
+  // A carrier change un-reviews the record: no agent email until an AE reviews it
+  // again (O3). A re-save of identical values changes nothing and clears nothing.
+  const was = profile as unknown as Record<string, unknown>;
+  const same = (a: unknown, b: unknown) => (a instanceof Date && b instanceof Date ? a.getTime() === b.getTime() : a === b);
+  if (Object.entries(data).some(([k, v]) => !same(v, was[k]))) data.insuranceReviewedAt = null;
+
   const updated = await prisma.carrierProfile.update({
     where: { id: profile.id },
     data,

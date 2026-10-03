@@ -52,18 +52,20 @@ beforeEach(() => {
 });
 
 const written = () => p.carrierProfile.update.mock.calls[0]?.[0].data;
+// What the save wrote, minus the record stamp (C2c), which the next block asserts on its own.
+const fields = () => { const { insuranceReviewedAt: _stamp, ...rest } = written(); return rest; };
 const patch = (body: object) => request(a).patch("/api/carrier/cp-1").send(body);
 
 describe("AE save: endorsements are three-state", () => {
   it("null stays null — it is not collapsed to false", async () => {
     const r = await patch({ additionalInsuredSRL: null, waiverOfSubrogation: null, thirtyDayCancellationNotice: null });
     expect(r.status).toBe(200);
-    expect(written()).toEqual({ additionalInsuredSRL: null, waiverOfSubrogation: null, thirtyDayCancellationNotice: null });
+    expect(fields()).toEqual({ additionalInsuredSRL: null, waiverOfSubrogation: null, thirtyDayCancellationNotice: null });
   });
 
   it("true and false are kept as given; anything else is a 400", async () => {
     expect((await patch({ additionalInsuredSRL: true, waiverOfSubrogation: false })).status).toBe(200);
-    expect(written()).toEqual({ additionalInsuredSRL: true, waiverOfSubrogation: false });
+    expect(fields()).toEqual({ additionalInsuredSRL: true, waiverOfSubrogation: false });
     expect((await patch({ thirtyDayCancellationNotice: "maybe" })).status).toBe(400);
   });
 });
@@ -81,7 +83,7 @@ describe("AE save: the new fields go through the strict schema", () => {
   it("all twelve save, EL limits as numbers", async () => {
     const r = await patch(NEW);
     expect(r.status).toBe(200);
-    expect(written()).toEqual({ ...NEW, workersCompElEachAccident: 1000000, workersCompElDiseaseEachEmployee: 1000000, workersCompElDiseasePolicyLimit: 1000000 });
+    expect(fields()).toEqual({ ...NEW, workersCompElEachAccident: 1000000, workersCompElDiseaseEachEmployee: 1000000, workersCompElDiseasePolicyLimit: 1000000 });
   });
 
   it("an EL limit that is not a number is a 400 naming it", async () => {
@@ -108,7 +110,7 @@ describe("agent email", () => {
   async function render(over: Record<string, unknown>) {
     p.carrierProfile.findUnique.mockResolvedValue({
       id: "cp-1", companyName: "Acme", mcNumber: "1", insuranceAgentEmail: "agent@broker.test", insuranceAgencyName: "Agency",
-      insuranceRecordUpdatedAt: new Date(), user: { firstName: "A", lastName: "B", email: "c@acme.test" },
+      insuranceReviewedAt: new Date(), user: { firstName: "A", lastName: "B", email: "c@acme.test" },
       autoLiabilityInsurerName: "MS Transverse", autoLiabilityInsurerNaic: "21075", autoLiabilityAmount: 1000000,
       workersCompAmount: 1000000, workersCompStatutory: true,
       workersCompElEachAccident: 1000000, workersCompElDiseaseEachEmployee: 1000000, workersCompElDiseasePolicyLimit: 1000000,
@@ -137,5 +139,39 @@ describe("agent email", () => {
   it("shows workers' comp as statutory with its EL limits, not as a dollar limit", async () => {
     const html = await render({});
     expect(html).toContain("Statutory · EL $1,000,000 / $1,000,000 / $1,000,000");
+  });
+});
+
+// coi-verify-email-fix C2c + O3: an AE insurance save is the review (insuranceReviewedAt),
+// and a carrier save that changes the record un-reviews it.
+describe("insuranceReviewedAt", () => {
+  it("an AE insurance save stamps it", async () => {
+    const before = Date.now();
+    expect((await patch({ autoLiabilityPolicy: "TINCA2743700-26" })).status).toBe(200);
+    expect(written().insuranceReviewedAt.getTime()).toBeGreaterThanOrEqual(before);
+  });
+
+  it("a profile-only AE save does not", async () => {
+    expect((await patch({ tier: "GOLD" })).status).toBe(200);
+    expect(written()).not.toHaveProperty("insuranceReviewedAt");
+  });
+
+  async function carrierSave(stored: Record<string, unknown>, body: Record<string, unknown>) {
+    const router = (await import("../../../src/routes/carrierCompliance")).default as any;
+    const layer = router.stack.find((l: any) => l.route?.path === "/insurance" && l.route.methods.patch);
+    p.carrierProfile.findUnique.mockResolvedValue({ id: "cp-1", userId: "u-1", ...stored });
+    await layer.route.stack[layer.route.stack.length - 1].handle(
+      { body, user: { id: "u-1", role: "CARRIER" } },
+      { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() }, () => {});
+  }
+
+  it("a carrier save that changes the record clears it (null), never stamps it", async () => {
+    await carrierSave({ cargoInsurancePolicy: "OLD-1" }, { cargoInsurancePolicy: "IM6079611149" });
+    expect(written().insuranceReviewedAt).toBeNull();
+  });
+
+  it("a carrier re-save of identical values leaves the review alone", async () => {
+    await carrierSave({ cargoInsurancePolicy: "IM6079611149" }, { cargoInsurancePolicy: "IM6079611149" });
+    expect(written()).not.toHaveProperty("insuranceReviewedAt");
   });
 });

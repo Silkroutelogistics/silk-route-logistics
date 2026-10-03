@@ -11,9 +11,9 @@ import { env } from "../config/env";
 import { AuthRequest } from "../middleware/auth";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
 import { getBonusPercentage } from "../services/tierService";
-import { validateInsuranceCoverage, maybeSendInsuranceVerificationEmail, didInsuranceFieldsChange } from "../services/insuranceVerificationService";
+import { validateInsuranceCoverage } from "../services/insuranceVerificationService";
 import { numOrNull, dateOrNull, boolOrNull } from "../lib/formCoerce";
-import { INSURER_FIELDS, WC_EL_FIELDS } from "../lib/insuranceFields";
+import { INSURER_FIELDS, WC_EL_FIELDS, INSURANCE_RECORD_FIELD } from "../lib/insuranceFields";
 import { log } from "../lib/logger";
 import { onCarrierApproved } from "../services/integrationService";
 import { uploadFile } from "../services/storageService";
@@ -781,32 +781,8 @@ export async function registerCarrier(req: Request, res: Response) {
     }
   }).catch((e) => log.error({ err: e }, "[Admin Notify] Error fetching admins:"));
 
-  // 2.5. v3.8.akz Item 1 Path β — Insurance-agent verification email.
-  // Original design intent was: when the registration payload includes
-  // insurance data + all 4 agent fields are populated, the platform
-  // emails the agent for verification that the policy is real. The
-  // sender + recipient logic in insuranceVerificationService has been
-  // healthy since pre-aky, but registerCarrier never invoked it — only
-  // updateCarrier (admin) + the carrier-compliance route + the
-  // expiry-reminder cron fired it. Wired here via the unified
-  // maybeSendInsuranceVerificationEmail gate. For registration, change-
-  // condition is computed off the request body (carrier may have skipped
-  // Step 3 Insurance — though canNext now requires it). Completeness-
-  // condition (all 4 agent fields) is enforced inside the helper via a
-  // post-write CarrierProfile read. Fire-and-forget per the rest of the
-  // post-registration chain.
-  if (profileId) {
-    const insuranceFieldsInRegistration = didInsuranceFieldsChange(req.body as Record<string, unknown>);
-    maybeSendInsuranceVerificationEmail(profileId, insuranceFieldsInRegistration)
-      .then((result) => {
-        if (!result.sent && result.reason) {
-          log.info({ carrierId: profileId, reason: result.reason }, "[InsVerify] Skipped after registration");
-        }
-      })
-      .catch((err) => {
-        log.error({ err, carrierId: profileId }, "[InsVerify] Registration auto-send failed");
-      });
-  }
+  // No agent email at registration (coi-verify-email-fix C2c, O3): carrier-typed
+  // data reaches an insurance agent only after an AE has reviewed it.
 
   // 3. Build chameleon fingerprint (needs address, phone, EIN stored first)
   if (profileId) {
@@ -1901,6 +1877,9 @@ export async function updateCarrier(req: AuthRequest, res: Response) {
     (STATUSES_CLOSED_TO_INFO_REQUESTS as readonly string[]).includes(data.onboardingStatus)
       ? (data.onboardingStatus as "APPROVED" | "REJECTED" | "SUSPENDED")
       : null;
+
+  // An AE insurance save is the review the agent-email gate requires (O3).
+  if (Object.keys(data).some((k) => INSURANCE_RECORD_FIELD.test(k))) data.insuranceReviewedAt = new Date();
 
   let closedRequests: ClosedInfoRequest[] = [];
   const updated = await prisma.$transaction(async (tx) => {

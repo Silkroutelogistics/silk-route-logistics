@@ -92,7 +92,7 @@ describe("PATCH /api/carrier/:id", () => {
   it("an insurance-only save leaves the agent fields untouched", async () => {
     const r = await patch({ autoLiabilityPolicy: "TINCA2743700-26" });
     expect(r.status).toBe(200);
-    expect(Object.keys(written())).toEqual(["autoLiabilityPolicy"]);
+    expect(Object.keys(written()).filter((k) => k !== "insuranceReviewedAt")).toEqual(["autoLiabilityPolicy"]); // an AE save is a review (C2c)
   });
 });
 

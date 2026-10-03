@@ -12,3 +12,6 @@ export const WC_EL_FIELDS = ["workersCompElEachAccident", "workersCompElDiseaseE
 export function endorsementState(v: boolean | null | undefined): "Confirmed" | "Not provided" | "Not stated" {
   return v === true ? "Confirmed" : v === false ? "Not provided" : "Not stated";
 }
+
+// An AE save touching any of these is a review: it stamps insuranceReviewedAt.
+export const INSURANCE_RECORD_FIELD = /^(autoLiability|cargoInsurance|generalLiability|workersComp|insurance|additionalInsuredSRL$|waiverOfSubrogation$|thirtyDayCancellationNotice$)/;

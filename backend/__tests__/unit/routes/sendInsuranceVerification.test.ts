@@ -53,8 +53,12 @@ beforeEach(() => {
   p.notification.create = vi.fn().mockResolvedValue({});
   p.user.findFirst.mockResolvedValue({ id: "admin-1" });
   p.user.findMany.mockResolvedValue([]);
+  // C2c: the hold is a column (JetEx carries it from the migration), and the record
+  // review must postdate the newest COI, so the fixture was reviewed after a day-old COI.
+  p.document = { findFirst: vi.fn().mockResolvedValue({ createdAt: new Date(Date.now() - 86_400_000) }) };
   p.carrierProfile.findUnique.mockImplementation(async ({ where }: any) => ({
     id: where.id, companyName: "Acme Freight", mcNumber: "123456",
+    insuranceReviewedAt: new Date(), agentEmailHoldUntil: where.id === JETEX ? new Date("9999-12-31T00:00:00Z") : null,
     insuranceAgentEmail: "agent@broker.test", insuranceAgencyName: "Agency",
     user: { firstName: "A", lastName: "B", email: "c@acme.test" },
   }));

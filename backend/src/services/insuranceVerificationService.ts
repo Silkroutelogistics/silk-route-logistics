@@ -80,95 +80,13 @@ export function validateInsuranceCoverage(carrier: {
   return { isCompliant: issues.length === 0, issues, warnings };
 }
 
-// ─── Unified Gate: Maybe Send Verification Email ────────
+// ─── Agent-Email Gate: hold, stale record, cooldown ────
 //
-// v3.8.akz Item 1 Path β — single source of truth for the
-// register + updateCarrier trigger logic. Two-condition gate:
-//
-//   (a) CHANGE-CONDITION — `insuranceFieldsChanged` MUST be true.
-//       Caller knows whether their write touched any insurance-
-//       relevant field. Prevents re-sends on unrelated PATCHes
-//       (e.g. status flip, address-only update, scorecard refresh)
-//       that happen to touch the carrier row but not insurance.
-//
-//   (b) COMPLETENESS-CONDITION — all 4 agent fields populated on
-//       the RESULTING persisted record. Reads the post-write row
-//       from DB (not the request payload) so a PATCH touching one
-//       agent field still evaluates correctly against the union of
-//       prior + new state. A registration that only sets agent
-//       name still doesn't fire if the other 3 fields are empty;
-//       a follow-up PATCH that sets the 4th field DOES fire.
-//
-// Cron expiry-reminder path (`checkExpiringInsurance` below) calls
-// `sendInsuranceVerificationEmail` directly — different semantic
-// (periodic reminder, NOT a "fields changed" event). Cron gate is
-// the `daysUntil === 60/30/7` threshold; cron keeps its own gate.
-//
-// Returns { sent, reason? } for caller logging. Non-blocking on
-// the caller's response chain — wrap with .catch() at the callsite.
-
-const INSURANCE_RELEVANT_FIELDS = [
-  "autoLiabilityProvider", "autoLiabilityAmount",
-  "cargoInsuranceProvider", "cargoInsuranceAmount",
-  "generalLiabilityProvider", "generalLiabilityAmount",
-  "workersCompProvider", "workersCompAmount",
-  "insuranceAgentName", "insuranceAgentEmail",
-  "insuranceAgentPhone", "insuranceAgencyName",
-] as const;
-
-export function didInsuranceFieldsChange(data: Record<string, unknown>): boolean {
-  return INSURANCE_RELEVANT_FIELDS.some((f) => data[f] !== undefined);
-}
-
-export async function maybeSendInsuranceVerificationEmail(
-  carrierId: string,
-  insuranceFieldsChanged: boolean,
-): Promise<{ sent: boolean; reason?: string }> {
-  if (!insuranceFieldsChanged) {
-    return { sent: false, reason: "no insurance-relevant fields changed in this write" };
-  }
-
-  const carrier = await prisma.carrierProfile.findUnique({
-    where: { id: carrierId },
-    select: {
-      insuranceAgentName: true,
-      insuranceAgentEmail: true,
-      insuranceAgentPhone: true,
-      insuranceAgencyName: true,
-    },
-  });
-  if (!carrier) {
-    return { sent: false, reason: "carrier not found" };
-  }
-
-  const isPresent = (v: string | null | undefined) =>
-    typeof v === "string" && v.trim().length > 0;
-  const missing: string[] = [];
-  if (!isPresent(carrier.insuranceAgentName)) missing.push("name");
-  if (!isPresent(carrier.insuranceAgentEmail)) missing.push("email");
-  if (!isPresent(carrier.insuranceAgentPhone)) missing.push("phone");
-  if (!isPresent(carrier.insuranceAgencyName)) missing.push("agency");
-  if (missing.length > 0) {
-    return { sent: false, reason: `agent fields missing on post-write record: ${missing.join(", ")}` };
-  }
-
-  const out = await sendInsuranceVerificationEmail(carrierId);
-  return out?.sent ? { sent: true } : { sent: false, reason: out?.reason ?? "RESEND_API_KEY not set" };
-}
-
-// ─── Agent-Email Hold + Cooldown ────────────────────────
-//
-// coi-verify-email-fix C1. Every send path — registration, cron, AE action —
-// goes through sendInsuranceVerificationEmail, so both checks live there.
-//
-// HOLD: a carrier listed here receives no agent email from any path until its
-// entry is removed in a reviewed commit. Keyed by CarrierProfile.id.
-export const AGENT_EMAIL_HOLD: ReadonlyMap<string, string> = new Map([
-  // JETEX FREIGHT LLC, MC 585393. On 2026-10-02 the expiry cron sent McGriff a
-  // request carrying stale policy numbers and false endorsement flags, and
-  // was set to send again on 2026-10-25. Held until the record is corrected.
-  ["cmublocyz00flh02dhyvwqwky", "JETEX FREIGHT LLC — 2026-10-02 incorrect COI request"],
-]);
+// coi-verify-email-fix C1 + C2c. Both senders (the AE's Send verification and
+// the expiry cron) go through sendInsuranceVerificationEmail, so the gate lives
+// there. HOLD: CarrierProfile.agentEmailHoldUntil (it replaced a code list).
+// STALE: the email repeats the record to the agent, so an AE must have reviewed
+// it (insuranceReviewedAt) since the newest COI on file. Never reviewed = stale.
 
 // COOLDOWN: one agent email per carrier per 14 days, whichever path asks.
 export const AGENT_EMAIL_COOLDOWN_DAYS = 14;
@@ -177,20 +95,36 @@ export const AGENT_EMAIL_COOLDOWN_DAYS = 14;
 // has no clear date: it lasts until it is lifted.
 export type AgentEmailBlock = { reason: string; clearsAt: Date | null };
 
-export async function agentEmailBlock(carrierId: string, agentEmail: string): Promise<AgentEmailBlock | null> {
-  const held = AGENT_EMAIL_HOLD.get(carrierId);
-  if (held) return { reason: `agent email on hold: ${held}`, clearsAt: null };
+type GateCarrier = { id: string; insuranceAgentEmail: string; agentEmailHoldUntil: Date | null; insuranceReviewedAt: Date | null };
+
+export async function agentEmailBlock(carrier: GateCarrier): Promise<AgentEmailBlock | null> {
+  const hold = carrier.agentEmailHoldUntil;
+  if (hold && hold > new Date()) {
+    const indefinite = hold.getUTCFullYear() >= 9999;
+    return { reason: `agent email on hold ${indefinite ? "until lifted" : `until ${hold.toISOString()}`}`, clearsAt: indefinite ? null : hold };
+  }
+
+  const reviewed = carrier.insuranceReviewedAt;
+  if (!reviewed) return { reason: "insurance record not reviewed by an AE since it last changed; review it against the COI and save", clearsAt: null };
+  const coi = await prisma.document.findFirst({
+    where: { entityType: "CARRIER", entityId: carrier.id, docType: "COI" },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
+  });
+  if (coi && reviewed < coi.createdAt) {
+    return { reason: `AE review (${reviewed.toISOString()}) predates the latest COI (${coi.createdAt.toISOString()}); review and save it`, clearsAt: null };
+  }
 
   const since = new Date(Date.now() - AGENT_EMAIL_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
   const recent = await prisma.communication.findFirst({
     where: {
       entityType: "CARRIER",
-      entityId: carrierId,
+      entityId: carrier.id,
       direction: "OUTBOUND",
       createdAt: { gte: since },
       OR: [
         { metadata: { path: ["source"], equals: "InsuranceVerification" } },
-        { to: { equals: agentEmail, mode: "insensitive" } },
+        { to: { equals: carrier.insuranceAgentEmail, mode: "insensitive" } },
       ],
     },
     orderBy: { createdAt: "desc" },
@@ -214,7 +148,7 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
   if (!carrier) throw new Error("Carrier not found");
   if (!carrier.insuranceAgentEmail) throw new Error("No insurance agent email on file");
 
-  const blocked = await agentEmailBlock(carrierId, carrier.insuranceAgentEmail);
+  const blocked = await agentEmailBlock({ ...carrier, insuranceAgentEmail: carrier.insuranceAgentEmail });
   if (blocked) {
     log.info({ carrierId, reason: blocked.reason }, "[InsVerify] Agent email blocked");
     return { sent: false as const, reason: blocked.reason, clearsAt: blocked.clearsAt };

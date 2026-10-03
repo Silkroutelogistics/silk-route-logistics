@@ -6,12 +6,10 @@ import { prisma } from "../../../src/config/database";
 // or from the AE's explicit Send verification.
 
 const sends = vi.hoisted(() => ({
-  maybe: vi.fn().mockResolvedValue({ sent: true }),
   direct: vi.fn().mockResolvedValue({ sent: true }),
 }));
 vi.mock("../../../src/services/insuranceVerificationService", async (orig) => ({
   ...(await orig<typeof import("../../../src/services/insuranceVerificationService")>()),
-  maybeSendInsuranceVerificationEmail: sends.maybe,
   sendInsuranceVerificationEmail: sends.direct,
 }));
 vi.mock("../../../src/lib/loginFlags", () => ({ flagSensitiveActionAfterNewLogin: vi.fn() }));
@@ -40,7 +38,6 @@ function res() {
   return { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() } as any;
 }
 function expectNoSend() {
-  expect(sends.maybe).not.toHaveBeenCalled();
   expect(sends.direct).not.toHaveBeenCalled();
   expect(fetchSpy).not.toHaveBeenCalled();
 }
@@ -71,5 +68,18 @@ describe("saving insurance sends no agent email", () => {
     expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ message: "Insurance details updated" }));
     await new Promise((d) => setImmediate(d));
     expectNoSend();
+  });
+});
+
+// coi-verify-email-fix C2c (O3): registration no longer emails the agent. The
+// controller module imports no send function at all, so no path through it can.
+describe("registration sends no agent email", () => {
+  it("carrierController imports nothing from the verification service but the validator", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const src = fs.readFileSync(path.resolve(__dirname, "../../../src/controllers/carrierController.ts"), "utf8");
+    const imp = src.match(/import \{([^}]*)\} from "\.\.\/services\/insuranceVerificationService";/);
+    expect(imp?.[1].split(",").map((x) => x.trim()).filter(Boolean)).toEqual(["validateInsuranceCoverage"]);
+    expect(src).not.toMatch(/sendInsuranceVerificationEmail|maybeSendInsuranceVerificationEmail/);
   });
 });

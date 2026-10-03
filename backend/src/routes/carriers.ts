@@ -292,6 +292,7 @@ router.post("/:id/read-coi", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), 
       if (extracted.agencyName) updateData.insuranceAgencyName = extracted.agencyName;
 
       if (Object.keys(updateData).length > 0) {
+        updateData.insuranceReviewedAt = new Date(); // an AE applying a COI is a review (O3)
         await prisma.carrierProfile.update({ where: { id: carrier.id }, data: updateData });
       }
     }

@@ -19671,7 +19671,10 @@
 // v3.8.bsk — the AE Insurance tab shows Confirmed / Not provided / Not stated and edits each endorsement
 // with a three-way control; each policy shows and edits its insurer and NAIC; workers comp shows Statutory
 // plus EL limits (coi-verify-email-fix C2b-2).
-export const SRL_VERSION = "3.8.bsk";
+// v3.8.bsl — the agent email is refused until an AE has reviewed the insurance record since the newest COI;
+// a carrier change clears the review; registration no longer emails the agent; the hold is a column
+// (coi-verify-email-fix C2c).
+export const SRL_VERSION = "3.8.bsl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
